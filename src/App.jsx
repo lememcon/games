@@ -16,7 +16,18 @@ import useData from "@/hooks/useData";
 
 import "@mantine/core/styles.css";
 
-import { assoc, descend, forEach, keys, map, prop, sort, values } from "ramda";
+import {
+  assoc,
+  descend,
+  forEach,
+  identity,
+  keys,
+  map,
+  prop,
+  sort,
+  sortBy,
+  values,
+} from "ramda";
 
 import logo from "@/assets/logo.png";
 
@@ -81,8 +92,17 @@ function App() {
           <MultiSelect
             label="Filter By Players"
             placeholder="Pick Player"
-            data={keys(data.by_player)}
+            data={sortBy(identity, keys(data.by_player))}
+            description="Which players are included in the list of games"
             onChange={setPlayers}
+            clearable
+            hidePickedOptions
+            comboboxProps={{
+              width: 300,
+              position: "bottom-start",
+              shadow: "md",
+              transitionProps: { transition: "pop", duration: 200 },
+            }}
           />
           <Table>
             <Table.Thead>
