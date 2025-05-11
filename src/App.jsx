@@ -96,7 +96,6 @@ function App() {
             description="Which players are included in the list of games"
             onChange={setPlayers}
             clearable
-            hidePickedOptions
             comboboxProps={{
               width: 300,
               position: "bottom-start",
