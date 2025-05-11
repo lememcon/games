@@ -13,6 +13,9 @@ importers:
       "@mantine/hooks":
         specifier: ^8.0.0
         version: 8.0.0(react@19.1.0)
+      ramda:
+        specifier: ^0.30.1
+        version: 0.30.1
       react:
         specifier: ^19.1.0
         version: 19.1.0
@@ -3107,6 +3110,12 @@ packages:
         integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==,
       }
 
+  ramda@0.30.1:
+    resolution:
+      {
+        integrity: sha512-tEF5I22zJnuclswcZMc8bDIrwRHRzf+NqVEmqg50ShAZMP7MWeR/RGDthfM/p+BlqvF2fXAzpn8i+SJcYD3alw==,
+      }
+
   range-parser@1.2.1:
     resolution:
       {
@@ -5813,6 +5822,8 @@ snapshots:
       side-channel: 1.1.0
 
   queue-microtask@1.2.3: {}
+
+  ramda@0.30.1: {}
 
   range-parser@1.2.1: {}
 

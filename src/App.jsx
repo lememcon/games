@@ -1,32 +1,100 @@
-import { MantineProvider } from "@mantine/core";
 import { useState } from "react";
 
-import logo from "./assets/logo.png";
+import {
+  AppShell,
+  Burger,
+  Flex,
+  Group,
+  MantineProvider,
+  MultiSelect,
+  Skeleton,
+  Table,
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+
+import useData from "@/hooks/useData";
 
 import "@mantine/core/styles.css";
 
-function App() {
-  const [count, setCount] = useState(0);
+import { assoc, descend, forEach, keys, map, prop, sort, values } from "ramda";
 
+import logo from "@/assets/logo.png";
+
+function App() {
+  const [opened, { toggle }] = useDisclosure();
+  const data = useData();
+  const [players, setPlayers] = useState([]);
+
+  const selected_games = {};
+  forEach(
+    (player) => {
+      forEach((item) => {
+        if (!(item.game in selected_games)) {
+          selected_games[item.game] = { name: item.game, score: 0 };
+        }
+        const game = selected_games[item.game];
+        selected_games[item.game] = assoc(
+          "score",
+          game.score + item.score,
+          game,
+        );
+      }, data.by_player[player]);
+    },
+    players.length > 0 ? players : keys(data.by_player),
+  );
+  const games = map(
+    (game) => {
+      return (
+        <Table.Tr key={game.name}>
+          <Table.Td>{game.name}</Table.Td>
+          <Table.Td>{game.score}</Table.Td>
+        </Table.Tr>
+      );
+    },
+    sort(descend(prop("score")), values(selected_games)),
+  );
   return (
-    <MantineProvider>
-      <div>
-        <a href="https://games.lememcon.com" target="_blank">
-          <img src={logo} className="logo" alt="LememCon logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+    <MantineProvider defaultColorTheme="auto">
+      <AppShell
+        header={{ height: 60 }}
+        navbar={{
+          width: 300,
+          breakpoint: "sm",
+          collapsed: { mobile: !opened },
+        }}
+        padding="md"
+      >
+        <AppShell.Header>
+          <Group h="100%" px="md">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+            />
+            <img src={logo} height="48px" />
+            <h3>LememCon</h3>
+          </Group>
+        </AppShell.Header>
+        <AppShell.Navbar p="md"></AppShell.Navbar>
+        <AppShell.Main>
+          <MultiSelect
+            label="Filter By Players"
+            placeholder="Pick Player"
+            data={keys(data.by_player)}
+            onChange={setPlayers}
+          />
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Game</Table.Th>
+                <Table.Th>Score</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>{games}</Table.Tbody>
+          </Table>
+        </AppShell.Main>
+      </AppShell>
     </MantineProvider>
   );
 }

@@ -1,0 +1,28 @@
+{
+  "player_game_scores": [
+    {
+      "game": "Sidereal Confluence",
+      "player": "kelsin",
+      "rank": 12,
+      "score": 37
+    },
+    {
+      "game": "Agricola",
+      "player": "waymost",
+      "rank": 3,
+      "score": 46
+    },
+    {
+      "game": "Agricola",
+      "player": "kelsin",
+      "rank": 7,
+      "score": 42
+    },
+    {
+      "game": "Sidereal Confluence",
+      "player": "waymost",
+      "rank": 4,
+      "score": 45
+    }
+  ]
+}
