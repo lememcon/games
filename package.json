@@ -1,0 +1,92 @@
+{
+  "name": "lememcon-games",
+  "version": "0.0.1",
+  "type": "module",
+  "homepage": "https://games.lememcon.com",
+  "repository": "github:lememcon/games",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "fix": "run-s pretty:fix lint:fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "pretty": "prettier -c .",
+    "pretty:fix": "prettier --write .",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ],
+    "rules": {
+      "body-max-line-length": [
+        0,
+        "always"
+      ],
+      "footer-max-line-length": [
+        0,
+        "always"
+      ],
+      "header-max-length": [
+        0,
+        "always"
+      ]
+    }
+  },
+  "prettier": {
+    "plugins": [
+      "@ianvs/prettier-plugin-sort-imports"
+    ],
+    "importOrder": [
+      "<BUILTIN_MODULES>",
+      "",
+      "<THIRD_PARTY_MODULES>",
+      "",
+      "^@mui",
+      "",
+      "^ramda$",
+      "",
+      "^@(/.*)$",
+      "^#(.*)$",
+      "^[.]",
+      "",
+      "^@tests(/.*)$",
+      "",
+      "^(?!.*[.]css$)[./].*$",
+      ".css$"
+    ],
+    "importOrderCaseSensitive": true
+  },
+  "dependencies": {
+    "@mantine/core": "^8.0.0",
+    "@mantine/hooks": "^8.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.26.0",
+    "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react-swc": "^3.9.0",
+    "eslint": "^9.26.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "lefthook": "^1.11.12",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.5.3",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
+    "prettier": "^3.5.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.3"
+  },
+  "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
+}
