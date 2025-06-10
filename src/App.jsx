@@ -56,7 +56,7 @@ function App() {
           const min = data.players.min;
           const max = data.players.max;
 
-          if (num_players < min || num_players > max) {
+          if (num_players > 0 && (num_players < min || num_players > max)) {
             return;
           }
 
