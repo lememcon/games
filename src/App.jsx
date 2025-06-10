@@ -29,19 +29,49 @@ import {
   values,
 } from "ramda";
 
+import game_data from "@/assets/games.json";
 import logo from "@/assets/logo.png";
+
+const images = import.meta.glob("./assets/games/*", {
+  eager: true,
+  import: "default",
+});
+console.log(images);
+console.log(game_data);
 
 function App() {
   const [opened, { toggle }] = useDisclosure();
   const data = useData();
   const [players, setPlayers] = useState([]);
 
+  const num_players = players.length;
   const selected_games = {};
+
   forEach(
     (player) => {
       forEach((item) => {
         if (!(item.game in selected_games)) {
-          selected_games[item.game] = { name: item.game, score: 0 };
+          const id = `${item.bgg_id}`;
+          const data = game_data[id];
+          const min = data.players.min;
+          const max = data.players.max;
+
+          if (num_players < min || num_players > max) {
+            return;
+          }
+
+          selected_games[item.game] = {
+            name: item.game,
+            score: 0,
+            id,
+            min,
+            max,
+          };
+
+          if (data.image) {
+            selected_games[item.game]["image"] =
+              images[`./assets/games/${id}${data.ext}`];
+          }
         }
         const game = selected_games[item.game];
         selected_games[item.game] = assoc(
@@ -55,10 +85,36 @@ function App() {
   );
   const games = map(
     (game) => {
+      const data = game_data[game.id];
+      console.log(game);
       return (
         <Table.Tr key={game.name}>
-          <Table.Td>{game.name}</Table.Td>
+          <Table.Td
+            styles={{
+              td: {
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                gap: "10px",
+              },
+            }}
+          >
+            <img src={game.image} width="50" />
+            <p
+              style={{
+                lineHeight: "75px",
+                margin: 0,
+                padding: 0,
+              }}
+            >
+              {game.name}
+            </p>
+          </Table.Td>
           <Table.Td>{game.score}</Table.Td>
+          <Table.Td>
+            {data.players.min}-{data.players.max}
+          </Table.Td>
         </Table.Tr>
       );
     },
@@ -108,6 +164,7 @@ function App() {
               <Table.Tr>
                 <Table.Th>Game</Table.Th>
                 <Table.Th>Score</Table.Th>
+                <Table.Th>Players</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>{games}</Table.Tbody>
