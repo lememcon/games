@@ -35,7 +35,7 @@ import logo from "@/assets/logo.png";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 
-const images = import.meta.glob("./assets/games/*", {
+const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
 });
@@ -91,7 +91,7 @@ function App() {
 
           if (data.image) {
             selected_games[item.game]["image"] =
-              images[`./assets/games/${id}${data.ext}`];
+              images[`/src/assets/games/${id}${data.ext}`];
           }
         }
         const game = selected_games[item.game];

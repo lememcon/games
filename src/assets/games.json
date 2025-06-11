@@ -787,7 +787,9 @@
     "players": {
       "min": 2,
       "max": 4
-    }
+    },
+    "image": "custom",
+    "ext": ".png"
   },
   "424975": {
     "players": {

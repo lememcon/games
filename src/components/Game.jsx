@@ -7,16 +7,23 @@ import { descend, map, prop, sort } from "ramda";
 
 import games from "@/assets/games.json";
 
+const images = import.meta.glob("@/assets/games/*", {
+  eager: true,
+  import: "default",
+});
+
 const BGG_URL = "https://boardgamegeek.com/boardgame/";
 
 const Game = ({ data, id }) => {
-  console.log(data);
   const players = data.by_id[id];
 
   if (!players || players.length === 0) {
     return null;
   }
   const game = games[id];
+  const image = game.image
+    ? images[`/src/assets/games/${id}${game.ext}`]
+    : null;
 
   const player_nodes = map(
     (player) => (
@@ -55,7 +62,7 @@ const Game = ({ data, id }) => {
             BGG Page
           </a>
         </div>
-        <img src={game.image} width="200" />
+        {image && <img src={image} width="200" />}
       </div>
       <Table>
         <Table.Thead>
