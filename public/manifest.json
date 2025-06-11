@@ -1,0 +1,17 @@
+{
+  "short_name": "Lememcon",
+  "name": "Lememcon Games Tool",
+  "description": "Helper app to choose games to play at Lememcon",
+  "categories": ["entertainment", "games"],
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2c9edc",
+  "background_color": "#ffffff"
+}
