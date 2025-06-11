@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { Link, Route, Switch } from "wouter";
 
 import {
@@ -9,12 +8,14 @@ import {
   MantineProvider,
   MultiSelect,
   Table,
+  createTheme,
 } from "@mantine/core";
 
 import Game from "@/components/Game";
 import useData from "@/hooks/useData";
 
 import "@mantine/core/styles.css";
+import "@/assets/styles.css";
 
 import {
   assoc,
@@ -37,6 +38,22 @@ import usePlayedCounts from "@/hooks/usePlayedCounts";
 const images = import.meta.glob("./assets/games/*", {
   eager: true,
   import: "default",
+});
+const theme = createTheme({
+  colors: {
+    blue: [
+      "#e3f9ff",
+      "#d2edfc",
+      "#a8d8f2",
+      "#7ac2e9",
+      "#55afe1",
+      "#3da4dd",
+      "#2c9edc",
+      "#198ac4",
+      "#017ab0",
+      "#006a9d",
+    ],
+  },
 });
 
 function App() {
@@ -93,53 +110,44 @@ function App() {
       const played = getPlayedCount(game.id);
       return (
         <Table.Tr key={game.name}>
-          <Table.Td
-            styles={{
-              td: {
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                gap: "10px",
-              },
-            }}
-          >
+          <Table.Td>
             <img src={game.image} width="50" />
-            <p
-              style={{
-                lineHeight: "75px",
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              {game.name}
-            </p>
+          </Table.Td>
+          <Table.Td>
+            <Link href={`/games/${game.id}`}>{game.name}</Link>
           </Table.Td>
           <Table.Td>{game.score}</Table.Td>
           <Table.Td>
             {data.players.min}-{data.players.max}
           </Table.Td>
           <Table.Td>
-            <div style={{ display: "flex", flexDirection: "row", gap: "1em" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.3em",
+                alignItems: "center",
+              }}
+            >
               <p style={{ margin: 0, padding: 0 }}>{played}</p>
-              <Button
-                size="compact-xs"
-                disabled={played <= 0}
-                onClick={() => decPlayedCount(game.id)}
+              <div
+                style={{ display: "flex", flexDirection: "row", gap: "1em" }}
               >
-                -
-              </Button>
-              <Button size="compact-xs" onClick={() => incPlayedCount(game.id)}>
-                +
-              </Button>
+                <Button
+                  size="compact-xs"
+                  disabled={played <= 0}
+                  onClick={() => decPlayedCount(game.id)}
+                >
+                  -
+                </Button>
+                <Button
+                  size="compact-xs"
+                  onClick={() => incPlayedCount(game.id)}
+                >
+                  +
+                </Button>
+              </div>
             </div>
-          </Table.Td>
-          <Table.Td>
-            <Button>
-              <Link href={`/games/${game.id}`}>
-                <Search color="white" size="16" />
-              </Link>
-            </Button>
           </Table.Td>
         </Table.Tr>
       );
@@ -147,7 +155,7 @@ function App() {
     sort(descend(prop("score")), values(selected_games)),
   );
   return (
-    <MantineProvider defaultColorTheme="auto">
+    <MantineProvider defaultColorTheme="auto" theme={theme}>
       <AppShell header={{ height: 60 }} padding="md">
         <AppShell.Header>
           <Group h="100%" px="md">
@@ -185,11 +193,11 @@ function App() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th></Table.Th>
                     <Table.Th>Game</Table.Th>
                     <Table.Th>Score</Table.Th>
                     <Table.Th>Players</Table.Th>
                     <Table.Th>Played</Table.Th>
-                    <Table.Th></Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>{games}</Table.Tbody>

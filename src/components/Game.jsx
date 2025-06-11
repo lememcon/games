@@ -66,7 +66,12 @@ const Game = ({ data, id }) => {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>{player_nodes}</Table.Tbody>
-      </Table>{" "}
+      </Table>
+      <Button style={{ marginTop: "2em" }}>
+        <Link href="/">
+          <CircleArrowLeft color="white" size="16" />
+        </Link>
+      </Button>
     </div>
   );
 };
