@@ -10,12 +10,29 @@ const useData = () => {
     scores: [],
     by_game: {},
     by_player: {},
+    by_id: {},
   });
 
   useEffect(() => {
     fetch(DATA_JSON)
       .then((res) => res.json())
       .then((data) => {
+        const by_id = reduce(
+          (games, score) => {
+            const id = `${score.bgg_id}`;
+            if (id in games) {
+              return assoc(
+                id,
+                append(dissoc("bgg_id", score), games[id]),
+                games,
+              );
+            }
+
+            return assoc(id, [dissoc("bgg_id", score)], games);
+          },
+          {},
+          data.player_game_scores,
+        );
         const by_game = reduce(
           (games, score) => {
             if (score.game in games) {
@@ -52,6 +69,7 @@ const useData = () => {
           scores: data.player_game_scores,
           by_game,
           by_player,
+          by_id,
         });
       });
   }, []);

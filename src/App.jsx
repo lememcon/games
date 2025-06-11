@@ -1,3 +1,6 @@
+import { Search } from "lucide-react";
+import { Link, Route, Switch } from "wouter";
+
 import {
   AppShell,
   Button,
@@ -8,6 +11,7 @@ import {
   Table,
 } from "@mantine/core";
 
+import Game from "@/components/Game";
 import useData from "@/hooks/useData";
 
 import "@mantine/core/styles.css";
@@ -130,6 +134,13 @@ function App() {
               </Button>
             </div>
           </Table.Td>
+          <Table.Td>
+            <Button>
+              <Link href={`/games/${game.id}`}>
+                <Search color="white" size="16" />
+              </Link>
+            </Button>
+          </Table.Td>
         </Table.Tr>
       );
     },
@@ -145,38 +156,46 @@ function App() {
           </Group>
         </AppShell.Header>
         <AppShell.Main>
-          <MultiSelect
-            label="Filter By Players"
-            placeholder="Pick Player"
-            value={players}
-            data={sortBy(identity, keys(data.by_player))}
-            description="Which players are included in the list of games"
-            onChange={setPlayers}
-            clearable
-            comboboxProps={{
-              width: 300,
-              position: "bottom-start",
-              shadow: "md",
-              transitionProps: { transition: "pop", duration: 200 },
-            }}
-          />
-          <Checkbox
-            checked={hidePlayed}
-            onChange={(event) => setHidePlayed(event.currentTarget.checked)}
-            style={{ margin: "1em 0" }}
-            label="Hide played games"
-          />
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Game</Table.Th>
-                <Table.Th>Score</Table.Th>
-                <Table.Th>Players</Table.Th>
-                <Table.Th>Played</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>{games}</Table.Tbody>
-          </Table>
+          <Switch>
+            <Route path="/games/:id">
+              {(params) => <Game data={data} id={params.id} />}
+            </Route>
+            <Route>
+              <MultiSelect
+                label="Filter By Players"
+                placeholder="Pick Player"
+                value={players}
+                data={sortBy(identity, keys(data.by_player))}
+                description="Which players are included in the list of games"
+                onChange={setPlayers}
+                clearable
+                comboboxProps={{
+                  width: 300,
+                  position: "bottom-start",
+                  shadow: "md",
+                  transitionProps: { transition: "pop", duration: 200 },
+                }}
+              />
+              <Checkbox
+                checked={hidePlayed}
+                onChange={(event) => setHidePlayed(event.currentTarget.checked)}
+                style={{ margin: "1em 0" }}
+                label="Hide played games"
+              />
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Game</Table.Th>
+                    <Table.Th>Score</Table.Th>
+                    <Table.Th>Players</Table.Th>
+                    <Table.Th>Played</Table.Th>
+                    <Table.Th></Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>{games}</Table.Tbody>
+              </Table>{" "}
+            </Route>
+          </Switch>
         </AppShell.Main>
       </AppShell>
     </MantineProvider>
