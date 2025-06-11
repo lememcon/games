@@ -1,16 +1,12 @@
-import { useState } from "react";
-
 import {
   AppShell,
-  Burger,
-  Flex,
+  Button,
+  Checkbox,
   Group,
   MantineProvider,
   MultiSelect,
-  Skeleton,
   Table,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 
 import useData from "@/hooks/useData";
 
@@ -31,20 +27,21 @@ import {
 
 import game_data from "@/assets/games.json";
 import logo from "@/assets/logo.png";
+import useLocalState from "@/hooks/useLocalState";
+import usePlayedCounts from "@/hooks/usePlayedCounts";
 
 const images = import.meta.glob("./assets/games/*", {
   eager: true,
   import: "default",
 });
-console.log(images);
-console.log(game_data);
 
 function App() {
-  const [opened, { toggle }] = useDisclosure();
   const data = useData();
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useLocalState("players", []);
+  const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
+  const [getPlayedCount, incPlayedCount, decPlayedCount] = usePlayedCounts();
 
-  const num_players = players.length;
+  const num_players = players.length || 0;
   const selected_games = {};
 
   forEach(
@@ -56,6 +53,9 @@ function App() {
           const min = data.players.min;
           const max = data.players.max;
 
+          if (hidePlayed && getPlayedCount(id) > 0) {
+            return;
+          }
           if (num_players > 0 && (num_players < min || num_players > max)) {
             return;
           }
@@ -79,14 +79,14 @@ function App() {
           game.score + item.score,
           game,
         );
-      }, data.by_player[player]);
+      }, data.by_player[player] || []);
     },
-    players.length > 0 ? players : keys(data.by_player),
+    (players.length > 0 ? players : keys(data.by_player)) || [],
   );
   const games = map(
     (game) => {
       const data = game_data[game.id];
-      console.log(game);
+      const played = getPlayedCount(game.id);
       return (
         <Table.Tr key={game.name}>
           <Table.Td
@@ -115,6 +115,21 @@ function App() {
           <Table.Td>
             {data.players.min}-{data.players.max}
           </Table.Td>
+          <Table.Td>
+            <div style={{ display: "flex", flexDirection: "row", gap: "1em" }}>
+              <p style={{ margin: 0, padding: 0 }}>{played}</p>
+              <Button
+                size="compact-xs"
+                disabled={played <= 0}
+                onClick={() => decPlayedCount(game.id)}
+              >
+                -
+              </Button>
+              <Button size="compact-xs" onClick={() => incPlayedCount(game.id)}>
+                +
+              </Button>
+            </div>
+          </Table.Td>
         </Table.Tr>
       );
     },
@@ -122,32 +137,18 @@ function App() {
   );
   return (
     <MantineProvider defaultColorTheme="auto">
-      <AppShell
-        header={{ height: 60 }}
-        navbar={{
-          width: 300,
-          breakpoint: "sm",
-          collapsed: { mobile: !opened },
-        }}
-        padding="md"
-      >
+      <AppShell header={{ height: 60 }} padding="md">
         <AppShell.Header>
           <Group h="100%" px="md">
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
             <img src={logo} height="48px" />
             <h3>LememCon</h3>
           </Group>
         </AppShell.Header>
-        <AppShell.Navbar p="md"></AppShell.Navbar>
         <AppShell.Main>
           <MultiSelect
             label="Filter By Players"
             placeholder="Pick Player"
+            value={players}
             data={sortBy(identity, keys(data.by_player))}
             description="Which players are included in the list of games"
             onChange={setPlayers}
@@ -159,12 +160,19 @@ function App() {
               transitionProps: { transition: "pop", duration: 200 },
             }}
           />
+          <Checkbox
+            checked={hidePlayed}
+            onChange={(event) => setHidePlayed(event.currentTarget.checked)}
+            style={{ margin: "1em 0" }}
+            label="Hide played games"
+          />
           <Table>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Game</Table.Th>
                 <Table.Th>Score</Table.Th>
                 <Table.Th>Players</Table.Th>
+                <Table.Th>Played</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>{games}</Table.Tbody>
