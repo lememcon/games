@@ -49,6 +49,7 @@ const Game = ({ data, id }) => {
           flexDirection: "row",
           justifyContent: "space-between",
           marginBottom: "1em",
+          alignItems: "flex-start",
         }}
       >
         <div>
