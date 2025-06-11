@@ -31,11 +31,11 @@ const Game = ({ data, id }) => {
 
   return (
     <div>
-      <Button>
-        <Link href="/">
+      <Link href="/">
+        <Button>
           <CircleArrowLeft color="white" size="16" />
-        </Link>
-      </Button>
+        </Button>
+      </Link>
       <div
         style={{
           display: "flex",
