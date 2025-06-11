@@ -193,8 +193,8 @@ function App() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th></Table.Th>
                     <Table.Th>Game</Table.Th>
+                    <Table.Th></Table.Th>
                     <Table.Th>Score</Table.Th>
                     <Table.Th>Players</Table.Th>
                     <Table.Th>Played</Table.Th>

@@ -3,3 +3,8 @@ a:visited {
   text-decoration: none;
   color: #2c9edc;
 }
+
+#root {
+  max-width: 640px;
+  margin: 0 auto;
+}
