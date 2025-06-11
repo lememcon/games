@@ -67,11 +67,11 @@ const Game = ({ data, id }) => {
         </Table.Thead>
         <Table.Tbody>{player_nodes}</Table.Tbody>
       </Table>
-      <Button style={{ marginTop: "2em" }}>
-        <Link href="/">
+      <Link href="/">
+        <Button style={{ marginTop: "2em" }}>
           <CircleArrowLeft color="white" size="16" />
-        </Link>
-      </Button>
+        </Button>
+      </Link>
     </div>
   );
 };
