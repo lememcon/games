@@ -56,7 +56,7 @@ function App() {
           if (hidePlayed && getPlayedCount(id) > 0) {
             return;
           }
-          if (num_players > 0 && (num_players < min || num_players > max)) {
+          if (num_players > 1 && (num_players < min || num_players > max)) {
             return;
           }
 
