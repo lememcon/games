@@ -35,6 +35,7 @@ import {
   values,
 } from "ramda";
 
+import bgg from "@/assets/bgg.svg";
 import game_data from "@/assets/games.json";
 import logo from "@/assets/logo.png";
 import useLocalState from "@/hooks/useLocalState";
@@ -201,6 +202,7 @@ function App() {
               data={allYears}
               onChange={handleYear}
             />
+            <img src={bgg} height="24px" />
           </Group>
         </AppShell.Header>
         <AppShell.Main>
