@@ -6,7 +6,7 @@ const path = require("node:path");
 const R = require("ramda");
 const { XMLParser } = require("fast-xml-parser");
 
-const DATA_URL = "https://data.lememcon.com/data.json";
+const DATA_URL = "https://data.lememcon.com/2026.json";
 const BGG_URL = "https://boardgamegeek.com/xmlapi2/thing?type=boardgame&id=";
 const GAMES_FILE = "./src/assets/games.json";
 

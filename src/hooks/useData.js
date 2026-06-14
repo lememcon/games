@@ -2,19 +2,21 @@ import { useEffect, useState } from "react";
 
 import { append, assoc, dissoc, reduce } from "ramda";
 
-const DATA_JSON = "https://data.lememcon.com/data.json";
-
-const useData = () => {
+const useData = (year) => {
   const [data, setData] = useState({
     loading: true,
     scores: [],
     by_game: {},
     by_player: {},
     by_id: {},
+    max: 0,
   });
 
+  const url = `https://data.lememcon.com/${year}.json`;
+  let max = 0;
+
   useEffect(() => {
-    fetch(DATA_JSON)
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         const by_id = reduce(
@@ -28,6 +30,7 @@ const useData = () => {
               );
             }
 
+            max = Math.max(max, score.score);
             return assoc(id, [dissoc("bgg_id", score)], games);
           },
           {},
@@ -70,9 +73,10 @@ const useData = () => {
           by_game,
           by_player,
           by_id,
+          max,
         });
       });
-  }, []);
+  }, [url]);
 
   return data;
 };

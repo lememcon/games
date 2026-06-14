@@ -5,8 +5,11 @@ import {
   Button,
   Checkbox,
   Group,
+  InputLabel,
   MantineProvider,
+  MenuItem,
   MultiSelect,
+  Select,
   Table,
   createTheme,
 } from "@mantine/core";
@@ -16,6 +19,8 @@ import useData from "@/hooks/useData";
 
 import "@mantine/core/styles.css";
 import "@/assets/styles.css";
+
+import { useLocation } from "wouter";
 
 import {
   assoc,
@@ -34,6 +39,7 @@ import game_data from "@/assets/games.json";
 import logo from "@/assets/logo.png";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
+import { Score } from "./util";
 
 const images = import.meta.glob("@/assets/games/*", {
   eager: true,
@@ -55,15 +61,36 @@ const theme = createTheme({
     ],
   },
 });
+const startYear = 2025;
+const currentYear = new Date().getFullYear();
+
+// Generate list of all years
+const allYears = [];
+for (let i = startYear; i <= currentYear; i++) {
+  allYears.push(`${i}`);
+}
 
 function App() {
-  const data = useData();
+  const [year, setYear] = useLocalState("year", `${currentYear}`);
+  const data = useData(year);
   const [players, setPlayers] = useLocalState("players", []);
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
-  const [getPlayedCount, incPlayedCount, decPlayedCount] = usePlayedCounts();
+  const [getPlayedCount, incPlayedCount, decPlayedCount] =
+    usePlayedCounts(year);
+  const [_, setLocation] = useLocation();
 
   const num_players = players.length || 0;
+  const selected_max =
+    players.length === 0
+      ? data.max * Object.keys(data.by_player).length
+      : data.max * num_players;
   const selected_games = {};
+
+  const handleYear = (year) => {
+    setPlayers([]);
+    setYear(year);
+    setLocation("/");
+  };
 
   forEach(
     (player) => {
@@ -71,8 +98,13 @@ function App() {
         if (!(item.game in selected_games)) {
           const id = `${item.bgg_id}`;
           const data = game_data[id];
-          const min = data.players.min;
-          const max = data.players.max;
+
+          let min = 0;
+          let max = 99;
+          if (data && data.players) {
+            min = data.players.min;
+            max = data.players.max;
+          }
 
           if (hidePlayed && getPlayedCount(id) > 0) {
             return;
@@ -89,7 +121,7 @@ function App() {
             max,
           };
 
-          if (data.image) {
+          if (data && data.image) {
             selected_games[item.game]["image"] =
               images[`/src/assets/games/${id}${data.ext}`];
           }
@@ -116,9 +148,11 @@ function App() {
           <Table.Td>
             <Link href={`/games/${game.id}`}>{game.name}</Link>
           </Table.Td>
-          <Table.Td>{game.score}</Table.Td>
           <Table.Td>
-            {data.players.min}-{data.players.max}
+            <Score score={game.score} max={selected_max} />
+          </Table.Td>
+          <Table.Td>
+            {data && data.players && `${data.players.min}-${data.players.max}`}
           </Table.Td>
           <Table.Td>
             <div
@@ -161,6 +195,12 @@ function App() {
           <Group h="100%" px="md">
             <img src={logo} height="48px" />
             <h3>LememCon</h3>
+            <Select
+              id="year"
+              value={year}
+              data={allYears}
+              onChange={handleYear}
+            />
           </Group>
         </AppShell.Header>
         <AppShell.Main>

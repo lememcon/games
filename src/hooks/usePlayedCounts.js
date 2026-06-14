@@ -4,8 +4,8 @@ import { assoc, dec, dissoc, inc } from "ramda";
 
 import useLocalState from "@/hooks/useLocalState";
 
-const usePlayedCounts = () => {
-  const [counts, setCounts] = useLocalState("played_counts", {});
+const usePlayedCounts = (year) => {
+  const [counts, setCounts] = useLocalState(`played_counts_${year}`, {});
 
   const decPlayedCount = useCallback(
     (id) => {

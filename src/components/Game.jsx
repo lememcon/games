@@ -6,6 +6,7 @@ import { Button, Table } from "@mantine/core";
 import { descend, map, prop, sort } from "ramda";
 
 import games from "@/assets/games.json";
+import { Score, normalized_score } from "../util";
 
 const images = import.meta.glob("@/assets/games/*", {
   eager: true,
@@ -15,20 +16,26 @@ const images = import.meta.glob("@/assets/games/*", {
 const BGG_URL = "https://boardgamegeek.com/boardgame/";
 
 const Game = ({ data, id }) => {
+  const max = data.max;
   const players = data.by_id[id];
 
   if (!players || players.length === 0) {
     return null;
   }
   const game = games[id];
-  const image = game.image
-    ? images[`/src/assets/games/${id}${game.ext}`]
+  const image = game
+    ? game.image
+      ? images[`/src/assets/games/${id}${game.ext}`]
+      : null
     : null;
 
   const player_nodes = map(
     (player) => (
       <Table.Tr key={player.player}>
         <Table.Td>{player.player}</Table.Td>
+        <Table.Td style={{ verticalAlign: "middle" }}>
+          <Score score={player.score} max={max} />
+        </Table.Td>
         <Table.Td>{player.rank}</Table.Td>
         <Table.Td>{player.score}</Table.Td>
       </Table.Tr>
@@ -55,9 +62,13 @@ const Game = ({ data, id }) => {
         <div>
           <h1>{players[0].game}</h1>
           <p>
-            <strong>Players:</strong>
-            &nbsp;
-            {game.players.min}-{game.players.max}
+            {game && game.players && (
+              <>
+                <strong>Players:</strong>
+                &nbsp;
+                {game.players.min}-{game.players.max}
+              </>
+            )}
           </p>
           <a href={`${BGG_URL}${id}/`} target="_blank">
             BGG Page
@@ -69,8 +80,9 @@ const Game = ({ data, id }) => {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Player</Table.Th>
+            <Table.Th>Normalized Score</Table.Th>
             <Table.Th>Rank</Table.Th>
-            <Table.Th>Score</Table.Th>
+            <Table.Th>Raw Score</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>{player_nodes}</Table.Tbody>
