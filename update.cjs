@@ -6,9 +6,14 @@ const path = require("node:path");
 const R = require("ramda");
 const { XMLParser } = require("fast-xml-parser");
 
-const DATA_URL = "https://data.lememcon.com/2026.json";
+const currentYear = new Date().getFullYear();
+const DATA_URL = `https://data.lememcon.com/${currentYear}.json`;
 const BGG_URL = "https://boardgamegeek.com/xmlapi2/thing?type=boardgame&id=";
 const GAMES_FILE = "./src/assets/games.json";
+const BGG_API_KEY = process.env.BGG_API_KEY;
+const HEADERS = {
+  Authorization: `Bearer ${BGG_API_KEY}`,
+};
 
 const game_data = require(GAMES_FILE);
 
@@ -30,10 +35,11 @@ const parse_games_from_bgg = (ids) => {
   const parser = new XMLParser(options);
 
   const id_query = ids.join(",");
+
   const url = `${BGG_URL}${id_query}`;
 
   console.log("Fetching:", url);
-  return fetch(url)
+  return fetch(url, { headers: HEADERS })
     .then((response) => response.text())
     .then((text) => parser.parse(text))
     .then((xml) => {
@@ -96,7 +102,7 @@ const load_groups = (groups) => {
 };
 
 // Grab the current data file
-fetch(DATA_URL)
+fetch(DATA_URL, { headers: HEADERS })
   .then((response) => response.json())
   .then((data) => {
     // Collect a set of bgg_ids that we need
@@ -136,10 +142,12 @@ fetch(DATA_URL)
         const local = `./src/assets/games/${id}${ext}`;
         if (!fs.existsSync(local)) {
           // Fetch image
-          console.log("Fetching:", all_games[id].image, "as", ext);
-          fetch(remote)
-            .then((response) => response.arrayBuffer())
-            .then((buf) => fs.writeFileSync(local, Buffer.from(buf)));
+          if (all_games[id].image !== "custom") {
+            console.log("Fetching:", all_games[id].image, "as", ext);
+            fetch(remote)
+              .then((response) => response.arrayBuffer())
+              .then((buf) => fs.writeFileSync(local, Buffer.from(buf)));
+          }
         }
       }
     }, ids);
