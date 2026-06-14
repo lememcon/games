@@ -1,0 +1,5 @@
+/assets/*.png
+  Cache-Control: public, max-age=604800
+
+/assets/*.jpg
+  Cache-Control: public, max-age=604800
