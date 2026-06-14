@@ -202,7 +202,7 @@ function App() {
               data={allYears}
               onChange={handleYear}
             />
-            <img src={bgg} height="24px" />
+            <img src={bgg} height="24px" className="mantine-visible-from-sm" />
           </Group>
         </AppShell.Header>
         <AppShell.Main>
