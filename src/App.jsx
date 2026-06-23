@@ -9,6 +9,7 @@ import {
   MantineProvider,
   MenuItem,
   MultiSelect,
+  Popover,
   Select,
   Table,
   createTheme,
@@ -23,12 +24,14 @@ import "@/assets/styles.css";
 import { useLocation } from "wouter";
 
 import {
+  addIndex,
   assoc,
   descend,
   forEach,
   identity,
   keys,
   map,
+  pick,
   prop,
   sort,
   sortBy,
@@ -81,6 +84,7 @@ function App() {
   const [_, setLocation] = useLocation();
 
   const num_players = players.length || 0;
+  const individual_max = data.max;
   const selected_max =
     players.length === 0
       ? data.max * Object.keys(data.by_player).length
@@ -131,18 +135,27 @@ function App() {
         selected_games[item.game] = assoc(
           "score",
           game.score + item.score,
-          game,
+          assoc(
+            "players",
+            assoc(
+              player,
+              assoc("name", player, pick(["rank", "score"], item)),
+              game.players || {},
+            ),
+            game,
+          ),
         );
       }, data.by_player[player] || []);
     },
     (players.length > 0 ? players : keys(data.by_player)) || [],
   );
-  const games = map(
-    (game) => {
+  const games = addIndex(map)(
+    (game, i) => {
       const data = game_data[game.id];
       const played = getPlayedCount(game.id);
       return (
         <Table.Tr key={game.name}>
+          <Table.Td>{i + 1}.</Table.Td>
           <Table.Td>
             <img src={game.image} width="50" />
           </Table.Td>
@@ -150,7 +163,45 @@ function App() {
             <Link href={`/games/${game.id}`}>{game.name}</Link>
           </Table.Td>
           <Table.Td>
-            <Score score={game.score} max={selected_max} />
+            <Popover withArrow arrowPosition="side" arrowSize={12} shadow="lg">
+              <Popover.Target>
+                <div>
+                  <Score score={game.score} max={selected_max} />
+                </div>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Player</Table.Th>
+                      <Table.Th>Rank</Table.Th>
+                      <Table.Th>Score</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {map(
+                      (player) => {
+                        const key = `${game.name}-${player.name}`;
+
+                        return (
+                          <Table.Tr key={key}>
+                            <Table.Td>{player.name}</Table.Td>
+                            <Table.Td>{player.rank}</Table.Td>
+                            <Table.Td>
+                              <Score
+                                score={player.score}
+                                max={individual_max}
+                              />
+                            </Table.Td>
+                          </Table.Tr>
+                        );
+                      },
+                      sortBy(prop("rank"), values(game.players)),
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </Popover.Dropdown>
+            </Popover>
           </Table.Td>
           <Table.Td>
             {data && data.players && `${data.players.min}-${data.players.max}`}
@@ -235,6 +286,7 @@ function App() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th>Rank</Table.Th>
                     <Table.Th>Game</Table.Th>
                     <Table.Th></Table.Th>
                     <Table.Th>Score</Table.Th>
