@@ -6,9 +6,13 @@
   "repository": "github:lememcon/games",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "check": "run-s lint pretty typecheck test:run build",
     "fix": "run-s pretty:fix lint:fix",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
