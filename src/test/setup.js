@@ -25,3 +25,7 @@ window.ResizeObserver = class {
   unobserve() {}
   disconnect() {}
 };
+
+// Mantine's Combobox scrolls the active option into view; jsdom has no layout
+// so scrollIntoView is undefined.
+window.Element.prototype.scrollIntoView = vi.fn();
