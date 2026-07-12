@@ -5,8 +5,7 @@ h4,
 h5,
 h6 {
   font-family:
-    Georgia, "Iowan Old Style", "Palatino Linotype", Palatino,
-    "Times New Roman", serif;
+    "Trebuchet MS", "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
 }
 
 a:link,
@@ -15,20 +14,281 @@ a:visited {
   color: #8a5d0c;
 }
 
-/* Felt table behind the content, scorepad paper for the content column. */
+/* Light tray theme: a warm neutral table with a near-white paper surface for
+   the app column so the white component cards read as objects on a tray. */
 body {
-  background: radial-gradient(
-    120% 80% at 50% -10%,
-    #1c3b33 0%,
-    #16302a 45%,
-    #0e211d 100%
-  );
+  background: #e9e4d8;
   background-attachment: fixed;
 }
 
 #root {
-  max-width: 640px;
+  max-width: 960px;
   margin: 0 auto;
   min-height: 100vh;
-  background: #f1ead8;
+  background: #fbf9f4;
+}
+
+/* ---- Sticky filter bar ---- */
+.tray-filters {
+  position: sticky;
+  top: 60px;
+  z-index: 3;
+  background: #fbf9f4;
+  padding-block: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #ece4d5;
+}
+
+/* ---- List layout ---- */
+.tray-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.tray-podium {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.tray-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+/* ---- Shared cover art + rank chip ---- */
+.tray-cover {
+  position: relative;
+  flex: none;
+}
+
+.tray-cover--lg {
+  width: 72px;
+  height: 72px;
+}
+
+.tray-cover--sm {
+  width: 46px;
+  height: 46px;
+}
+
+.tray-cover img,
+.tray-cover__blank {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #efe9dc;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.tray-cover--lg img,
+.tray-cover--lg .tray-cover__blank {
+  border-radius: 11px;
+}
+
+.tray-cover--sm img,
+.tray-cover--sm .tray-cover__blank {
+  border-radius: 9px;
+}
+
+.tray-cover__chip {
+  position: absolute;
+  left: -7px;
+  top: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--mantine-font-family-monospace);
+  font-weight: 700;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.tray-cover--lg .tray-cover__chip {
+  min-width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+}
+
+/* ---- Names, eyebrows, meta ---- */
+.tray-name,
+.tray-name:link,
+.tray-name:visited {
+  color: #2b2723;
+  font-weight: 700;
+  line-height: 1.15;
+  display: inline-block;
+  text-wrap: balance;
+}
+
+.tray-name:hover {
+  text-decoration: underline;
+}
+
+.tray-eyebrow {
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7a736a;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.tray-meta {
+  font-size: 0.72rem;
+  color: #7a736a;
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tray-pips {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+/* ---- Podium card ---- */
+.tray-card {
+  background: #fff;
+  border: 1px solid #ece4d5;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px -18px rgba(70, 55, 20, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.tray-card__spine {
+  height: 8px;
+}
+
+.tray-card__body {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.tray-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tray-card__title {
+  min-width: 0;
+}
+
+.tray-card__title .tray-name {
+  font-size: 1.2rem;
+}
+
+.tray-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.tray-card__played {
+  margin-left: auto;
+}
+
+/* ---- Compact row ---- */
+.tray-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
+  background: #fff;
+  border: 1px solid #ece4d5;
+  border-radius: 12px;
+  padding: 0.5rem 0.7rem 0.5rem 0.85rem;
+}
+
+.tray-row:hover {
+  border-color: #ddd2bd;
+}
+
+.tray-row__main {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.tray-row__main .tray-name {
+  font-size: 0.98rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.tray-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  flex-wrap: wrap;
+}
+
+.tray-row__score {
+  flex: 0 1 auto;
+  min-width: 140px;
+}
+
+/* ---- Played stepper ---- */
+.tray-played {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tray-played__label {
+  font-size: 0.74rem;
+  color: #7a736a;
+  font-weight: 600;
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tray-played__steps {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.tray-step {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: #f0eadd;
+  color: #2b2723;
+  font-family: var(--mantine-font-family-monospace);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.tray-step:hover:not(:disabled) {
+  background: #e7ddc9;
+}
+
+.tray-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

@@ -12,6 +12,9 @@ interface ScorePopoverProps {
   individualMax: number;
 }
 
+// Clicking the aggregate score opens a breakdown of every selected player's
+// rank and score for that game. The target's own score is normalized against
+// selectedMax; each player's against individualMax.
 const ScorePopover = ({
   score,
   players,
@@ -20,7 +23,7 @@ const ScorePopover = ({
 }: ScorePopoverProps) => (
   <Popover withArrow arrowPosition="side" arrowSize={12} shadow="lg">
     <Popover.Target>
-      <div>
+      <div style={{ cursor: "pointer" }}>
         <Score score={score} max={selectedMax} />
       </div>
     </Popover.Target>

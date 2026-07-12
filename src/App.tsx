@@ -16,7 +16,7 @@ import { identity, keys, sortBy } from "ramda";
 import game_data from "@/assets/games.json";
 import Filters from "@/components/Filters";
 import Game from "@/components/Game";
-import GamesTable from "@/components/GamesTable";
+import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
 import useData from "@/hooks/useData";
 import useLocalState from "@/hooks/useLocalState";
@@ -30,9 +30,9 @@ const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
 }) as Record<string, string>;
-// Tabletop identity: victory-point amber accent, a rulebook serif for
-// headings, and a monospace face for the scores so digits line up like a
-// scorepad. The felt/paper surfaces live in src/assets/styles.css.
+// Component-tray identity: a rounded, friendly display face, an amber
+// victory-point accent, and a monospace face for the scores so digits line up
+// like a scorepad. The light paper surfaces live in src/assets/styles.css.
 const theme = createTheme({
   primaryColor: "amber",
   primaryShade: 6,
@@ -52,12 +52,12 @@ const theme = createTheme({
   },
   defaultRadius: "md",
   fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    "'Trebuchet MS', 'Segoe UI', system-ui, Helvetica, Arial, sans-serif",
   fontFamilyMonospace:
     "'SF Mono', 'JetBrains Mono', 'Roboto Mono', ui-monospace, Menlo, Consolas, monospace",
   headings: {
     fontFamily:
-      "Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif",
+      "'Trebuchet MS', 'Segoe UI', system-ui, Helvetica, Arial, sans-serif",
   },
 });
 const startYear = 2025;
@@ -127,6 +127,8 @@ function App() {
                   onPlayersChange={setPlayers}
                   hidePlayed={hidePlayed}
                   onHidePlayedChange={setHidePlayed}
+                  shown={games.length}
+                  total={keys(data.by_game).length}
                 />
                 {games.length === 0 ? (
                   <Stack align="center" gap="xs" mt="xl">
@@ -145,7 +147,7 @@ function App() {
                     )}
                   </Stack>
                 ) : (
-                  <GamesTable
+                  <GamesList
                     games={games}
                     selectedMax={selectedMax}
                     individualMax={individualMax}

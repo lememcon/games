@@ -1,10 +1,8 @@
 import { Link } from "wouter";
 
-import { Table } from "@mantine/core";
-
 import PlayedCounter from "@/components/PlayedCounter";
-import Score from "@/components/Score";
 import ScorePopover from "@/components/ScorePopover";
+import { medalColor, paletteColor } from "@/lib/colors";
 import type { Bounds, SelectedGame } from "@/types";
 
 interface GameRowProps {
@@ -18,6 +16,9 @@ interface GameRowProps {
   onDec: () => void;
 }
 
+// The compact chase unit: a mini horizontal card keeping the tray language
+// (cover art, corner rank chip, score) at roughly a third the height of a
+// GameCard. Clicking the score opens the per-player breakdown.
 const GameRow = ({
   game,
   rank,
@@ -27,28 +28,47 @@ const GameRow = ({
   played,
   onInc,
   onDec,
-}: GameRowProps) => (
-  <Table.Tr>
-    <Table.Td>{rank}.</Table.Td>
-    <Table.Td>
-      <img src={game.image} width="50" />
-    </Table.Td>
-    <Table.Td>
-      <Link href={`/games/${game.id}`}>{game.name}</Link>
-    </Table.Td>
-    <Table.Td>
-      <ScorePopover
-        score={game.score}
-        players={game.players}
-        selectedMax={selectedMax}
-        individualMax={individualMax}
-      />
-    </Table.Td>
-    <Table.Td>{bounds && `${bounds.min}-${bounds.max}`}</Table.Td>
-    <Table.Td>
+}: GameRowProps) => {
+  const chip = medalColor(rank) ?? paletteColor(game.name);
+
+  return (
+    <div className="tray-row">
+      <div className="tray-cover tray-cover--sm">
+        {game.image ? (
+          <img src={game.image} alt={game.name} />
+        ) : (
+          <div className="tray-cover__blank" aria-hidden />
+        )}
+        <span className="tray-cover__chip" style={{ background: chip }}>
+          {rank}
+        </span>
+      </div>
+
+      <div className="tray-row__main">
+        <Link href={`/games/${game.id}`} className="tray-name">
+          {game.name}
+        </Link>
+        {bounds && (
+          <div className="tray-row__meta">
+            <span className="tray-meta">
+              {bounds.min}-{bounds.max}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="tray-row__score">
+        <ScorePopover
+          score={game.score}
+          players={game.players}
+          selectedMax={selectedMax}
+          individualMax={individualMax}
+        />
+      </div>
+
       <PlayedCounter count={played} onInc={onInc} onDec={onDec} />
-    </Table.Td>
-  </Table.Tr>
-);
+    </div>
+  );
+};
 
 export default GameRow;
