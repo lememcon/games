@@ -292,3 +292,40 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ---- Back button ---- */
+.tray-back,
+.tray-back:link,
+.tray-back:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: #f0eadd;
+  border: 1px solid #ece4d5;
+  color: #2b2723;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tray-back:hover {
+  background: #e7ddc9;
+  border-color: #ddd2bd;
+}
+
+/* ---- Year selector ---- */
+.tray-year {
+  background: #f0eadd;
+  border: 1px solid #ece4d5;
+  border-radius: 999px;
+  color: #2b2723;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.tray-year:hover {
+  background: #e7ddc9;
+  border-color: #ddd2bd;
+}

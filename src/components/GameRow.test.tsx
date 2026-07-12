@@ -62,6 +62,22 @@ describe("GameRow", () => {
     expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
+  it("colors the rank chip by score band, not by name", () => {
+    const chipBg = (score: number, name: string) => {
+      const { getByText, unmount } = renderRow({
+        game: { ...game, name, score },
+      });
+      const bg = getByText("5").style.background;
+      unmount();
+      return bg;
+    };
+
+    // A strong score and a weak score land in different bands → different color.
+    expect(chipBg(90, "Root")).not.toBe(chipBg(10, "Root"));
+    // Two different games with the same score share a color (name is irrelevant).
+    expect(chipBg(10, "Wingspan")).toBe(chipBg(10, "Root"));
+  });
+
   it("omits the bounds when bounds is null", () => {
     const { queryByText } = renderRow({ bounds: null });
     expect(queryByText("2-4")).not.toBeInTheDocument();

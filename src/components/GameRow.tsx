@@ -1,9 +1,11 @@
 import { Link } from "wouter";
 
+import { useMantineTheme } from "@mantine/core";
+
 import PlayedCounter from "@/components/PlayedCounter";
 import ScorePopover from "@/components/ScorePopover";
-import { medalColor, paletteColor } from "@/lib/colors";
 import type { Bounds, SelectedGame } from "@/types";
+import { normalized_score, score_color } from "@/util";
 
 interface GameRowProps {
   game: SelectedGame;
@@ -18,7 +20,9 @@ interface GameRowProps {
 
 // The compact chase unit: a mini horizontal card keeping the tray language
 // (cover art, corner rank chip, score) at roughly a third the height of a
-// GameCard. Clicking the score opens the per-player breakdown.
+// GameCard. Clicking the score opens the per-player breakdown. Below the podium
+// the rank chip takes its color from the game's score band, echoing the score
+// bar so a glance down the list reads strong-to-weak.
 const GameRow = ({
   game,
   rank,
@@ -29,7 +33,8 @@ const GameRow = ({
   onInc,
   onDec,
 }: GameRowProps) => {
-  const chip = medalColor(rank) ?? paletteColor(game.name);
+  const theme = useMantineTheme();
+  const chip = score_color(theme, normalized_score(game.score, selectedMax));
 
   return (
     <div className="tray-row">

@@ -1,14 +1,14 @@
-import { CircleArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Link } from "wouter";
 
-import { Button } from "@mantine/core";
-
+// A tray-style pill that reads as a paper control on the light surface, matching
+// the podium's play steppers. Names its destination rather than leaning on a
+// bare icon.
 const BackButton = ({ style }: { style?: CSSProperties }) => (
-  <Link href="/">
-    <Button style={style}>
-      <CircleArrowLeft color="white" size="16" />
-    </Button>
+  <Link href="/" className="tray-back" style={style}>
+    <ArrowLeft size={16} aria-hidden />
+    Back to games
   </Link>
 );
 
