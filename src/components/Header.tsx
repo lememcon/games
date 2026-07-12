@@ -11,12 +11,19 @@ interface HeaderProps {
 
 const Header = ({ year, years, onYearChange }: HeaderProps) => (
   <AppShell.Header
-    style={{ background: "#16302a", borderBottom: "1px solid #274b42" }}
+    style={{ background: "#ffffff", borderBottom: "1px solid #ece4d5" }}
   >
     <Group h="100%" px="md">
-      <img src={logo} height="48px" />
-      <h3 style={{ margin: 0, color: "#f1ead8" }}>LememCon</h3>
-      <Select id="year" value={year} data={years} onChange={onYearChange} />
+      <img src={logo} height="40px" alt="LememCon logo" />
+      <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
+      <Select
+        id="year"
+        value={year}
+        data={years}
+        onChange={onYearChange}
+        w={92}
+        classNames={{ input: "tray-year" }}
+      />
       <img src={bgg} height="24px" className="mantine-visible-from-sm" />
     </Group>
   </AppShell.Header>

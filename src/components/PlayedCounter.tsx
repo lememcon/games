@@ -1,28 +1,28 @@
-import { Button } from "@mantine/core";
-
 interface PlayedCounterProps {
   count: number;
   onInc: () => void;
   onDec: () => void;
 }
 
+// Compact inline stepper: a "Played N×" label beside neutral square −/+ buttons,
+// matching the tray's paper-tan controls. Decrement is disabled at zero.
 const PlayedCounter = ({ count, onInc, onDec }: PlayedCounterProps) => (
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "0.3em",
-      alignItems: "center",
-    }}
-  >
-    <p style={{ margin: 0, padding: 0 }}>{count}</p>
-    <div style={{ display: "flex", flexDirection: "row", gap: "1em" }}>
-      <Button size="compact-xs" disabled={count <= 0} onClick={onDec}>
+  <div className="tray-played">
+    <span className="tray-played__label">
+      {count > 0 ? `Played ${count}×` : "Not Played"}
+    </span>
+    <div className="tray-played__steps">
+      <button
+        type="button"
+        className="tray-step"
+        onClick={onDec}
+        disabled={count <= 0}
+      >
         -
-      </Button>
-      <Button size="compact-xs" onClick={onInc}>
+      </button>
+      <button type="button" className="tray-step" onClick={onInc}>
         +
-      </Button>
+      </button>
     </div>
   </div>
 );

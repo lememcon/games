@@ -9,10 +9,15 @@ describe("BackButton", () => {
     expect(getByRole("link")).toHaveAttribute("href", "/");
   });
 
-  it("applies a passed style to the button", () => {
+  it("labels its destination", () => {
+    const { getByRole } = renderWithMantine(<BackButton />);
+    expect(getByRole("link")).toHaveTextContent("Back to games");
+  });
+
+  it("applies a passed style to the link", () => {
     const { getByRole } = renderWithMantine(
       <BackButton style={{ marginTop: "2em" }} />,
     );
-    expect(getByRole("button")).toHaveStyle({ marginTop: "2em" });
+    expect(getByRole("link")).toHaveStyle({ marginTop: "2em" });
   });
 });

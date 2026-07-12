@@ -10,6 +10,8 @@ const defaults = {
   onPlayersChange: () => {},
   hidePlayed: false,
   onHidePlayedChange: () => {},
+  shown: 3,
+  total: 12,
 };
 
 describe("Filters", () => {
@@ -31,5 +33,10 @@ describe("Filters", () => {
     );
 
     expect(getByRole("checkbox")).toBeChecked();
+  });
+
+  it("shows how many games are in view of the total", () => {
+    const { getByText } = renderWithMantine(<Filters {...defaults} />);
+    expect(getByText("3 of 12 games")).toBeInTheDocument();
   });
 });
