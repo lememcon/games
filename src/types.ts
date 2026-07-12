@@ -31,6 +31,8 @@ export interface Bounds {
 // so they are typed pragmatically as full rows.
 export interface Data {
   loading: boolean;
+  // Set when the remote fetch fails, so the app can show an error state.
+  error?: boolean;
   scores: PlayerGameScore[];
   by_game: Record<string, PlayerGameScore[]>;
   by_player: Record<string, PlayerGameScore[]>;

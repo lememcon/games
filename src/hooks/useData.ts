@@ -88,6 +88,17 @@ const useData = (year: string): Data => {
           by_id,
           max,
         });
+      })
+      .catch(() => {
+        setData({
+          loading: false,
+          error: true,
+          scores: [],
+          by_game: {},
+          by_player: {},
+          by_id: {},
+          max: 0,
+        });
       });
   }, [url]);
 

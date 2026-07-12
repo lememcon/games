@@ -1,6 +1,15 @@
 import { Route, Switch, useLocation } from "wouter";
 
-import { AppShell, MantineProvider, createTheme } from "@mantine/core";
+import {
+  AppShell,
+  Button,
+  MantineProvider,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+  createTheme,
+} from "@mantine/core";
 
 import { identity, keys, sortBy } from "ramda";
 
@@ -21,20 +30,34 @@ const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
 }) as Record<string, string>;
+// Tabletop identity: victory-point amber accent, a rulebook serif for
+// headings, and a monospace face for the scores so digits line up like a
+// scorepad. The felt/paper surfaces live in src/assets/styles.css.
 const theme = createTheme({
+  primaryColor: "amber",
+  primaryShade: 6,
   colors: {
-    blue: [
-      "#e3f9ff",
-      "#d2edfc",
-      "#a8d8f2",
-      "#7ac2e9",
-      "#55afe1",
-      "#3da4dd",
-      "#2c9edc",
-      "#198ac4",
-      "#017ab0",
-      "#006a9d",
+    amber: [
+      "#fbf3e0",
+      "#f4e7c6",
+      "#e9cd8d",
+      "#dfb457",
+      "#d79f2c",
+      "#d1961d",
+      "#c9871c",
+      "#a86e12",
+      "#8a5d0c",
+      "#6f4706",
     ],
+  },
+  defaultRadius: "md",
+  fontFamily:
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  fontFamilyMonospace:
+    "'SF Mono', 'JetBrains Mono', 'Roboto Mono', ui-monospace, Menlo, Consolas, monospace",
+  headings: {
+    fontFamily:
+      "Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif",
   },
 });
 const startYear = 2025;
@@ -77,29 +100,64 @@ function App() {
       <AppShell header={{ height: 60 }} padding="md">
         <Header year={year} years={allYears} onYearChange={handleYear} />
         <AppShell.Main>
-          <Switch>
-            <Route path="/games/:id">
-              {(params) => <Game data={data} id={params.id} />}
-            </Route>
-            <Route>
-              <Filters
-                players={players}
-                playerOptions={sortBy(identity, keys(data.by_player))}
-                onPlayersChange={setPlayers}
-                hidePlayed={hidePlayed}
-                onHidePlayedChange={setHidePlayed}
-              />
-              <GamesTable
-                games={games}
-                selectedMax={selectedMax}
-                individualMax={individualMax}
-                gameData={game_data}
-                getPlayedCount={getPlayedCount}
-                onInc={incPlayedCount}
-                onDec={decPlayedCount}
-              />
-            </Route>
-          </Switch>
+          {data.loading ? (
+            <Stack gap="sm" mt="md">
+              <Skeleton height={44} radius="md" />
+              <Skeleton height={44} radius="md" />
+              <Skeleton height={44} radius="md" />
+              <Skeleton height={44} radius="md" />
+            </Stack>
+          ) : data.error ? (
+            <Stack align="center" gap="xs" mt="xl">
+              <Title order={3}>Couldn&apos;t load the scores</Title>
+              <Text c="dimmed" ta="center">
+                The {year} scores didn&apos;t load. Check your connection and
+                refresh the page.
+              </Text>
+            </Stack>
+          ) : (
+            <Switch>
+              <Route path="/games/:id">
+                {(params) => <Game data={data} id={params.id} />}
+              </Route>
+              <Route>
+                <Filters
+                  players={players}
+                  playerOptions={sortBy(identity, keys(data.by_player))}
+                  onPlayersChange={setPlayers}
+                  hidePlayed={hidePlayed}
+                  onHidePlayedChange={setHidePlayed}
+                />
+                {games.length === 0 ? (
+                  <Stack align="center" gap="xs" mt="xl">
+                    <Title order={3}>No games to rank</Title>
+                    <Text c="dimmed" ta="center">
+                      {players.length > 0
+                        ? "None of the ranked games include everyone you picked."
+                        : hidePlayed
+                          ? "You've played every ranked game. Nice work."
+                          : "Scores haven't been posted for this year yet."}
+                    </Text>
+                    {players.length > 0 && (
+                      <Button variant="light" onClick={() => setPlayers([])}>
+                        Clear players
+                      </Button>
+                    )}
+                  </Stack>
+                ) : (
+                  <GamesTable
+                    games={games}
+                    selectedMax={selectedMax}
+                    individualMax={individualMax}
+                    gameData={game_data}
+                    getPlayedCount={getPlayedCount}
+                    onInc={incPlayedCount}
+                    onDec={decPlayedCount}
+                  />
+                )}
+              </Route>
+            </Switch>
+          )}
         </AppShell.Main>
       </AppShell>
     </MantineProvider>
