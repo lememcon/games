@@ -1,28 +1,33 @@
 // The tray identity's color language. Players and games get a stable color from
-// the classic five board-game component colors (tuned down from primary), and
-// the top three ranks get medal colors. Kept here, pure and framework-free, so
-// components and tests share one source of truth.
+// five board-game component hues, and the top three ranks get medal colors.
+// Kept here, pure and framework-free, so components and tests share one source
+// of truth. The hues are deep enough to read as name text on the light surface
+// while still carrying white text as a chip background.
 
 export const PALETTE = [
-  "#E5533D", // red
-  "#3B7DD8", // blue
-  "#E2A50E", // yellow
-  "#4CAF6E", // green
-  "#8A63C4", // purple
+  "#C4402C", // red
+  "#2F6BB8", // blue
+  "#8A5D0C", // amber
+  "#2C7A48", // green
+  "#6D48B0", // purple
 ];
 
 export const GOLD = "#D89A12";
 export const SILVER = "#98A0AC";
 export const BRONZE = "#B87A48";
 
-// Deterministic palette color for a string key (a player or game name), so the
-// same person or game always shows the same token color across the app.
-export const paletteColor = (key: string): string => {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash * 31 + key.charCodeAt(i)) | 0;
-  }
-  return PALETTE[Math.abs(hash) % PALETTE.length];
+// Assign palette colors to players in a pleasing, stable order: sort the names
+// case-insensitively and hand out the palette by position (wrapping with mod),
+// so the filter reads as a rainbow down the list and every player keeps one
+// color across the app. Returns a name -> color lookup.
+export const buildPlayerColors = (names: string[]): Record<string, string> => {
+  const colors: Record<string, string> = {};
+  [...names]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .forEach((name, i) => {
+      colors[name] = PALETTE[i % PALETTE.length];
+    });
+  return colors;
 };
 
 // Medal color for the top three ranks; undefined below the podium.

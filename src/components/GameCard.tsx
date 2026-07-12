@@ -2,7 +2,7 @@ import { Link } from "wouter";
 
 import PlayedCounter from "@/components/PlayedCounter";
 import ScorePopover from "@/components/ScorePopover";
-import { medalColor, paletteColor } from "@/lib/colors";
+import { PALETTE, medalColor } from "@/lib/colors";
 import type { Bounds, SelectedGame } from "@/types";
 
 interface GameCardProps {
@@ -29,7 +29,7 @@ const GameCard = ({
   onInc,
   onDec,
 }: GameCardProps) => {
-  const chip = medalColor(rank) ?? paletteColor(game.name);
+  const chip = medalColor(rank) ?? PALETTE[(rank - 1) % PALETTE.length];
 
   return (
     <div className="tray-card">

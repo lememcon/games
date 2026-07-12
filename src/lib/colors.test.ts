@@ -5,24 +5,30 @@ import {
   GOLD,
   PALETTE,
   SILVER,
+  buildPlayerColors,
   medalColor,
-  paletteColor,
 } from "@/lib/colors";
 
-describe("paletteColor", () => {
-  it("maps a key to a color from the palette", () => {
-    expect(PALETTE).toContain(paletteColor("alice"));
+describe("buildPlayerColors", () => {
+  it("assigns palette colors in case-insensitive sorted order", () => {
+    expect(buildPlayerColors(["carol", "Alice", "bob"])).toEqual({
+      Alice: PALETTE[0],
+      bob: PALETTE[1],
+      carol: PALETTE[2],
+    });
   });
 
-  it("is deterministic for the same key", () => {
-    expect(paletteColor("Wingspan")).toBe(paletteColor("Wingspan"));
+  it("wraps around the palette when there are more players than colors", () => {
+    const names = ["a", "b", "c", "d", "e", "f"]; // 6 names, 5 colors
+    const colors = buildPlayerColors(names);
+    expect(colors.a).toBe(PALETTE[0]);
+    expect(colors.f).toBe(PALETTE[5 % PALETTE.length]); // wraps to PALETTE[0]
   });
 
-  it("spreads different keys across more than one color", () => {
-    const colors = new Set(
-      ["alice", "bob", "carol", "dave", "erin", "frank"].map(paletteColor),
-    );
-    expect(colors.size).toBeGreaterThan(1);
+  it("does not mutate the input array", () => {
+    const names = ["carol", "Alice", "bob"];
+    buildPlayerColors(names);
+    expect(names).toEqual(["carol", "Alice", "bob"]);
   });
 });
 
