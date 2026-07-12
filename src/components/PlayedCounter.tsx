@@ -1,6 +1,12 @@
 import { Button } from "@mantine/core";
 
-const PlayedCounter = ({ count, onInc, onDec }) => (
+interface PlayedCounterProps {
+  count: number;
+  onInc: () => void;
+  onDec: () => void;
+}
+
+const PlayedCounter = ({ count, onInc, onDec }: PlayedCounterProps) => (
   <div
     style={{
       display: "flex",

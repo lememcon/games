@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 
-const getCount = (result) => result.current[0];
-const inc = (result, id) => act(() => result.current[1](id));
-const dec = (result, id) => act(() => result.current[2](id));
+type Result = { current: ReturnType<typeof usePlayedCounts> };
+
+const getCount = (result: Result) => result.current[0];
+const inc = (result: Result, id: string) => act(() => result.current[1](id));
+const dec = (result: Result, id: string) => act(() => result.current[2](id));
 
 describe("usePlayedCounts", () => {
   beforeEach(() => localStorage.clear());
@@ -41,7 +43,7 @@ describe("usePlayedCounts", () => {
 
     inc(result, "100");
 
-    expect(JSON.parse(localStorage.getItem("played_counts_2025"))).toEqual({
+    expect(JSON.parse(localStorage.getItem("played_counts_2025")!)).toEqual({
       100: 1,
     });
   });

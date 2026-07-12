@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import { renderWithMantine } from "@/test/utils";
+import type { PlayerGameScore } from "@/types";
 
-const players = [
-  { player: "alice", rank: 1, score: 20 },
-  { player: "bob", rank: 2, score: 80 },
+const players: PlayerGameScore[] = [
+  { bgg_id: 100, game: "Root", player: "alice", rank: 1, score: 20 },
+  { bgg_id: 100, game: "Root", player: "bob", rank: 2, score: 80 },
 ];
 
 describe("PlayerScoresTable", () => {

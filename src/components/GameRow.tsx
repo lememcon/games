@@ -4,7 +4,19 @@ import { Table } from "@mantine/core";
 
 import PlayedCounter from "@/components/PlayedCounter";
 import ScorePopover from "@/components/ScorePopover";
+import type { Bounds, SelectedGame } from "@/types";
 import { Score } from "@/util";
+
+interface GameRowProps {
+  game: SelectedGame;
+  rank: number;
+  selectedMax: number;
+  individualMax: number;
+  bounds: Bounds | null;
+  played: number;
+  onInc: () => void;
+  onDec: () => void;
+}
 
 const GameRow = ({
   game,
@@ -15,7 +27,7 @@ const GameRow = ({
   played,
   onInc,
   onDec,
-}) => (
+}: GameRowProps) => (
   <Table.Tr>
     <Table.Td>{rank}.</Table.Td>
     <Table.Td>

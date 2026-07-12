@@ -51,9 +51,9 @@ describe("App", () => {
 
     // The year Select has id="year"; the MultiSelect also renders a textbox,
     // so target the year input directly. Default year is the current year.
-    await user.click(container.querySelector("#year"));
+    await user.click(container.querySelector("#year")!);
     await user.click(await screen.findByText("2025"));
 
-    expect(JSON.parse(localStorage.getItem("players"))).toEqual([]);
+    expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
   });
 });

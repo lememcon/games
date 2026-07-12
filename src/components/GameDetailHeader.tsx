@@ -1,6 +1,20 @@
+import type { Bounds } from "@/types";
+
 const BGG_URL = "https://boardgamegeek.com/boardgame/";
 
-const GameDetailHeader = ({ name, bounds, id, image }) => (
+interface GameDetailHeaderProps {
+  name: string;
+  bounds: Bounds | null;
+  id: string;
+  image?: string | null;
+}
+
+const GameDetailHeader = ({
+  name,
+  bounds,
+  id,
+  image,
+}: GameDetailHeaderProps) => (
   <div
     style={{
       display: "flex",

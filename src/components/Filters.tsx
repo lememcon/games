@@ -1,12 +1,20 @@
 import { Checkbox, MultiSelect } from "@mantine/core";
 
+interface FiltersProps {
+  players: string[];
+  playerOptions: string[];
+  onPlayersChange: (value: string[]) => void;
+  hidePlayed: boolean;
+  onHidePlayedChange: (value: boolean) => void;
+}
+
 const Filters = ({
   players,
   playerOptions,
   onPlayersChange,
   hidePlayed,
   onHidePlayedChange,
-}) => (
+}: FiltersProps) => (
   <>
     <MultiSelect
       label="Filter By Players"

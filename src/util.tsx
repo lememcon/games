@@ -6,13 +6,13 @@ import {
   Minus,
 } from "lucide-react";
 
-import { useMantineTheme } from "@mantine/core";
+import { useMantineTheme, type MantineTheme } from "@mantine/core";
 
-export const normalized_score = (score, max) => {
+export const normalized_score = (score: number, max: number): number => {
   return +((score / max) * 100.0).toFixed(2);
 };
 
-export const score_icon = (normalized) => {
+export const score_icon = (normalized: number) => {
   if (normalized > 80.0) return ChevronsUp;
 
   if (normalized > 60.0) return ChevronUp;
@@ -24,7 +24,7 @@ export const score_icon = (normalized) => {
   return ChevronsDown;
 };
 
-export const score_color = (theme, normalized) => {
+export const score_color = (theme: MantineTheme, normalized: number) => {
   if (normalized > 80.0) return theme.colors.green[7];
 
   if (normalized > 60.0) return theme.colors.green[7];
@@ -36,7 +36,7 @@ export const score_color = (theme, normalized) => {
   return theme.colors.red[7];
 };
 
-export const Score = ({ score, max }) => {
+export const Score = ({ score, max }: { score: number; max: number }) => {
   const theme = useMantineTheme();
   const normalized = normalized_score(score, max);
   const Icon = score_icon(normalized);

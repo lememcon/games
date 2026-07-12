@@ -2,17 +2,30 @@ import { describe, expect, it } from "vitest";
 
 import Game from "@/components/Game";
 import { renderWithMantine } from "@/test/utils";
+import type { Data } from "@/types";
 
-const data = {
+const data: Data = {
+  loading: false,
+  scores: [],
+  by_game: {},
+  by_player: {},
   max: 100,
   by_id: {
     // "11" exists in games.json (players 2-7), exercising the bounds branch.
     11: [
-      { player: "alice", game: "Belfort", rank: 1, score: 80 },
-      { player: "bob", game: "Belfort", rank: 2, score: 40 },
+      { bgg_id: 11, player: "alice", game: "Belfort", rank: 1, score: 80 },
+      { bgg_id: 11, player: "bob", game: "Belfort", rank: 2, score: 40 },
     ],
     // An id absent from games.json leaves bounds/image null.
-    999999: [{ player: "alice", game: "Unknown Game", rank: 1, score: 10 }],
+    999999: [
+      {
+        bgg_id: 999999,
+        player: "alice",
+        game: "Unknown Game",
+        rank: 1,
+        score: 10,
+      },
+    ],
   },
 };
 

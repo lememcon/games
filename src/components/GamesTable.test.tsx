@@ -1,17 +1,19 @@
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import GamesTable from "@/components/GamesTable";
 import { renderWithMantine } from "@/test/utils";
+import type { GamesData, SelectedGame } from "@/types";
 
-const games = [
-  { name: "Root", id: "100", score: 90, players: {} },
-  { name: "Chess", id: "200", score: 30, players: {} },
+const games: SelectedGame[] = [
+  { name: "Root", id: "100", score: 90, min: 0, max: 99, players: {} },
+  { name: "Chess", id: "200", score: 30, min: 0, max: 99, players: {} },
 ];
 
-const gameData = { 100: { players: { min: 2, max: 4 } } };
+const gameData: GamesData = { 100: { players: { min: 2, max: 4 } } };
 
-const renderTable = (props) =>
+const renderTable = (props: Partial<ComponentProps<typeof GamesTable>> = {}) =>
   renderWithMantine(
     <GamesTable
       games={games}

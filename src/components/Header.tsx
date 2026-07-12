@@ -3,7 +3,13 @@ import { AppShell, Group, Select } from "@mantine/core";
 import bgg from "@/assets/bgg.svg";
 import logo from "@/assets/logo.png";
 
-const Header = ({ year, years, onYearChange }) => (
+interface HeaderProps {
+  year: string;
+  years: string[];
+  onYearChange: (value: string | null) => void;
+}
+
+const Header = ({ year, years, onYearChange }: HeaderProps) => (
   <AppShell.Header>
     <Group h="100%" px="md">
       <img src={logo} height="48px" />

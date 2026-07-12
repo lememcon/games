@@ -1,19 +1,23 @@
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Table } from "@mantine/core";
 
 import GameRow from "@/components/GameRow";
 import { renderWithMantine } from "@/test/utils";
+import type { SelectedGame } from "@/types";
 
-const game = {
+const game: SelectedGame = {
   name: "Root",
   id: "100",
   score: 45,
+  min: 2,
+  max: 4,
   image: "root.jpg",
   players: { alice: { name: "alice", rank: 1, score: 45 } },
 };
 
-const renderRow = (props) =>
+const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
   renderWithMantine(
     <Table>
       <Table.Tbody>

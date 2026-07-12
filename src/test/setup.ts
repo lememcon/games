@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 // does not implement.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: (query) => ({
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,

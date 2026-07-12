@@ -20,7 +20,7 @@ import "@/assets/styles.css";
 const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
-});
+}) as Record<string, string>;
 const theme = createTheme({
   colors: {
     blue: [
@@ -41,7 +41,7 @@ const startYear = 2025;
 const currentYear = new Date().getFullYear();
 
 // Generate list of all years
-const allYears = [];
+const allYears: string[] = [];
 for (let i = startYear; i <= currentYear; i++) {
   allYears.push(`${i}`);
 }
@@ -49,7 +49,7 @@ for (let i = startYear; i <= currentYear; i++) {
 function App() {
   const [year, setYear] = useLocalState("year", `${currentYear}`);
   const data = useData(year);
-  const [players, setPlayers] = useLocalState("players", []);
+  const [players, setPlayers] = useLocalState<string[]>("players", []);
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [getPlayedCount, incPlayedCount, decPlayedCount] =
     usePlayedCounts(year);
@@ -65,14 +65,15 @@ function App() {
     getPlayedCount,
   });
 
-  const handleYear = (year) => {
+  const handleYear = (year: string | null) => {
+    if (year === null) return;
     setPlayers([]);
     setYear(year);
     setLocation("/");
   };
 
   return (
-    <MantineProvider defaultColorTheme="auto" theme={theme}>
+    <MantineProvider theme={theme}>
       <AppShell header={{ height: 60 }} padding="md">
         <Header year={year} years={allYears} onYearChange={handleYear} />
         <AppShell.Main>

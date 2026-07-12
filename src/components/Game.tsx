@@ -1,15 +1,18 @@
-import games from "@/assets/games.json";
+import gamesJson from "@/assets/games.json";
 import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import { gameBounds } from "@/lib/games";
+import type { Data, GamesData } from "@/types";
+
+const games = gamesJson as GamesData;
 
 const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
-});
+}) as Record<string, string>;
 
-const Game = ({ data, id }) => {
+const Game = ({ data, id }: { data: Data; id: string }) => {
   const max = data.max;
   const players = data.by_id[id];
 

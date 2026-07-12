@@ -1,8 +1,17 @@
 import { Table } from "@mantine/core";
 
-import { addIndex, map } from "ramda";
-
 import GameRow from "@/components/GameRow";
+import type { GamesData, SelectedGame } from "@/types";
+
+interface GamesTableProps {
+  games: SelectedGame[];
+  selectedMax: number;
+  individualMax: number;
+  gameData: GamesData;
+  getPlayedCount: (id: string) => number;
+  onInc: (id: string) => void;
+  onDec: (id: string) => void;
+}
 
 const GamesTable = ({
   games,
@@ -12,7 +21,7 @@ const GamesTable = ({
   getPlayedCount,
   onInc,
   onDec,
-}) => (
+}: GamesTableProps) => (
   <Table>
     <Table.Thead>
       <Table.Tr>
@@ -25,7 +34,7 @@ const GamesTable = ({
       </Table.Tr>
     </Table.Thead>
     <Table.Tbody>
-      {addIndex(map)((game, i) => {
+      {games.map((game, i) => {
         const meta = gameData[game.id];
         const bounds =
           meta && meta.players
@@ -45,7 +54,7 @@ const GamesTable = ({
             onDec={() => onDec(game.id)}
           />
         );
-      }, games)}
+      })}
     </Table.Tbody>
   </Table>
 );

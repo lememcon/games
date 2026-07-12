@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@mantine/core";
@@ -6,7 +7,7 @@ import { AppShell } from "@mantine/core";
 import Header from "@/components/Header";
 import { renderWithMantine } from "@/test/utils";
 
-const renderHeader = (props) =>
+const renderHeader = (props: Partial<ComponentProps<typeof Header>> = {}) =>
   renderWithMantine(
     <AppShell header={{ height: 60 }}>
       <Header

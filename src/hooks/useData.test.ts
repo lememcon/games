@@ -9,8 +9,10 @@ const scores = [
   { game: "Chess", rank: 1, score: 30, player: "alice", bgg_id: 200 },
 ];
 
-const mockFetch = (payload) =>
-  vi.fn(() => Promise.resolve({ json: () => Promise.resolve(payload) }));
+const mockFetch = (payload: unknown) =>
+  vi.fn(() =>
+    Promise.resolve({ json: () => Promise.resolve(payload) }),
+  ) as unknown as typeof fetch;
 
 describe("useData", () => {
   afterEach(() => vi.restoreAllMocks());

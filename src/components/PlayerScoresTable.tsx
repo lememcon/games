@@ -2,9 +2,15 @@ import { Table } from "@mantine/core";
 
 import { descend, map, prop, sort } from "ramda";
 
+import type { PlayerGameScore } from "@/types";
 import { Score } from "@/util";
 
-const PlayerScoresTable = ({ players, max }) => (
+interface PlayerScoresTableProps {
+  players: PlayerGameScore[];
+  max: number;
+}
+
+const PlayerScoresTable = ({ players, max }: PlayerScoresTableProps) => (
   <Table>
     <Table.Thead>
       <Table.Tr>
@@ -16,7 +22,7 @@ const PlayerScoresTable = ({ players, max }) => (
     </Table.Thead>
     <Table.Tbody>
       {map(
-        (player) => (
+        (player: PlayerGameScore) => (
           <Table.Tr key={player.player}>
             <Table.Td>{player.player}</Table.Td>
             <Table.Td style={{ verticalAlign: "middle" }}>

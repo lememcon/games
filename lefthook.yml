@@ -6,16 +6,20 @@ commit-msg:
 pre-commit:
   commands:
     prettier:
-      glob: "*.{css,js,mjs,cjs,jsx,json,yml,yaml,md}"
+      glob: "*.{css,js,mjs,cjs,jsx,ts,tsx,json,yml,yaml,md}"
       run: pnpm prettier --write {staged_files}
       stage_fixed: true
       priority: 20
     eslint:
-      glob: "*.{js,mjs,cjs,jsx}"
+      glob: "*.{js,mjs,cjs,jsx,ts,tsx}"
       run: pnpm eslint --fix {staged_files}
       stage_fixed: true
       priority: 30
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
+      priority: 40
     test:
-      glob: "*.{js,mjs,cjs,jsx,json}"
+      glob: "*.{js,mjs,cjs,jsx,ts,tsx,json}"
       run: pnpm vitest related --coverage.enabled=false --reporter=dot --exclude "tests/**" --run {staged_files}
       priority: 50

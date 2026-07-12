@@ -2,9 +2,22 @@ import { Popover, Table } from "@mantine/core";
 
 import { map, prop, sortBy, values } from "ramda";
 
+import type { SelectedGamePlayer } from "@/types";
 import { Score } from "@/util";
 
-const ScorePopover = ({ score, players, selectedMax, individualMax }) => (
+interface ScorePopoverProps {
+  score: number;
+  players: Record<string, SelectedGamePlayer>;
+  selectedMax: number;
+  individualMax: number;
+}
+
+const ScorePopover = ({
+  score,
+  players,
+  selectedMax,
+  individualMax,
+}: ScorePopoverProps) => (
   <Popover withArrow arrowPosition="side" arrowSize={12} shadow="lg">
     <Popover.Target>
       <div>
@@ -22,7 +35,7 @@ const ScorePopover = ({ score, players, selectedMax, individualMax }) => (
         </Table.Thead>
         <Table.Tbody>
           {map(
-            (player) => (
+            (player: SelectedGamePlayer) => (
               <Table.Tr key={player.name}>
                 <Table.Td>{player.name}</Table.Td>
                 <Table.Td>{player.rank}</Table.Td>
