@@ -78,8 +78,8 @@ importers:
         specifier: ^5.2.5
         version: 5.2.5
       globals:
-        specifier: ^16.0.0
-        version: 16.1.0
+        specifier: ^17.7.0
+        version: 17.7.0
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -2338,10 +2338,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  globals@16.1.0:
+  globals@17.7.0:
     resolution:
       {
-        integrity: sha512-aibexHNbb/jiUSObBgpHLj+sIuUmJnYcgXBlrfsiDZ9rt4aF2TFRbyLgZ2iFQuVZ1K5Mx3FVkbKRSgKrbK3K2g==,
+        integrity: sha512-Czmyns5dUsq4seFBR/Kdydhmo8y9kC79hiSkPn0YcGtNnYWnrgt0vjrSjx9tspoDGWm2CMarffRuLjM4xUz8xg==,
       }
     engines: { node: ">=18" }
 
@@ -6244,7 +6244,7 @@ snapshots:
 
   globals@14.0.0: {}
 
-  globals@16.1.0: {}
+  globals@17.7.0: {}
 
   globalthis@1.0.4:
     dependencies:
