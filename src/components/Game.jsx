@@ -1,19 +1,13 @@
-import { CircleArrowLeft } from "lucide-react";
-import { Link } from "wouter";
-
-import { Button, Table } from "@mantine/core";
-
-import { descend, map, prop, sort } from "ramda";
-
 import games from "@/assets/games.json";
-import { Score, normalized_score } from "../util";
+import BackButton from "@/components/BackButton";
+import GameDetailHeader from "@/components/GameDetailHeader";
+import PlayerScoresTable from "@/components/PlayerScoresTable";
+import { gameBounds } from "@/lib/games";
 
 const images = import.meta.glob("@/assets/games/*", {
   eager: true,
   import: "default",
 });
-
-const BGG_URL = "https://boardgamegeek.com/boardgame/";
 
 const Game = ({ data, id }) => {
   const max = data.max;
@@ -28,70 +22,19 @@ const Game = ({ data, id }) => {
       ? images[`/src/assets/games/${id}${game.ext}`]
       : null
     : null;
-
-  const player_nodes = map(
-    (player) => (
-      <Table.Tr key={player.player}>
-        <Table.Td>{player.player}</Table.Td>
-        <Table.Td style={{ verticalAlign: "middle" }}>
-          <Score score={player.score} max={max} />
-        </Table.Td>
-        <Table.Td>{player.rank}</Table.Td>
-        <Table.Td>{player.score}</Table.Td>
-      </Table.Tr>
-    ),
-    sort(descend(prop("score")), players),
-  );
+  const bounds = game && game.players ? gameBounds(games, id) : null;
 
   return (
     <div>
-      <Link href="/">
-        <Button>
-          <CircleArrowLeft color="white" size="16" />
-        </Button>
-      </Link>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginBottom: "1em",
-          alignItems: "flex-start",
-        }}
-      >
-        <div>
-          <h1>{players[0].game}</h1>
-          <p>
-            {game && game.players && (
-              <>
-                <strong>Players:</strong>
-                &nbsp;
-                {game.players.min}-{game.players.max}
-              </>
-            )}
-          </p>
-          <a href={`${BGG_URL}${id}/`} target="_blank">
-            BGG Page
-          </a>
-        </div>
-        {image && <img src={image} width="200" />}
-      </div>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Player</Table.Th>
-            <Table.Th>Normalized Score</Table.Th>
-            <Table.Th>Rank</Table.Th>
-            <Table.Th>Raw Score</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>{player_nodes}</Table.Tbody>
-      </Table>
-      <Link href="/">
-        <Button style={{ marginTop: "2em" }}>
-          <CircleArrowLeft color="white" size="16" />
-        </Button>
-      </Link>
+      <BackButton />
+      <GameDetailHeader
+        name={players[0].game}
+        bounds={bounds}
+        id={id}
+        image={image}
+      />
+      <PlayerScoresTable players={players} max={max} />
+      <BackButton style={{ marginTop: "2em" }} />
     </div>
   );
 };

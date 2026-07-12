@@ -15,4 +15,21 @@ export default defineConfig({
     open: true,
     port: 3000,
   },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.js",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["src/**/*.{js,jsx}"],
+      exclude: ["src/main.jsx", "src/test/**", "**/*.test.{js,jsx}"],
+      thresholds: {
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
+      },
+    },
+  },
 });
