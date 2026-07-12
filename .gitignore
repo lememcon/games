@@ -39,3 +39,6 @@ yarn-error.log*
 data.json
 data
 .envrc
+
+# claude code
+/.claude
