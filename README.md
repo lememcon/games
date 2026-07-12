@@ -1,7 +1,18 @@
 # LememCon Games
 
 [![site](https://img.shields.io/netlify/261ad471-fd16-4d17-89b1-43dcc8fd7af4?logo=netlify&logoColor=%23fff&label=site)](https://games.lememcon.com)
+[![ci](https://img.shields.io/github/actions/workflow/status/lememcon/games/ci.yml?branch=main&logo=github&logoColor=%23fff&label=ci)](https://github.com/lememcon/games/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen)](#testing--quality)
 [![license](https://img.shields.io/github/license/lememcon/games?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBzdHJva2U9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNNyAyMGwxMCAwIi8%2BPHBhdGggZD0iTTYgNmw2IC0xbDYgMSIvPjxwYXRoIGQ9Ik0xMiAzbDAgMTciLz48cGF0aCBkPSJNOSAxMmwtMyAtNmwtMyA2YTMgMyAwIDAgMCA2IDAiLz48cGF0aCBkPSJNMjEgMTJsLTMgLTZsLTMgNmEzIDMgMCAwIDAgNiAwIi8%2BPC9zdmc%2B&logoColor=%23fff&color=%23750014)](https://github.com/lememcon/games?tab=MIT-1-ov-file#readme)
+
+[![last commit](https://img.shields.io/github/last-commit/lememcon/games?logo=github&logoColor=%23fff)](https://github.com/lememcon/games/commits/main)
+[![commit activity](https://img.shields.io/github/commit-activity/m/lememcon/games?logo=github&logoColor=%23fff)](https://github.com/lememcon/games/pulse)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-F7B93E?logo=prettier&logoColor=%23fff)](https://prettier.io)
+[![conventional commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=%23fff)](https://www.conventionalcommits.org)
+
+[![react](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=%23fff)](https://react.dev)
+[![vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=%23fff)](https://vite.dev)
+[![pnpm](https://img.shields.io/badge/pnpm-managed-F69220?logo=pnpm&logoColor=%23fff)](https://pnpm.io)
 
 A single-page web app for browsing board game scores from LememCon. It pulls
 per-player scores for a given year, ranks games by their total score, and lets
