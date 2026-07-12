@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import Score from "@/components/Score";
 import { renderWithMantine } from "@/test/utils";
-import { Score } from "@/util";
 
 describe("Score", () => {
   it("renders the normalized percentage", () => {

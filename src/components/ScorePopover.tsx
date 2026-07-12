@@ -2,8 +2,8 @@ import { Popover, Table } from "@mantine/core";
 
 import { map, prop, sortBy, values } from "ramda";
 
+import Score from "@/components/Score";
 import type { SelectedGamePlayer } from "@/types";
-import { Score } from "@/util";
 
 interface ScorePopoverProps {
   score: number;

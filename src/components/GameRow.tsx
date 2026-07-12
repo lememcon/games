@@ -3,9 +3,9 @@ import { Link } from "wouter";
 import { Table } from "@mantine/core";
 
 import PlayedCounter from "@/components/PlayedCounter";
+import Score from "@/components/Score";
 import ScorePopover from "@/components/ScorePopover";
 import type { Bounds, SelectedGame } from "@/types";
-import { Score } from "@/util";
 
 interface GameRowProps {
   game: SelectedGame;

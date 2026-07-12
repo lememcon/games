@@ -21,9 +21,10 @@ const useData = (year: string): Data => {
   });
 
   const url = `https://data.lememcon.com/${year}.json`;
-  let max = 0;
 
   useEffect(() => {
+    let max = 0;
+
     fetch(url)
       .then((res) => res.json())
       .then((data: { player_game_scores: PlayerGameScore[] }) => {

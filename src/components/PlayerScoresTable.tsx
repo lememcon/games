@@ -2,8 +2,8 @@ import { Table } from "@mantine/core";
 
 import { descend, map, prop, sort } from "ramda";
 
+import Score from "@/components/Score";
 import type { PlayerGameScore } from "@/types";
-import { Score } from "@/util";
 
 interface PlayerScoresTableProps {
   players: PlayerGameScore[];
