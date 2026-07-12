@@ -1,4 +1,4 @@
-import { assoc, descend, forEach, keys, pick, prop, sort, values } from "ramda";
+import { descend, keys, prop, sort, values } from "ramda";
 
 // Player-count bounds for a game, with the same 0/99 defaults App used when a
 // game has no metadata in games.json.
@@ -37,55 +37,50 @@ export const buildSelectedGames = ({
   hidePlayed,
   getPlayedCount,
 }) => {
-  const numPlayers = players.length || 0;
+  const numPlayers = players.length;
   const selectedGames = {};
 
-  forEach(
-    (player) => {
-      forEach((item) => {
-        if (!(item.game in selectedGames)) {
-          const id = `${item.bgg_id}`;
-          const meta = gameData[id];
-          const { min, max } = gameBounds(gameData, id);
+  // Whether a not-yet-seen game should be left out of the list entirely.
+  const isExcluded = (id, min, max) => {
+    if (hidePlayed && getPlayedCount(id) > 0) return true;
+    if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) return true;
+    return false;
+  };
 
-          if (hidePlayed && getPlayedCount(id) > 0) {
-            return;
-          }
-          if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) {
-            return;
-          }
+  const selectedPlayers = players.length > 0 ? players : keys(byPlayer);
 
-          selectedGames[item.game] = {
-            name: item.game,
-            score: 0,
-            id,
-            min,
-            max,
-          };
+  for (const player of selectedPlayers) {
+    for (const item of byPlayer[player] || []) {
+      if (!(item.game in selectedGames)) {
+        const id = `${item.bgg_id}`;
+        const meta = gameData[id];
+        const { min, max } = gameBounds(gameData, id);
 
-          if (meta && meta.image) {
-            selectedGames[item.game]["image"] =
-              images[`/src/assets/games/${id}${meta.ext}`];
-          }
+        if (isExcluded(id, min, max)) continue;
+
+        selectedGames[item.game] = {
+          name: item.game,
+          score: 0,
+          id,
+          min,
+          max,
+          players: {},
+        };
+        if (meta && meta.image) {
+          selectedGames[item.game].image =
+            images[`/src/assets/games/${id}${meta.ext}`];
         }
-        const game = selectedGames[item.game];
-        selectedGames[item.game] = assoc(
-          "score",
-          game.score + item.score,
-          assoc(
-            "players",
-            assoc(
-              player,
-              assoc("name", player, pick(["rank", "score"], item)),
-              game.players || {},
-            ),
-            game,
-          ),
-        );
-      }, byPlayer[player] || []);
-    },
-    (players.length > 0 ? players : keys(byPlayer)) || [],
-  );
+      }
+
+      const game = selectedGames[item.game];
+      game.score += item.score;
+      game.players[player] = {
+        name: player,
+        rank: item.rank,
+        score: item.score,
+      };
+    }
+  }
 
   return sort(descend(prop("score")), values(selectedGames));
 };
