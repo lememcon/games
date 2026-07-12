@@ -24,14 +24,25 @@ export const score_icon = (normalized: number) => {
   return ChevronsDown;
 };
 
-export const score_color = (theme: MantineTheme, normalized: number) => {
-  if (normalized > 80.0) return theme.colors.green[7];
+// A short word for the score band. Paired with the icon and color so strength
+// is conveyed by shape and text, not color alone (readable with any color
+// vision).
+export const score_label = (normalized: number): string => {
+  if (normalized > 80.0) return "Great";
 
+  if (normalized > 60.0) return "Good";
+
+  if (normalized > 40.0) return "Even";
+
+  if (normalized > 20.0) return "Low";
+
+  return "Poor";
+};
+
+export const score_color = (theme: MantineTheme, normalized: number) => {
   if (normalized > 60.0) return theme.colors.green[7];
 
-  if (normalized > 40.0) return theme.colors.blue[5];
-
-  if (normalized > 20.0) return theme.colors.red[7];
+  if (normalized > 40.0) return theme.colors.yellow[8];
 
   return theme.colors.red[7];
 };

@@ -3,23 +3,38 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "@/App";
+import type { Data } from "@/types";
 
-const data = {
+const emptyData: Data = {
   loading: false,
   scores: [],
   by_game: {},
-  by_player: {
-    alice: [{ game: "Belfort", rank: 1, score: 50, bgg_id: 11 }],
-    bob: [{ game: "Belfort", rank: 2, score: 30, bgg_id: 11 }],
-  },
+  by_player: {},
   by_id: {},
+  max: 0,
+};
+
+const loadedData: Data = {
+  ...emptyData,
+  by_player: {
+    alice: [
+      { game: "Belfort", player: "alice", rank: 1, score: 50, bgg_id: 11 },
+    ],
+    bob: [{ game: "Belfort", player: "bob", rank: 2, score: 30, bgg_id: 11 }],
+  },
   max: 100,
 };
 
-vi.mock("@/hooks/useData", () => ({ default: () => data }));
+// The mocked hook reads from a hoisted holder so each test can swap in a
+// different Data shape (loaded, loading, error, empty).
+const state = vi.hoisted(() => ({ data: {} as Data }));
+vi.mock("@/hooks/useData", () => ({ default: () => state.data }));
 
 describe("App", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    state.data = loadedData;
+  });
   afterEach(() => vi.clearAllMocks());
 
   it("renders the header and the games list", () => {
@@ -55,5 +70,27 @@ describe("App", () => {
     await user.click(await screen.findByText("2025"));
 
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+  });
+
+  it("shows skeletons while the data loads", () => {
+    state.data = { ...emptyData, loading: true };
+    const { container, queryByText } = render(<App />);
+
+    expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
+    expect(queryByText("Filter By Players")).toBeNull();
+  });
+
+  it("shows an error message when the fetch fails", () => {
+    state.data = { ...emptyData, error: true };
+    const { getByText } = render(<App />);
+
+    expect(getByText(/Couldn.t load the scores/)).toBeInTheDocument();
+  });
+
+  it("shows an empty message when no games are ranked", () => {
+    state.data = emptyData;
+    const { getByText } = render(<App />);
+
+    expect(getByText(/Scores haven.t been posted/)).toBeInTheDocument();
   });
 });

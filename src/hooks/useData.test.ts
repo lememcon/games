@@ -42,4 +42,14 @@ describe("useData", () => {
     ]);
     expect(result.current.max).toBe(50);
   });
+
+  it("flags an error when the fetch fails", async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.reject(new Error("network down")),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useData("2025"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe(true);
+  });
 });
