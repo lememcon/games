@@ -18,7 +18,7 @@ Deployed to games.lememcon.com via Netlify (auto-builds `main`).
 - `pnpm check` — full local gate: lint → pretty → typecheck → test → build
 
 Run `pnpm check` before considering a change done. CI (`.github/workflows/ci.yml`) runs
-lint → pretty → test:coverage → build; `check` additionally runs `typecheck`.
+lint → pretty → typecheck → test:coverage → build — the same gate as `pnpm check`.
 
 ## Layout
 
@@ -37,8 +37,8 @@ lint → pretty → test:coverage → build; `check` additionally runs `typechec
 ## Conventions
 
 - **TypeScript everywhere.** Prefer typing against `src/types.ts` over inline shapes; add
-  to that file when a shape is shared. `pnpm typecheck` must pass (not yet a CI gate, but
-  part of `pnpm check`).
+  to that file when a shape is shared. `pnpm typecheck` must pass — it's a CI gate and
+  part of `pnpm check`.
 - **Colocated tests.** Every source file has a sibling `Name.test.tsx`/`Name.test.ts`.
   Adding or changing behavior means updating the sibling test — the 90% coverage gate
   (`vite.config.ts`) blocks CI otherwise.

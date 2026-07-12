@@ -41,4 +41,5 @@ data
 .envrc
 
 # claude code
-/.claude
+/.claude/*
+!/.claude/settings.json
