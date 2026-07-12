@@ -331,22 +331,65 @@ body {
 }
 
 /* ---- Player filter ---- */
-.tray-field {
-  background: #f0eadd;
-  border: 1px solid #ece4d5;
-  border-radius: 12px;
+.player-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.player-filter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.player-filter__clear {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #7a736a;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.player-filter__clear:hover {
   color: #2b2723;
 }
 
-.tray-field:hover {
+.player-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 8.5rem;
+  overflow-y: auto;
+}
+
+/* Unselected chips carry the player's color as text on white; the selected
+   state overrides background/border/color inline with that same color. */
+.player-chip {
+  border: 1px solid #ece4d5;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.player-chip:hover {
   border-color: #ddd2bd;
 }
 
-/* Selected players read as little white chips on the tan field, echoing the
-   white cards on the tray. */
-.tray-field__pill {
-  background: #fff;
-  border: 1px solid #ece4d5;
-  color: #2b2723;
-  font-weight: 600;
+.player-chip[aria-pressed="true"]:hover {
+  filter: brightness(1.08);
+}
+
+.player-chip:focus-visible {
+  outline: 2px solid #8a5d0c;
+  outline-offset: 2px;
 }

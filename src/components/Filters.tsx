@@ -1,4 +1,6 @@
-import { Checkbox, Group, MultiSelect, Text } from "@mantine/core";
+import { Checkbox, Group, Text } from "@mantine/core";
+
+import PlayerFilter from "@/components/PlayerFilter";
 
 interface FiltersProps {
   players: string[];
@@ -22,25 +24,10 @@ const Filters = ({
   total,
 }: FiltersProps) => (
   <div className="tray-filters">
-    <MultiSelect
-      label="Filter By Players"
-      placeholder="Pick Player"
-      value={players}
-      data={playerOptions}
-      description="Which players are included in the list of games"
-      onChange={onPlayersChange}
-      clearable
-      classNames={{
-        label: "tray-eyebrow",
-        input: "tray-field",
-        pill: "tray-field__pill",
-      }}
-      comboboxProps={{
-        width: 300,
-        position: "bottom-start",
-        shadow: "md",
-        transitionProps: { transition: "pop", duration: 200 },
-      }}
+    <PlayerFilter
+      players={players}
+      playerOptions={playerOptions}
+      onPlayersChange={onPlayersChange}
     />
     <Group justify="space-between" align="center" mt="sm">
       <Text size="sm" c="dimmed" ff="monospace">
