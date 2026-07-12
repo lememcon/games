@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "@/App";
@@ -41,5 +42,18 @@ describe("App", () => {
       "href",
       "/games/11",
     );
+  });
+
+  it("clears the player filter when the year changes", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("players", JSON.stringify(["alice"]));
+    const { container } = render(<App />);
+
+    // The year Select has id="year"; the MultiSelect also renders a textbox,
+    // so target the year input directly. Default year is the current year.
+    await user.click(container.querySelector("#year"));
+    await user.click(await screen.findByText("2025"));
+
+    expect(JSON.parse(localStorage.getItem("players"))).toEqual([]);
   });
 });
