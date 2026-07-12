@@ -329,3 +329,24 @@ body {
   background: #e7ddc9;
   border-color: #ddd2bd;
 }
+
+/* ---- Player filter ---- */
+.tray-field {
+  background: #f0eadd;
+  border: 1px solid #ece4d5;
+  border-radius: 12px;
+  color: #2b2723;
+}
+
+.tray-field:hover {
+  border-color: #ddd2bd;
+}
+
+/* Selected players read as little white chips on the tan field, echoing the
+   white cards on the tray. */
+.tray-field__pill {
+  background: #fff;
+  border: 1px solid #ece4d5;
+  color: #2b2723;
+  font-weight: 600;
+}

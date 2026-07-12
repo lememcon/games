@@ -30,6 +30,11 @@ const Filters = ({
       description="Which players are included in the list of games"
       onChange={onPlayersChange}
       clearable
+      classNames={{
+        label: "tray-eyebrow",
+        input: "tray-field",
+        pill: "tray-field__pill",
+      }}
       comboboxProps={{
         width: 300,
         position: "bottom-start",
