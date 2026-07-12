@@ -17,5 +17,5 @@ pre-commit:
       priority: 30
     test:
       glob: "*.{js,mjs,cjs,jsx,json}"
-      run: pnpm vitest related --coverage.enabled=false --reporter=basic --exclude "tests/**" --run {staged_files}
+      run: pnpm vitest related --coverage.enabled=false --reporter=dot --exclude "tests/**" --run {staged_files}
       priority: 50
