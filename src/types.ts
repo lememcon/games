@@ -131,7 +131,7 @@ export interface Profile {
   linkedPlayers: string[];
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
-  // Score rows across all players and years.
+  // Recorded plays (sum of played_count) across all members and years.
   totalPlays: number;
 }
 

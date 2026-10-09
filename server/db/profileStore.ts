@@ -3,7 +3,15 @@ import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { collapseMemberScores, toProfileStats } from "../shape";
 import type { ProfileStore } from "../types";
 import { lockDisplayNames, pgCode } from "./import";
-import { account, appUser, game, player, score, user } from "./schema";
+import {
+  account,
+  appUser,
+  game,
+  playedCount,
+  player,
+  score,
+  user,
+} from "./schema";
 import type { StoreDb } from "./userStore";
 
 const UNIQUE_VIOLATION = "23505";
@@ -125,8 +133,10 @@ export function createProfileStore(
         : null;
 
       const [{ plays: totalPlays }] = await db
-        .select({ plays: sql<number>`count(*)::int` })
-        .from(score);
+        .select({
+          plays: sql<number>`coalesce(sum(${playedCount.count}), 0)::int`,
+        })
+        .from(playedCount);
 
       return {
         discordId,

@@ -286,7 +286,7 @@ export interface Profile {
   linkedPlayers: string[];
   /** Null when no player is linked. */
   stats: ProfileStats | null;
-  /** Score rows across all players and years. */
+  /** Recorded plays (sum of played_count) across all members and years. */
   totalPlays: number;
 }
 

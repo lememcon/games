@@ -241,16 +241,27 @@ describe("getProfile", () => {
     });
   });
 
-  it("counts every player's scores as total plays, even with no stats", async () => {
-    await importScores(2025, [
-      row({ player: "amy", rank: 1, score: 90 }),
-      row({ player: "bob", rank: 2, score: 80 }),
-    ]);
-    await importScores(2026, [row({ player: "bob", rank: 1, score: 99 })]);
+  it("sums recorded plays across members and years, even with no stats", async () => {
+    await importScores(2025, [row({ player: "amy" })]);
+    await importScores(2026, [row({ player: "bob" })]);
+    await client.query(
+      `INSERT INTO played_count (discord_id, year, bgg_id, count)
+       VALUES ($1, 2025, 1, 3), ($1, 2026, 1, 2), ($2, 2025, 1, 5)`,
+      [ALEX, JO],
+    );
     expect(await store.getProfile(ALEX)).toMatchObject({
       stats: null,
-      totalPlays: 3,
+      totalPlays: 10,
     });
+  });
+
+  it("reports zero plays when only score rows exist", async () => {
+    await importScores(2025, [
+      row({ player: "amy", rank: 1 }),
+      row({ player: "bob", rank: 2 }),
+      row({ bgg_id: 2, game: "Azul", player: "amy", rank: 1 }),
+    ]);
+    expect(await store.getProfile(ALEX)).toMatchObject({ totalPlays: 0 });
   });
 
   it("prefers the display name", async () => {
@@ -303,7 +314,7 @@ describe("getProfile", () => {
           },
         ],
       },
-      totalPlays: 5,
+      totalPlays: 0,
     });
   });
 
