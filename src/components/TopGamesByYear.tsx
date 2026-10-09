@@ -23,7 +23,7 @@ const TopGamesByYear = ({ topByYear }: { topByYear: YearTopGames[] }) => {
             <Text size="sm" c="dimmed">
               {total > games.length
                 ? `${games.length} of ${total} games`
-                : `${total} games`}
+                : `${total} ${total === 1 ? "game" : "games"}`}
             </Text>
           </Group>
           <Stack gap="xs">

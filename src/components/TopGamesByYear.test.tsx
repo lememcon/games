@@ -32,7 +32,7 @@ describe("TopGamesByYear", () => {
     expect(screen.getByRole("heading", { name: "2026" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "2025" })).toBeInTheDocument();
     expect(screen.getByText("2 of 12 games")).toBeInTheDocument();
-    expect(screen.getByText("1 games")).toBeInTheDocument();
+    expect(screen.getByText("1 game")).toBeInTheDocument();
     expect(screen.getByLabelText("place 1")).toHaveTextContent("1");
     expect(screen.getByLabelText("place 4")).toHaveTextContent("4");
     expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
