@@ -16,18 +16,39 @@ export default defineConfig({
     port: 3000,
   },
   test: {
-    environment: "jsdom",
     globals: true,
-    setupFiles: "./src/test/setup.ts",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "web",
+          environment: "jsdom",
+          include: ["src/**/*.test.{ts,tsx}"],
+          setupFiles: "./src/test/setup.ts",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "server",
+          environment: "node",
+          include: ["server/**/*.test.ts"],
+        },
+      },
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/**/*.{ts,tsx}"],
+      include: ["src/**/*.{ts,tsx}", "server/**/*.ts"],
       exclude: [
         "src/main.tsx",
         "src/vite-env.d.ts",
         "src/types.ts",
         "src/test/**",
+        "server/index.ts",
+        "server/migrate.ts",
+        "server/db/**",
+        "server/types.ts",
         "**/*.test.{ts,tsx}",
       ],
       thresholds: {
