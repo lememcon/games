@@ -31,6 +31,20 @@ describe("usePlayerLinks", () => {
     const { hook } = await setup();
     expect(hook.result.current.players).toHaveLength(1);
     expect(hook.result.current.users).toHaveLength(1);
+    expect(hook.result.current.unlinked).toHaveLength(1);
+    expect(hook.result.current.members).toEqual([]);
+  });
+
+  it("groups linked names by member", async () => {
+    const { hook } = await setup(
+      new Response(null, { status: 204 }),
+      res(linked),
+    );
+    await act(() => hook.result.current.link(1, "10"));
+    expect(hook.result.current.unlinked).toEqual([]);
+    expect(hook.result.current.members).toMatchObject([
+      { discordId: "10", label: "Amy" },
+    ]);
   });
 
   it("reports a load failure", async () => {
@@ -77,6 +91,7 @@ describe("usePlayerLinks", () => {
   it.each([
     [404, "unknown_player", /player no longer exists/],
     [404, "unknown_user", /member no longer exists/],
+    [409, "name_taken", /matches another member/],
     [400, "invalid_body", /rejected: invalid_body/],
     [401, "x", /no longer have admin access/],
     [403, "x", /no longer have admin access/],

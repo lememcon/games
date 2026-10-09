@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { groupByMember } from "@/lib/playerLinks";
 import type { PlayerLinks } from "@/types";
 
 const GENERIC = "Something went wrong. Try again.";
@@ -11,6 +12,8 @@ const describe = (e: unknown): string => {
     return "You no longer have admin access.";
   if (e.message === "unknown_player") return "That player no longer exists.";
   if (e.message === "unknown_user") return "That member no longer exists.";
+  if (e.message === "name_taken")
+    return "That name matches another member's display name.";
   if (e.status === 400) return `The change was rejected: ${e.message}`;
   return GENERIC;
 };
@@ -58,9 +61,18 @@ const usePlayerLinks = (fetchImpl: typeof fetch = fetch) => {
     [fetchImpl],
   );
 
+  const players = data?.players;
+  const users = data?.users;
+  const grouped = useMemo(
+    () => groupByMember(players ?? [], users ?? []),
+    [players, users],
+  );
+
   return {
-    players: data?.players ?? [],
-    users: data?.users ?? [],
+    players: players ?? [],
+    users: users ?? [],
+    members: grouped.members,
+    unlinked: grouped.unlinked,
     loading,
     error,
     actionError,
