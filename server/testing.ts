@@ -1,9 +1,14 @@
 import type { BggGame } from "./bgg/client";
+import type { NormalizedImport } from "./import";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
 import type {
   BggRepo,
   GameMetadataRow,
   SettingRow,
+  DataStore,
+  GamesMap,
+  ImportContext,
+  LegacyScoreRow,
   StoredUser,
   UserRow,
   UserStore,
@@ -98,4 +103,48 @@ export function fakeBggRepo() {
     },
   };
   return { repo, settings, rows, writes };
+}
+
+/** In-memory DataStore for tests; the import applies the same rules as the SQL store. */
+export function fakeData(
+  initial: { years?: Record<number, LegacyScoreRow[]>; games?: GamesMap } = {},
+) {
+  const years = new Map<number, LegacyScoreRow[]>(
+    Object.entries(initial.years ?? {}).map(([y, rows]) => [Number(y), rows]),
+  );
+  const games: GamesMap = { ...initial.games };
+  const imports: { input: NormalizedImport; context: ImportContext }[] = [];
+
+  const data: DataStore = {
+    listYears: async () => [...years.keys()].sort((a, b) => b - a),
+    getScores: async (year) => years.get(year) ?? null,
+    getGames: async () => games,
+    importData: async (input, context) => {
+      if (input.year !== null && years.has(input.year))
+        return { ok: false, status: 409, error: "year_exists" };
+      imports.push({ input, context });
+      if (input.year !== null)
+        years.set(
+          input.year,
+          input.scores.map((s) => ({
+            bgg_id: s.bggId,
+            game: input.games.find((g) => g.bggId === s.bggId)?.name ?? "",
+            player: s.player,
+            score: s.score,
+            rank: s.rank,
+          })),
+        );
+      return {
+        ok: true,
+        value: {
+          year: input.year,
+          scores: input.scores.length,
+          games: { new: input.games.length, updated: 0 },
+          players: { new: input.players.length, total: input.players.length },
+          warnings: input.warnings,
+        },
+      };
+    },
+  };
+  return { data, years, games, imports };
 }

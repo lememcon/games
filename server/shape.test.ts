@@ -1,0 +1,213 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { parseImport, type NormalizedGame } from "./import";
+import {
+  chunk,
+  newPlayers,
+  planGames,
+  summarize,
+  toGamesMap,
+  toLegacyRow,
+} from "./shape";
+import type { GameRow, ScoreRow } from "./types";
+
+const root = path.resolve(import.meta.dirname, "..");
+const readJson = (file: string) =>
+  JSON.parse(readFileSync(path.join(root, file), "utf8"));
+
+const game = (over: Partial<NormalizedGame> = {}): NormalizedGame => ({
+  bggId: 1,
+  name: "Root",
+  minPlayers: null,
+  maxPlayers: null,
+  imageUrl: null,
+  imageExt: null,
+  ...over,
+});
+
+describe("chunk", () => {
+  it("splits into groups of at most size", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 3)).toEqual([]);
+    expect(chunk([1, 2], 5)).toEqual([[1, 2]]);
+  });
+});
+
+describe("toLegacyRow", () => {
+  it("maps a stored score to the feed row, negatives included", () => {
+    const stored: ScoreRow = {
+      bggId: 7,
+      gameName: "Root",
+      playerName: "kelsin",
+      score: -3,
+      rank: 2,
+    };
+    expect(toLegacyRow(stored)).toEqual({
+      bgg_id: 7,
+      game: "Root",
+      player: "kelsin",
+      score: -3,
+      rank: 2,
+    });
+  });
+
+  it("never emits a null game name", () => {
+    expect(
+      toLegacyRow({
+        bggId: 1,
+        gameName: null,
+        playerName: "a",
+        score: 1,
+        rank: 1,
+      }).game,
+    ).toBe("");
+  });
+});
+
+describe("toGamesMap", () => {
+  const row = (over: Partial<GameRow>): GameRow => ({
+    bggId: 1,
+    name: null,
+    minPlayers: null,
+    maxPlayers: null,
+    imageUrl: null,
+    imageExt: null,
+    ...over,
+  });
+
+  it("returns the games.json shape keyed by id", () => {
+    expect(
+      toGamesMap([
+        row({
+          bggId: 11,
+          minPlayers: 2,
+          maxPlayers: 7,
+          imageUrl: "https://x/a.jpg",
+          imageExt: ".jpg",
+        }),
+      ]),
+    ).toEqual({
+      "11": {
+        players: { min: 2, max: 7 },
+        image: "https://x/a.jpg",
+        ext: ".jpg",
+      },
+    });
+  });
+
+  it("omits null columns so gameBounds sees undefined", () => {
+    const map = toGamesMap([
+      row({ bggId: 1 }),
+      row({ bggId: 2, minPlayers: 2, maxPlayers: null, imageExt: ".png" }),
+    ]);
+    expect(map["1"]).toEqual({});
+    expect(map["1"].players).toBeUndefined();
+    expect(map["2"]).toEqual({ ext: ".png" });
+  });
+
+  it("keeps zero player counts", () => {
+    expect(
+      toGamesMap([row({ minPlayers: 0, maxPlayers: 0 })])["1"].players,
+    ).toEqual({ min: 0, max: 0 });
+  });
+});
+
+describe("planGames", () => {
+  it("counts new and updated games from the stored ids", () => {
+    const plan = planGames(
+      [{ bggId: 1, name: "Root" }],
+      [game(), game({ bggId: 2, name: "Other" })],
+    );
+    expect(plan).toEqual({ created: 1, updated: 1, warnings: [] });
+  });
+
+  it("warns on a rename and keeps the stored name", () => {
+    const plan = planGames(
+      [{ bggId: 1, name: "Root" }],
+      [game({ name: "Root: Deluxe" })],
+    );
+    expect(plan.warnings).toEqual([
+      'bgg_id 1 renamed "Root" to "Root: Deluxe" in the file; kept "Root"',
+    ]);
+  });
+
+  it("does not warn when the stored or incoming name is null", () => {
+    expect(planGames([{ bggId: 1, name: null }], [game()]).warnings).toEqual(
+      [],
+    );
+    expect(
+      planGames([{ bggId: 1, name: "Root" }], [game({ name: null })]).warnings,
+    ).toEqual([]);
+    expect(planGames([{ bggId: 1, name: "Root" }], [game()]).warnings).toEqual(
+      [],
+    );
+  });
+});
+
+describe("newPlayers", () => {
+  it("excludes stored players regardless of case", () => {
+    expect(newPlayers(["Kelsin"], ["kelsin", "pat"])).toEqual(["pat"]);
+  });
+});
+
+describe("summarize", () => {
+  it("combines counts and warnings", () => {
+    const parsed = parseImport({
+      year: 2026,
+      player_game_scores: [
+        { bgg_id: 1, game: "Root", player: "A", score: 1, rank: 1 },
+        { bgg_id: 1, game: "Root", player: "a2", score: 1, rank: 2 },
+      ],
+    });
+    if (!parsed.ok) throw new Error("invalid");
+    expect(
+      summarize(parsed.value, { created: 1, updated: 0, warnings: ["w"] }, 2),
+    ).toEqual({
+      year: 2026,
+      scores: 2,
+      games: { new: 1, updated: 0 },
+      players: { new: 2, total: 2 },
+      warnings: ["w"],
+    });
+  });
+});
+
+describe("round trip", () => {
+  const sample = readJson("sample-data.json");
+  const realGames = readJson("src/assets/games.json");
+
+  it("reads back exactly what sample-data.json held, in insertion order", () => {
+    const parsed = parseImport({ year: 2025, ...sample, games: realGames });
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
+    const { games, scores } = parsed.value;
+    const names = new Map(games.map((g) => [g.bggId, g.name]));
+    // What the database returns for the year, ordered by score.id.
+    const stored: ScoreRow[] = scores.map((s) => ({
+      bggId: s.bggId,
+      gameName: names.get(s.bggId)!,
+      playerName: s.player,
+      score: s.score,
+      rank: s.rank,
+    }));
+    expect(stored.map(toLegacyRow)).toEqual(sample.player_game_scores);
+  });
+
+  it("reads back every game of games.json except the custom image", () => {
+    const parsed = parseImport(realGames);
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
+    const map = toGamesMap(parsed.value.games);
+    expect(Object.keys(map)).toHaveLength(191);
+    // games with no scores are present, with only metadata.
+    expect(map["11"]).toEqual(realGames["11"]);
+    expect(map["417258"]).toEqual({
+      players: { min: 2, max: 4 },
+      ext: ".png",
+    });
+    const { "417258": _custom, ...rest } = realGames;
+    const { "417258": _read, ...restMap } = map;
+    expect(restMap).toEqual(rest);
+  });
+});
