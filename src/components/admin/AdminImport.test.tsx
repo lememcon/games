@@ -52,6 +52,15 @@ describe("AdminImport", () => {
     expect(screen.getByRole("button", { name: "Import 2027" })).toBeEnabled();
   });
 
+  it("keeps a typed year when the file names none", async () => {
+    renderWithMantine(<AdminImport />);
+    await userEvent.type(screen.getByLabelText("Year"), "2030");
+    await upload({ player_game_scores: rows });
+
+    expect(await screen.findByText(/Preview/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Year")).toHaveValue("2030");
+  });
+
   it("asks for a year when a scores file has none", async () => {
     renderWithMantine(<AdminImport />);
     await upload({ player_game_scores: rows });
@@ -102,7 +111,7 @@ describe("AdminImport", () => {
           year: 2027,
           scores: 2,
           games: { new: 1, updated: 1 },
-          players: 2,
+          players: { new: 2, total: 2 },
           warnings: ["renamed A to B"],
         },
         201,
@@ -135,7 +144,7 @@ describe("AdminImport", () => {
           year: 2027,
           scores: 2,
           games: { new: 0, updated: 0 },
-          players: 2,
+          players: { new: 2, total: 2 },
           warnings: [],
         },
         201,
@@ -163,7 +172,7 @@ describe("AdminImport", () => {
           year: null,
           scores: 0,
           games: { new: 2, updated: 0 },
-          players: 0,
+          players: { new: 0, total: 0 },
           warnings: [],
         },
         201,

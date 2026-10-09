@@ -159,7 +159,7 @@ export interface ImportResult {
   year: number | null;
   scores: number;
   games: { new: number; updated: number };
-  players: number;
+  players: { new: number; total: number };
   warnings: string[];
 }
 

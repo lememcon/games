@@ -177,7 +177,8 @@ type ImageResult = { url: string | null } | { error: string };
 
 function parseImage(value: unknown): ImageResult {
   if (typeof value !== "string") return { error: "must be a string" };
-  if (value === CUSTOM_IMAGE) return { url: null };
+  // Stored as-is: the metadata upsert keeps a "custom" image and its ext.
+  if (value === CUSTOM_IMAGE) return { url: CUSTOM_IMAGE };
   if (value.length > MAX_IMAGE)
     return { error: `must be at most ${MAX_IMAGE} characters` };
   // new URL() trims whitespace, so check for it explicitly.

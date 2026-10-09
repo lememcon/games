@@ -200,7 +200,7 @@ session; optional `?filename=` is stored with the year). Two shapes:
 
 `sample-data.json` has no year, so add `"year": 2025` (or the right year) to it before
 uploading it as a year upload. `src/assets/games.json` uploads as is (its `"custom"` image
-marker is read as no image URL; the bundled cover is used). Rules: 20,000 score rows at
+marker is stored as is and the bundled cover is used). Rules: 20,000 score rows at
 most, strings up to 200 characters, https image URLs only, extensions `.jpg .jpeg .png .webp
 .gif`, no two game ids sharing a name, and players that differ only by case are one player
 (first spelling wins; a warning says so). A game's stored name is never overwritten; a

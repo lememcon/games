@@ -209,19 +209,12 @@ describe("round trip", () => {
     expect(stored.map(toLegacyRow)).toEqual(sample.player_game_scores);
   });
 
-  it("reads back every game of games.json except the custom image", () => {
+  it("reads back every game of games.json, custom image included", () => {
     const parsed = parseImport(realGames);
     if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
     const map = toGamesMap(parsed.value.games);
     expect(Object.keys(map)).toHaveLength(191);
     // games with no scores are present, with only metadata.
-    expect(map["11"]).toEqual(realGames["11"]);
-    expect(map["417258"]).toEqual({
-      players: { min: 2, max: 4 },
-      ext: ".png",
-    });
-    const { "417258": _custom, ...rest } = realGames;
-    const { "417258": _read, ...restMap } = map;
-    expect(restMap).toEqual(rest);
+    expect(map).toEqual(realGames);
   });
 });

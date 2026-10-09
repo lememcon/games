@@ -2,6 +2,8 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MantineProvider } from "@mantine/core";
+
 import Scoreboard from "@/components/Scoreboard";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser, Data, GamesData } from "@/types";
@@ -114,6 +116,26 @@ describe("Scoreboard", () => {
     expect(state.useData).toHaveBeenLastCalledWith("2025");
 
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+  });
+
+  it("loads the stored played counts once the years resolve", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("played_counts_2026", JSON.stringify({ "11": 3 }));
+    state.years = { years: [], loading: true, error: false };
+    const { rerender } = render();
+
+    state.years = { years: ["2025", "2026"], loading: false, error: false };
+    rerender(
+      <MantineProvider>
+        <Scoreboard user={member} />
+      </MantineProvider>,
+    );
+    await user.click(await screen.findByRole("button", { name: "+" }));
+
+    expect(JSON.parse(localStorage.getItem("played_counts_2026")!)).toEqual({
+      "11": 4,
+    });
+    expect(localStorage.getItem("played_counts_")).toBeNull();
   });
 
   it("shows skeletons while the data loads", () => {

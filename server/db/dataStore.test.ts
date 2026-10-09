@@ -173,6 +173,42 @@ describe("data store metadata", () => {
     expect(games["900101"]).toEqual({});
   });
 
+  it("imports more metadata rows than one chunk", async () => {
+    const games = Object.fromEntries(
+      Array.from({ length: 1200 }, (_, i) => [
+        `${800000 + i}`,
+        { players: { min: 1, max: 4 } },
+      ]),
+    );
+    const result = await store.importData(parsed({ games }), context);
+    expect(result).toMatchObject({ ok: true });
+    expect((await store.getGames())["800000"]).toEqual({
+      players: { min: 1, max: 4 },
+    });
+    expect((await store.getGames())["801199"]).toEqual({
+      players: { min: 1, max: 4 },
+    });
+  });
+
+  it("stores the custom image sentinel from an upload", async () => {
+    await store.importData(
+      parsed({
+        games: {
+          "900200": {
+            players: { min: 1, max: 2 },
+            image: "custom",
+            ext: ".png",
+          },
+        },
+      }),
+      context,
+    );
+    expect((await store.getGames())["900200"]).toMatchObject({
+      image: "custom",
+      ext: ".png",
+    });
+  });
+
   it("keeps stored metadata when an upload carries none or other values", async () => {
     await store.importData(
       parsed({

@@ -82,7 +82,8 @@ export async function importData(
             target: game.bggId,
             set: { name: sql`coalesce(${game.name}, excluded.name)` },
           });
-      await upsertMetadata(tx, toMetadata(input.games), new Date());
+      for (const metadata of chunk(toMetadata(input.games), CHUNK))
+        await upsertMetadata(tx, metadata, new Date());
 
       for (const rows of chunk(input.scores, CHUNK))
         await tx.insert(score).values(

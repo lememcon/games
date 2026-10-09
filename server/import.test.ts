@@ -67,7 +67,7 @@ describe("real data", () => {
     expect(value.games).toHaveLength(191);
     expect(value.games.every((g) => g.name === null)).toBe(true);
     expect(value.games.find((g) => g.bggId === 417258)).toMatchObject({
-      imageUrl: null,
+      imageUrl: "custom",
       imageExt: ".png",
       minPlayers: 2,
       maxPlayers: 4,
@@ -271,9 +271,9 @@ describe("games map", () => {
       expect(gamesErrors({ "1": meta({ ext }) })).toEqual(['games["1"].ext']);
   });
 
-  it("maps image 'custom' to a null url and keeps the ext", () => {
+  it("passes image 'custom' through as the sentinel and keeps the ext", () => {
     const game = ok({ games: { "1": meta({ image: "custom" }) } }).games[0];
-    expect(game.imageUrl).toBeNull();
+    expect(game.imageUrl).toBe("custom");
     expect(game.imageExt).toBe(".jpg");
   });
 

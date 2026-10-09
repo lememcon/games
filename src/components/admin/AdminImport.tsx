@@ -75,7 +75,8 @@ const AdminImport = () => {
     const parsed = parseFile(await file.text());
     if (parsed.ok) {
       setRaw(parsed.raw);
-      setYearInput(fileYear(parsed.raw));
+      const named = fileYear(parsed.raw);
+      if (named) setYearInput(named);
     } else {
       setFileError(parsed.error);
     }
