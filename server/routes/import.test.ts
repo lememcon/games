@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeStore } from "../testing";
+import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
 import type { AppUser } from "../types";
 import { MAX_BODY_BYTES } from "./import";
 
 const ADMIN: AppUser = {
   discordId: "998877665544332211",
   name: "Alex",
+  displayName: null,
+  discordName: "Alex",
   image: null,
   role: "admin",
   status: "approved",
@@ -27,6 +29,7 @@ function makeApp() {
     store: fakeStore().store,
     data: fake.data,
     links: fakeLinks().links,
+    profiles: fakeProfiles().profiles,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

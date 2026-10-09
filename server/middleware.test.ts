@@ -4,7 +4,13 @@ import { describe, expect, it } from "vitest";
 import { requireAdmin, requireApproved } from "./middleware";
 import type { AppEnv, AppUser } from "./types";
 
-const base = { discordId: "222222222222222222", name: "Pat", image: null };
+const base = {
+  discordId: "222222222222222222",
+  name: "Pat",
+  displayName: null,
+  discordName: "Pat",
+  image: null,
+};
 const member: AppUser = { ...base, role: "member", status: "approved" };
 const admin: AppUser = { ...member, role: "admin" };
 const pending: AppUser = { ...member, status: "pending" };

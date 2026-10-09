@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
 import { PROTECTED_ADMIN_IDS } from "./roles";
-import { fakeData, fakeLinks, fakeStore } from "./testing";
+import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "./testing";
 import type { AdminUser, AppUser } from "./types";
 
 const BASE = "https://api.lememcon.com";
@@ -17,6 +17,8 @@ const person = (
 ): Omit<AppUser, "role" | "status"> => ({
   discordId,
   name,
+  displayName: null,
+  discordName: name,
   image: null,
 });
 const users: Record<string, AppUser> = {
@@ -43,6 +45,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     store: fake.store,
     data: fakeData().data,
     links: fakeLinks().links,
+    profiles: fakeProfiles().profiles,
     resolveSession: async (headers) => {
       const cookie = headers.get("cookie");
       const who = cookie?.startsWith("as=") && users[cookie.slice(3)];
@@ -96,7 +99,63 @@ describe("GET /api/me", () => {
     const res = await makeApp().app.request("/api/me", as("admin"));
     expect(await res.json()).toEqual({
       status: "approved",
-      user: { discordId: ALEX, name: "Alex", image: null, role: "admin" },
+      user: {
+        discordId: ALEX,
+        name: "Alex",
+        displayName: null,
+        discordName: "Alex",
+        image: null,
+        role: "admin",
+      },
+    });
+  });
+});
+
+describe("GET /api/me display names", () => {
+  const named = {
+    ...person(ALEX, "Kel"),
+    displayName: "Kel",
+    discordName: "Alex",
+  };
+  const appAs = (user: AppUser) =>
+    createApp({
+      baseUrl: BASE,
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data: fakeData().data,
+      links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
+      resolveSession: async () => ({ user }),
+    });
+
+  it("reports the resolved, chosen and Discord names to an approved user", async () => {
+    const res = await appAs({
+      ...named,
+      role: "member",
+      status: "approved",
+    }).request("/api/me");
+    expect(await res.json()).toEqual({
+      status: "approved",
+      user: {
+        discordId: ALEX,
+        name: "Kel",
+        displayName: "Kel",
+        discordName: "Alex",
+        image: null,
+        role: "member",
+      },
+    });
+  });
+
+  it("gives a pending user only the Discord name", async () => {
+    const res = await appAs({
+      ...named,
+      role: "member",
+      status: "pending",
+    }).request("/api/me");
+    expect(await res.json()).toEqual({
+      status: "pending",
+      user: { discordId: ALEX, name: "Alex", image: null },
     });
   });
 });

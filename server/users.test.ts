@@ -14,6 +14,8 @@ const JO = "777666555444333222";
 const actor: AppUser = {
   discordId: ALEX,
   name: "Alex",
+  displayName: null,
+  discordName: "Alex",
   image: null,
   role: "admin",
   status: "approved",
@@ -69,6 +71,7 @@ describe("GET /users", () => {
     expect(users[1]).toEqual({
       discordId: SAM,
       name: "Sam",
+      displayName: null,
       image: null,
       username: "sam_k",
       role: "member",
@@ -77,6 +80,18 @@ describe("GET /users", () => {
       createdAt: "2026-01-04T00:00:00.000Z",
     });
     expect(users[0].name).toBe("Unknown");
+  });
+
+  it("lists the display name next to the Discord name", async () => {
+    const fake = setup();
+    fake.users.set(SAM, { ...fake.users.get(SAM)!, displayName: "Sammy" });
+    const users = (await (
+      await fake.app.request("/users")
+    ).json()) as AdminUser[];
+    expect(users.find((u) => u.discordId === SAM)).toMatchObject({
+      name: "Sam",
+      displayName: "Sammy",
+    });
   });
 
   it("reports a tampered built-in row as a locked approved admin", async () => {

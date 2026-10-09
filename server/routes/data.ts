@@ -24,9 +24,13 @@ export function dataRoutes(data: DataStore) {
 
   routes.get("/years/:year/scores", ...read, async (c) => {
     const param = c.req.param("year");
+    // Display names and profile ids are for approved sessions only, so the
+    // response varies by caller and must not be shared from a cache.
+    const approved = c.get("user")?.status === "approved";
     const rows = /^\d{1,4}$/.test(param)
-      ? await data.getScores(Number(param))
+      ? await data.getScores(Number(param), approved)
       : null;
+    c.header("Vary", "Cookie", { append: true });
     return rows
       ? c.json({ player_game_scores: rows })
       : c.json({ error: "not_found" }, 404);

@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../app";
-import { fakeBggRepo, fakeData, fakeLinks, fakeStore } from "../testing";
+import {
+  fakeBggRepo,
+  fakeData,
+  fakeLinks,
+  fakeProfiles,
+  fakeStore,
+} from "../testing";
 import type { AppUser } from "../types";
 import type { BggBatch, BggClient } from "./client";
 import { createBggService } from "./service";
@@ -15,6 +21,8 @@ const IMG = "https://cf.geekdo-images.com/a/p.jpg";
 const person = (role: "admin" | "member", status = "approved"): AppUser => ({
   discordId: "1",
   name: "Alex",
+  displayName: null,
+  discordName: "Alex",
   image: null,
   role,
   status: status as AppUser["status"],
@@ -61,6 +69,7 @@ function setup(over: { fetchThings?: BggClient["fetchThings"] } = {}) {
     store: fakeStore().store,
     data: fakeData().data,
     links: fakeLinks().links,
+    profiles: fakeProfiles().profiles,
     bgg,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
@@ -142,6 +151,7 @@ describe("admin guard", () => {
       store: fakeStore().store,
       data: fakeData().data,
       links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
       resolveSession: async () => ({ user: users.admin }),
     });
     const res = await app.request("/api/admin/bgg/key");
@@ -236,6 +246,7 @@ describe("POST /key/test", () => {
       store: fakeStore().store,
       data: fakeData().data,
       links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
       resolveSession: async () => ({ user: users.admin }),
       bgg: frozen,
     });
@@ -273,6 +284,7 @@ describe("status, download and job", () => {
       store: fakeStore().store,
       data: fakeData().data,
       links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
       resolveSession: async () => ({ user: users.admin }),
       bgg: createBggService({
         repo: s.repo,

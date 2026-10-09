@@ -127,12 +127,26 @@ describe("createSessionResolver", () => {
     expect(user).toEqual({
       discordId: ALEX,
       name: "Pat",
+      displayName: null,
+      discordName: "Pat",
       image: "pat.png",
       role: "member",
       status: "pending",
     });
     expect(fake.users.get(ALEX)).toEqual({ role: "member", status: "pending" });
     expect(headers?.getSetCookie()).toEqual(["session=refreshed"]);
+  });
+
+  it("prefers the display name over the Discord name", async () => {
+    const fake = setup([ALEX], {
+      [ALEX]: { role: "member", status: "approved", displayName: "Kel" },
+    });
+    const { user } = await resolve(fake);
+    expect(user).toMatchObject({
+      name: "Kel",
+      displayName: "Kel",
+      discordName: "Pat",
+    });
   });
 
   it("applies the stored role and status on the next request", async () => {

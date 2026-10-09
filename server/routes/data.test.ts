@@ -1,17 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeStore } from "../testing";
-import type { LegacyScoreRow } from "../types";
+import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
+import type { AppUser, LegacyScoreRow } from "../types";
 
 const rows: LegacyScoreRow[] = [
   { bgg_id: 1, game: "Root", player: "kelsin", score: -3, rank: 2 },
   { bgg_id: 1, game: "Root", player: "pat", score: 9, rank: 1 },
 ];
 
-function makeApp() {
-  const { data } = fakeData({
-    years: { 2025: rows, 2026: [] },
+const MEMBER: AppUser = {
+  discordId: "222222222222222222",
+  name: "Pat",
+  displayName: null,
+  discordName: "Pat",
+  image: null,
+  role: "member",
+  status: "approved",
+};
+const PENDING: AppUser = { ...MEMBER, status: "pending" };
+
+function makeApp(user: AppUser | null = null) {
+  const { data, scoreCalls } = fakeData({
+    years: {
+      2025: [rows[0], { ...rows[1], discord_id: "222222222222222222" }],
+      2026: [],
+    },
     games: {
       "1": {
         players: { min: 2, max: 4 },
@@ -21,14 +35,16 @@ function makeApp() {
       "2": {},
     },
   });
-  return createApp({
+  const app = createApp({
     baseUrl: "https://api.lememcon.com",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data,
     links: fakeLinks().links,
-    resolveSession: async () => ({ user: null }),
+    profiles: fakeProfiles().profiles,
+    resolveSession: async () => ({ user }),
   });
+  return Object.assign(app, { scoreCalls });
 }
 
 describe("GET /api/years", () => {
@@ -47,10 +63,36 @@ describe("GET /api/years", () => {
 });
 
 describe("GET /api/years/:year/scores", () => {
-  it("returns the legacy row shape", async () => {
-    const res = await makeApp().request("/api/years/2025/scores");
+  it("returns the legacy row shape without discord_id to anonymous callers", async () => {
+    const app = makeApp();
+    const res = await app.request("/api/years/2025/scores");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ player_game_scores: rows });
+    expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: false }]);
+  });
+
+  it("adds discord_id for approved sessions", async () => {
+    const app = makeApp(MEMBER);
+    const res = await app.request("/api/years/2025/scores");
+    expect(await res.json()).toEqual({
+      player_game_scores: [
+        rows[0],
+        { ...rows[1], discord_id: MEMBER.discordId },
+      ],
+    });
+    expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: true }]);
+  });
+
+  it("treats pending sessions like anonymous ones", async () => {
+    const app = makeApp(PENDING);
+    await app.request("/api/years/2025/scores");
+    expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: false }]);
+  });
+
+  it("is private and varies by cookie", async () => {
+    const res = await makeApp().request("/api/years/2025/scores");
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(res.headers.get("vary")).toContain("Cookie");
   });
 
   it("returns an empty list for a year without scores", async () => {
