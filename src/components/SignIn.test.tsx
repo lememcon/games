@@ -14,6 +14,16 @@ vi.mock("@/lib/auth", async (orig) => ({
 describe("SignIn", () => {
   afterEach(() => vi.clearAllMocks());
 
+  it("renders the heading and a Discord button with a decorative icon", () => {
+    renderWithMantine(<SignIn />);
+
+    expect(
+      screen.getByRole("heading", { name: "Sign in to LememCon" }),
+    ).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Sign in with Discord" });
+    expect(button.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
   it("redirects to the URL returned by the server", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", {
