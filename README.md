@@ -29,8 +29,7 @@ you've already played. Live at **[games.lememcon.com](https://games.lememcon.com
   current selection are hidden.
 - **Played counter** — increment/decrement a per-game play count, persisted in
   `localStorage` per year, with an option to hide games you've played.
-- **Year switcher** — pick any year from 2025 to the current year; each year is
-  a separate data feed.
+- **Year switcher** — pick any imported year; each year is a separate import.
 - **Game detail pages** — per-game view with the BoardGameGeek cover image,
   player-count bounds, and a table of every player's rank and score.
 
@@ -83,15 +82,17 @@ pnpm dev
 
 ### Data flow
 
-Score data is **not** bundled — it's fetched at runtime:
+Score data is **not** bundled — it comes from the API, which reads PostgreSQL:
 
-- `useData(year)` fetches `https://data.lememcon.com/{year}.json` and reshapes
-  the flat `player_game_scores` array into lookups by game id, by game name, and
-  by player, plus the max single score used to normalize the score bars.
-- `src/assets/games.json` is the one bundled data file. It maps a BoardGameGeek
-  id to static metadata — player-count bounds and the cover image extension.
-  Cover images live in `src/assets/games/<bgg_id>.<ext>` and are imported via
-  Vite's `import.meta.glob`.
+- `GET /api/years` lists the imported years, newest first, and
+  `GET /api/years/{year}/scores` returns that year's `player_game_scores` rows
+  (`bgg_id`, `game`, `player`, `score`, `rank`). `useData(year)` reshapes the flat
+  array into lookups by game id, by game name, and by player, plus the max single
+  score used to normalize the score bars.
+- `GET /api/games` returns every game's metadata (player-count bounds, cover image
+  URL and extension) in the shape of `src/assets/games.json`, which stays in the repo
+  as import source data and for `pnpm update`. Cover images in `src/assets/games/` are
+  imported via Vite's `import.meta.glob`.
 - `src/lib/games.ts` holds the pure logic — `buildSelectedGames` aggregates and
   sorts the games list, and `computeMaxScores` derives the normalization maxima.
   It takes injected dependencies (images, metadata, play counts) so it can be
@@ -135,39 +136,36 @@ separate Hono server in `server/`, built from the `Dockerfile` and meant to run 
 an API-only service at `api.lememcon.com`. Login is Discord OAuth via Better Auth;
 sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `admin`
 (a user whose Discord id is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`,
-`GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`.
+`GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`. Game data:
+public `GET /api/years`, `GET /api/years/:year/scores` and `GET /api/games`, and the
+admin-only `POST /api/admin/import` (see Importing game data).
 
-The SPA and the API are different origins (same site). Not done yet: the CSRF check in
-`server/middleware.ts` accepts `Sec-Fetch-Site` `same-origin`/`none` or, when that header
-is absent, an `Origin` equal to `BETTER_AUTH_URL`. Browsers always send `Sec-Fetch-Site`,
-so a browser POST from `games.lememcon.com` to `api.lememcon.com`
-(`Sec-Fetch-Site: same-site`) gets a 403. There is also no CORS yet (it needs `cors()`
-with the web origin, credentials and preflight on `/api/*`), `trustedOrigins` in
-`server/auth.ts` lacks the web origin, the SPA makes no `/api` calls yet (future ones
-need an API base URL and `credentials: "include"`), and the server and image still
-serve and bundle the SPA (`server/static.ts`, `pnpm build` and the `dist/` copy in the
-`Dockerfile`), which the API host does not need. A host-only session cookie on
-`api.lememcon.com` with `credentials: "include"` should work because the hosts are
-same-site; a `.lememcon.com` cookie domain is only needed if that proves insufficient.
+The browser only talks to `games.lememcon.com`: `public/_redirects` has a Netlify
+rewrite of `/api/*` to `https://api.lememcon.com/api/:splat` (before the SPA fallback), so
+the SPA, the CSRF check and the session cookie are all same-origin and no CORS is needed.
+Consequences:
 
-An alternative is a Netlify rewrite of `/api/*` to the API host, so the browser sees
-one origin and the CSRF, CORS and cookie work is avoided. With that rewrite
-`BETTER_AUTH_URL` and the Discord redirect URI stay `https://games.lememcon.com`, so do
-not mix the two topologies.
+- `BETTER_AUTH_URL` is `https://games.lememcon.com` (not the API host), and the Discord
+  redirect URI is `https://games.lememcon.com/api/auth/callback/discord`.
+- Netlify's proxy has its own request limits and timeout. The import endpoint accepts at
+  most about 5 MB (`413` beyond that), but a proxy in front may cut a large upload off
+  earlier; a typical year is about 100 KB. Check an import of a real file after deploying.
+- The server still supports direct cross-origin calls (`WEB_ORIGIN` for CORS and the CSRF
+  origin check), but do not mix the two topologies.
 
 Environment variables (see `.env.example`; a local `.env` is loaded automatically).
-The Discord redirect URI is `https://api.lememcon.com/api/auth/callback/discord`.
+With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com/api/auth/callback/discord`.
 
-| Variable                | Purpose                                                  |
-| ----------------------- | -------------------------------------------------------- |
-| `DATABASE_URL`          | PostgreSQL connection string                             |
-| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                     |
-| `BETTER_AUTH_URL`       | API origin, e.g. `https://api.lememcon.com`              |
-| `DISCORD_CLIENT_ID`     | Discord application client id                            |
-| `DISCORD_CLIENT_SECRET` | Discord application client secret                        |
-| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role |
-| `PORT`                  | Listen port (default `8080`)                             |
-| `WEB_ORIGIN`            | Planned, not implemented yet: SPA origin for CORS/CSRF   |
+| Variable                | Purpose                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string                                                          |
+| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                                                  |
+| `BETTER_AUTH_URL`       | Public origin users see: `https://games.lememcon.com`; `http://localhost:3000` in dev |
+| `DISCORD_CLIENT_ID`     | Discord application client id                                                         |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret                                                     |
+| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role                              |
+| `PORT`                  | Listen port (default `8080`)                                                          |
+| `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                            |
 
 ```sh
 pnpm server:dev                          # watch mode
@@ -179,10 +177,45 @@ docker run --env-file .env lememcon-games node dist-server/migrate.js   # apply 
 docker run --env-file .env -p 8080:8080 lememcon-games
 ```
 
-Locally the SPA (Vite on :3000) and the API (:8080) are also different origins on the
-same site, so the same CSRF 403 applies to POSTs. The planned local option is a Vite
-`server.proxy` for `/api` to `http://localhost:8080`, which makes local calls
-same-origin (not configured yet).
+Locally, Vite (`pnpm dev`, :3000) proxies `/api` to `http://localhost:8080` (override with
+`API_PROXY_TARGET`), so the browser stays on one origin. For Discord login in dev set
+`BETTER_AUTH_URL=http://localhost:3000` and add
+`http://localhost:3000/api/auth/callback/discord` as a Discord redirect URI. The app needs
+the server (`pnpm server:dev`), PostgreSQL with migrations applied, and an imported year.
+
+### Importing game data
+
+The database starts empty and the app reads only from it. Admins load data on the
+`/admin/import` page (or `POST /api/admin/import` with a JSON body, same-origin, admin
+session; optional `?filename=` is stored with the year). Two shapes:
+
+- **Year upload**: `{ "year": 2026, "player_game_scores": [{bgg_id, game, player, score, rank}], "games"?: {...} }`.
+  Creates the year and its scores; an existing year is refused with `409` (there is no
+  replace). Extra feed fields are dropped.
+- **Games-only upload**: `{ "games": {...} }` or a bare `games.json`. Creates no year; it only
+  adds or updates game metadata (player counts, image URL and extension). Games without
+  scores are stored without a name until a score row names them.
+
+`sample-data.json` has no year, so add `"year": 2025` (or the right year) to it before
+uploading it as a year upload. `src/assets/games.json` uploads as is (its `"custom"` image
+marker is stored as no image URL; the bundled cover is used). Rules: 20,000 score rows at
+most, strings up to 200 characters, https image URLs only, extensions `.jpg .jpeg .png .webp
+.gif`, no two game ids sharing a name, and players that differ only by case are one player
+(first spelling wins; a warning says so). A game's stored name is never overwritten; a
+changed name comes back as a warning. Responses: `201` with counts and warnings, `400`
+bad JSON, `401`/`403` not an admin, `409` year exists, `413` over about 5 MB, `422`
+`{ errors: [{ path, message }] }`.
+
+There is no delete endpoint. To remove a year (its scores go with it), run:
+
+```sql
+DELETE FROM year WHERE year = 2026;
+```
+
+**Deploy order**: the app no longer carries its data, so deploy the backend and run the
+migration (`node dist-server/migrate.js`), then import `games.json` (games-only) and each
+year through the admin page, and only then deploy the SPA (merge after the import).
+Deploying the SPA first shows an empty app.
 
 ### BoardGameGeek data (admin)
 
