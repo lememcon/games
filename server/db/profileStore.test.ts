@@ -237,6 +237,19 @@ describe("getProfile", () => {
       image: null,
       linkedPlayers: [],
       stats: null,
+      totalPlays: 0,
+    });
+  });
+
+  it("counts every player's scores as total plays, even with no stats", async () => {
+    await importScores(2025, [
+      row({ player: "amy", rank: 1, score: 90 }),
+      row({ player: "bob", rank: 2, score: 80 }),
+    ]);
+    await importScores(2026, [row({ player: "bob", rank: 1, score: 99 })]);
+    expect(await store.getProfile(ALEX)).toMatchObject({
+      stats: null,
+      totalPlays: 3,
     });
   });
 
@@ -273,15 +286,7 @@ describe("getProfile", () => {
       image: null,
       linkedPlayers: ["amy"],
       stats: {
-        games: 3,
-        wins: 1,
-        winRate: 1 / 3,
-        avgRank: 2,
-        podiums: 3,
-        mostPlayed: [
-          { bggId: 1, game: "Root", plays: 2, bestRank: 1, bestScore: 90 },
-          { bggId: 2, game: "Azul", plays: 1, bestRank: 3, bestScore: 40 },
-        ],
+        years: 2,
         topByYear: [
           {
             year: 2026,
@@ -298,6 +303,7 @@ describe("getProfile", () => {
           },
         ],
       },
+      totalPlays: 5,
     });
   });
 
@@ -330,16 +336,7 @@ describe("getProfile", () => {
     await link("amy", ALEX);
     const profile = (await store.getProfile(ALEX))!;
     expect(profile.linkedPlayers).toEqual(["amy", "kc"]);
-    expect(profile.stats).toMatchObject({
-      games: 3,
-      wins: 1,
-      podiums: 2,
-      avgRank: 7 / 3,
-      mostPlayed: [
-        { bggId: 1, game: "Root", plays: 2, bestRank: 1, bestScore: 90 },
-        { bggId: 2, game: "Azul", plays: 1, bestRank: 4, bestScore: 10 },
-      ],
-    });
+    expect(profile.stats).toMatchObject({ years: 2 });
     expect(profile.stats!.topByYear.map((y) => [y.year, y.total])).toEqual([
       [2026, 1],
       [2025, 2],
@@ -354,9 +351,7 @@ describe("getProfile", () => {
     await link("amy", ALEX);
     await link("kc", ALEX);
     expect((await store.getProfile(ALEX))!.stats).toMatchObject({
-      games: 1,
-      wins: 1,
-      mostPlayed: [{ plays: 1, bestRank: 1, bestScore: 90 }],
+      years: 1,
       topByYear: [{ year: 2025, total: 1 }],
     });
   });
@@ -365,8 +360,7 @@ describe("getProfile", () => {
     await client.exec(`INSERT INTO player (name) VALUES ('idle')`);
     await link("idle", ALEX);
     expect((await store.getProfile(ALEX))!.stats).toMatchObject({
-      games: 0,
-      mostPlayed: [],
+      years: 0,
       topByYear: [],
     });
   });

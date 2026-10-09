@@ -26,15 +26,7 @@ const base: Profile = {
   image: null,
   linkedPlayers: ["kelsin"],
   stats: {
-    games: 42,
-    wins: 11,
-    winRate: 0.26,
-    avgRank: 2.4,
-    podiums: 19,
-    mostPlayed: [
-      { bggId: 266192, game: "Wingspan", plays: 9, bestRank: 1, bestScore: 87 },
-      { bggId: 230802, game: "Azul", plays: 7, bestRank: 2, bestScore: 74 },
-    ],
+    years: 3,
     topByYear: [
       {
         year: 2025,
@@ -43,6 +35,7 @@ const base: Profile = {
       },
     ],
   },
+  totalPlays: 120,
 };
 
 describe("PublicProfile", () => {
@@ -70,24 +63,23 @@ describe("PublicProfile", () => {
     expect(screen.getByText("Couldn't load this profile")).toBeInTheDocument();
   });
 
-  it("shows the name, stat tiles and most played games", () => {
+  it("shows the name and the years and total plays tiles", () => {
     set({ status: "ready", profile: base });
     renderWithMantine(<PublicProfile discordId="5" />);
 
     expect(screen.getByRole("heading", { name: "Kel" })).toBeInTheDocument();
-    for (const text of ["42", "11", "26%", "2.4", "19"]) {
-      expect(screen.getByText(text)).toBeInTheDocument();
-    }
-    expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
-      "href",
-      "/games/266192",
-    );
-    expect(
-      screen.getByText("9 plays, best 1st (87)", { exact: false }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("7 plays, best 2nd (74)", { exact: false }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("years of data")).toBeInTheDocument();
+    expect(screen.getByText("120")).toBeInTheDocument();
+    expect(screen.getByText("total plays")).toBeInTheDocument();
+    for (const gone of [
+      "wins",
+      "win rate",
+      "avg rank",
+      "podiums",
+      "Most played",
+    ])
+      expect(screen.queryByText(gone)).toBeNull();
   });
 
   it("shows top games by year when there are any", () => {
@@ -112,5 +104,13 @@ describe("PublicProfile", () => {
     expect(screen.getByText(/No scores are linked/)).toBeInTheDocument();
     expect(screen.queryByText("Most played")).toBeNull();
     expect(screen.queryByText("Top games by year")).toBeNull();
+  });
+
+  it("still shows total plays when no scores are linked", () => {
+    set({ status: "ready", profile: { ...base, stats: null } });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.getByText("120")).toBeInTheDocument();
+    expect(screen.getByText("total plays")).toBeInTheDocument();
+    expect(screen.queryByText("years of data")).toBeNull();
   });
 });

@@ -124,6 +124,10 @@ export function createProfileStore(
           )
         : null;
 
+      const [{ plays: totalPlays }] = await db
+        .select({ plays: sql<number>`count(*)::int` })
+        .from(score);
+
       return {
         discordId,
         name: member.displayName ?? member.discordName ?? "Unknown",
@@ -132,6 +136,7 @@ export function createProfileStore(
           .map((p) => p.name)
           .sort((a, b) => a.localeCompare(b)),
         stats: toProfileStats(scores),
+        totalPlays,
       };
     },
   };

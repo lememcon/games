@@ -100,14 +100,6 @@ export interface AdminUser {
 
 // Public profiles (GET /api/profiles/:discordId) and the display-name setter
 // (PUT /api/me/display-name).
-export interface ProfileGame {
-  bggId: number;
-  game: string;
-  plays: number;
-  bestRank: number;
-  bestScore: number;
-}
-
 export interface TopGame {
   bggId: number;
   game: string;
@@ -123,13 +115,8 @@ export interface YearTopGames {
 }
 
 export interface ProfileStats {
-  games: number;
-  wins: number;
-  // 0..1
-  winRate: number;
-  avgRank: number;
-  podiums: number;
-  mostPlayed: ProfileGame[];
+  // Years with at least one score.
+  years: number;
   topByYear: YearTopGames[];
 }
 
@@ -140,6 +127,8 @@ export interface Profile {
   linkedPlayers: string[];
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
+  // Score rows across all players and years.
+  totalPlays: number;
 }
 
 export interface DisplayNameResult {
