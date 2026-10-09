@@ -63,6 +63,27 @@ describe("Game", () => {
     );
   });
 
+  it("links only players that have a discord id", () => {
+    const linked: Data = {
+      ...data,
+      by_id: {
+        ...data.by_id,
+        11: data.by_id[11].map((row) =>
+          row.player === "alice" ? { ...row, discord_id: "7" } : row,
+        ),
+      },
+    };
+    const { getByRole, queryByRole } = renderWithMantine(
+      <Game data={linked} gameData={gameData} id="11" />,
+    );
+
+    expect(getByRole("link", { name: "alice" })).toHaveAttribute(
+      "href",
+      "/players/7",
+    );
+    expect(queryByRole("link", { name: "bob" })).toBeNull();
+  });
+
   it("renders a scores row per player", () => {
     const { getByText } = renderWithMantine(
       <Game data={data} gameData={gameData} id="11" />,

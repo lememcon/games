@@ -17,7 +17,14 @@ const PlayerName = ({ name, discordId }: PlayerNameProps) => {
   const style = { color, fontWeight: 700 };
   if (!discordId) return <span style={style}>{name}</span>;
   return (
-    <Link href={`/players/${discordId}`} style={style}>
+    <Link
+      href={`/players/${discordId}`}
+      style={{
+        ...style,
+        textDecoration: "underline dotted",
+        textUnderlineOffset: 3,
+      }}
+    >
       {name}
     </Link>
   );
