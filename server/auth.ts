@@ -7,10 +7,28 @@ import type { Env } from "./env";
 import { effectiveUser } from "./roles";
 import type { ResolvedSession, UserStore } from "./types";
 
+/**
+ * Where Better Auth sends the browser when an OAuth callback fails before it
+ * can recover the per-request `errorCallbackURL` (e.g. an expired or
+ * already-used state, or a missing state param). Without this it lands on the API host's own
+ * `/api/auth/error`. The SPA origin is WEB_ORIGIN, else the origin of
+ * BETTER_AUTH_URL (the same-origin proxy topology).
+ *
+ * Limit: if BETTER_AUTH_URL is the API host and WEB_ORIGIN is unset this still
+ * resolves to the API host; the SPA's per-request `errorCallbackURL` covers
+ * every failure after state is parsed, but not that early one.
+ */
+export function resolveErrorUrl(
+  env: Pick<Env, "BETTER_AUTH_URL" | "WEB_ORIGIN">,
+): string {
+  return env.WEB_ORIGIN || new URL(env.BETTER_AUTH_URL).origin;
+}
+
 export function createAuth(env: Env, db: Db) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    onAPIError: { errorURL: resolveErrorUrl(env) },
     trustedOrigins: [
       new URL(env.BETTER_AUTH_URL).origin,
       ...(env.WEB_ORIGIN ? [env.WEB_ORIGIN] : []),

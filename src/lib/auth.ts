@@ -13,9 +13,14 @@ export async function signInWithDiscord(
 ): Promise<string> {
   const callbackURL =
     loc.origin + safeCallbackPath(`${loc.pathname}${loc.search}`);
+  // Failures after the state is recovered land back on the SPA, not the API host.
+  const errorCallbackURL = `${loc.origin}/`;
   const { url } = await apiFetch<{ url: string }>(
     "/auth/sign-in/social",
-    { method: "POST", body: { provider: "discord", callbackURL } },
+    {
+      method: "POST",
+      body: { provider: "discord", callbackURL, errorCallbackURL },
+    },
     fetchImpl,
   );
   return url;

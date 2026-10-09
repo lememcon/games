@@ -77,6 +77,22 @@ describe("App gate", () => {
     expect(gate.useData).not.toHaveBeenCalled();
   });
 
+  it("shows the sign-in error for anonymous visitors and cleans the URL", () => {
+    window.history.pushState({}, "", "/?error=access_denied&x=1");
+    setGate({ me: { status: "anonymous" } });
+    render(<App />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/cancelled/);
+    expect(window.location.search).toBe("?x=1");
+  });
+
+  it("silently cleans the URL for signed-in users", () => {
+    window.history.pushState({}, "", "/?error=access_denied");
+    setGate({ me: { status: "pending", user } });
+    render(<App />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(window.location.search).toBe("");
+  });
+
   it("shows the error state and retries", async () => {
     setGate({ error: true });
     render(<App />);

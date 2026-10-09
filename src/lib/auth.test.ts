@@ -38,6 +38,7 @@ describe("signInWithDiscord", () => {
     expect(JSON.parse(init.body)).toEqual({
       provider: "discord",
       callbackURL: "https://games.test/games/11?a=1",
+      errorCallbackURL: "https://games.test/",
     });
   });
 

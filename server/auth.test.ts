@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createAuth, createSessionResolver } from "./auth";
+import { createAuth, createSessionResolver, resolveErrorUrl } from "./auth";
 import type { Db } from "./db";
 import type { Env } from "./env";
 import { PROTECTED_ADMIN_IDS } from "./roles";
@@ -175,5 +175,76 @@ describe("createSessionResolver", () => {
     expect(user).toBeNull();
     expect(headers?.getSetCookie()).toEqual(["session=refreshed"]);
     expect(two.users.size).toBe(0);
+  });
+});
+
+describe("resolveErrorUrl", () => {
+  it.each([
+    [
+      "proxy (same origin, no WEB_ORIGIN)",
+      undefined,
+      "https://games.lememcon.com",
+    ],
+    [
+      "cross-origin with WEB_ORIGIN",
+      "https://games.lememcon.com",
+      "https://games.lememcon.com",
+    ],
+  ])("%s", (_name, webOrigin, expected) => {
+    expect(
+      resolveErrorUrl({
+        BETTER_AUTH_URL: "https://games.lememcon.com",
+        WEB_ORIGIN: webOrigin,
+      }),
+    ).toBe(expected);
+  });
+
+  it("prefers WEB_ORIGIN over the API host", () => {
+    expect(
+      resolveErrorUrl({
+        BETTER_AUTH_URL: "https://api.lememcon.com",
+        WEB_ORIGIN: "https://games.lememcon.com",
+      }),
+    ).toBe("https://games.lememcon.com");
+  });
+
+  it("falls back to the API host when WEB_ORIGIN is unset", () => {
+    expect(
+      resolveErrorUrl({ BETTER_AUTH_URL: "https://api.lememcon.com/api/auth" }),
+    ).toBe("https://api.lememcon.com");
+  });
+});
+
+// A query builder whose every call chains and whose awaited result is no rows,
+// so the state lookup finds nothing, as with a real empty verification table.
+const emptyDb = (): Db => {
+  const chain: unknown = new Proxy(() => chain, {
+    get: (_t, prop) =>
+      prop === "then"
+        ? (resolve: (rows: unknown[]) => void) => resolve([])
+        : chain,
+  });
+  return chain as Db;
+};
+
+describe("OAuth callback failures", () => {
+  it("redirects a callback whose state matches no verification row (unknown or expired) to the SPA origin via the error URL", async () => {
+    const auth = createAuth(
+      {
+        ...env,
+        BETTER_AUTH_URL: "https://api.lememcon.com",
+        WEB_ORIGIN: "https://games.lememcon.com",
+      },
+      emptyDb(),
+    );
+    const res = await auth.handler(
+      new Request(
+        "https://api.lememcon.com/api/auth/callback/discord?code=c&state=abc",
+      ),
+    );
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.origin).toBe("https://games.lememcon.com");
+    expect(location.searchParams.get("error")).toBe("state_mismatch");
   });
 });
