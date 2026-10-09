@@ -119,14 +119,17 @@ describe("setLink", () => {
     expect((await playerRows())[0].discord_id).toBeNull();
   });
 
-  it("refuses a second player for the same member", async () => {
+  it("links several players to the same member", async () => {
+    expect((await store.setLink(await idOf("amy"), ALEX)).ok).toBe(true);
+    expect((await store.setLink(await idOf("bob"), ALEX)).ok).toBe(true);
+    expect((await playerRows()).map((p) => p.discord_id)).toEqual([ALEX, ALEX]);
+  });
+
+  it("unlinking one name leaves the member's other names linked", async () => {
     await store.setLink(await idOf("amy"), ALEX);
-    expect(await store.setLink(await idOf("bob"), ALEX)).toEqual({
-      ok: false,
-      status: 409,
-      error: "already_linked",
-    });
-    expect((await playerRows())[1].discord_id).toBeNull();
+    await store.setLink(await idOf("bob"), ALEX);
+    await store.setLink(await idOf("amy"), null);
+    expect((await playerRows()).map((p) => p.discord_id)).toEqual([null, ALEX]);
   });
 
   it("refuses a player named like another member's display name", async () => {

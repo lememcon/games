@@ -234,8 +234,8 @@ export interface LinkStore {
   list(): Promise<PlayerLinks>;
   /**
    * Null unlinks. Refuses with 404 `unknown_player` or `unknown_user`, and with
-   * 409 `name_taken` (the player's name is another member's display name) or
-   * `already_linked` (the member is linked to another player).
+   * 409 `name_taken` (the player's name is another member's display name).
+   * A member may be linked to several players.
    */
   setLink(
     playerId: number,
@@ -294,8 +294,8 @@ export interface Profile {
   discordId: string;
   name: string;
   image: string | null;
-  /** Data-file name of the linked player, if an admin linked one. */
-  linkedPlayer: string | null;
+  /** Data-file names of the linked players, sorted; empty when none. */
+  linkedPlayers: string[];
   /** Null when no player is linked. */
   stats: ProfileStats | null;
 }

@@ -176,10 +176,8 @@ export const player = pgTable(
   },
   (table) => [
     uniqueIndex("player_name_lower_idx").on(sql`lower(${table.name})`),
-    // A member is at most one player; many players may be unlinked.
-    uniqueIndex("player_discord_id_idx")
-      .on(table.discordId)
-      .where(sql`${table.discordId} is not null`),
+    // A member may have several players (names); this speeds up the lookup.
+    index("player_discord_id_idx").on(table.discordId),
   ],
 );
 

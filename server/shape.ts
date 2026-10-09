@@ -39,13 +39,16 @@ export interface NameParts {
 }
 
 /**
- * Builds the resolver for shown player names: the display name if set, else
- * the Discord name unless it clashes (any case) with another player's
- * data-file name or another approved member's shown name, else the data-file
- * name. A Discord name equal to the player's own data-file name is no clash.
+ * Builds the resolver for shown player names, once per member so all of a
+ * member's names show the same: the display name if set, else the Discord name
+ * unless it clashes (any case) with the data-file name of an unlinked player
+ * or another member's player, or with another approved member's shown name,
+ * else the member's data-file name with the lowest player id. A member's own
+ * data-file names never clash. A player linked to a non-approved member counts
+ * as unlinked.
  */
 export function createNameResolver(
-  playerNames: readonly string[],
+  players: readonly { id: number; name: string; discordId: string | null }[],
   members: readonly {
     discordId: string;
     displayName: string | null;
@@ -53,7 +56,21 @@ export function createNameResolver(
   }[],
 ) {
   const lower = (n: string) => n.toLowerCase();
-  const data = new Set(playerNames.map(lower));
+  const approved = new Set(members.map((m) => m.discordId));
+  const owner = (p: { discordId: string | null }) =>
+    p.discordId !== null && approved.has(p.discordId) ? p.discordId : null;
+  // Lowercase data name -> owners of the players with that name.
+  const data = new Map<string, Set<string | null>>();
+  // Member -> their lowest-id player.
+  const first = new Map<string, { id: number; name: string }>();
+  for (const p of players) {
+    const key = lower(p.name);
+    data.set(key, (data.get(key) ?? new Set()).add(owner(p)));
+    const o = owner(p);
+    const known = o === null ? undefined : first.get(o);
+    if (o !== null && (!known || p.id < known.id))
+      first.set(o, { id: p.id, name: p.name });
+  }
   const shown = new Map<string, Set<string>>();
   for (const m of members) {
     const name = m.displayName ?? m.discordName;
@@ -63,14 +80,54 @@ export function createNameResolver(
   }
   return (r: NameParts & { discordId?: string | null }): string => {
     if (r.displayName) return r.displayName;
-    if (!r.discordName) return r.dataName;
+    const id = r.discordId ?? null;
+    const fallback = (id !== null && first.get(id)?.name) || r.dataName;
+    if (!r.discordName) return fallback;
     const key = lower(r.discordName);
-    const clashesData = data.has(key) && key !== lower(r.dataName);
-    const clashesMember = [...(shown.get(key) ?? [])].some(
-      (id) => id !== r.discordId,
-    );
-    return clashesData || clashesMember ? r.dataName : r.discordName;
+    const clashesData = [...(data.get(key) ?? [])].some((o) => o !== id);
+    const clashesMember = [...(shown.get(key) ?? [])].some((m) => m !== id);
+    if (!clashesData && !clashesMember) return r.discordName;
+    return fallback;
   };
+}
+
+export interface MemberScore {
+  /** Score id; breaks ties and orders the output. */
+  id: number;
+  /** Approved member who owns the row, else null. */
+  owner: string | null;
+  bggId: number;
+  year: number;
+  score: number;
+  rank: number;
+}
+
+/**
+ * One row per member, game and year: when several of a member's names scored
+ * in the same game and year, keeps the best rank, then the highest score, then
+ * the lowest id. Rows without an owner pass through. Output is in id order.
+ */
+export function collapseMemberScores<T extends MemberScore>(
+  rows: readonly T[],
+): T[] {
+  const best = new Map<string, T>();
+  const out: T[] = [];
+  for (const r of rows) {
+    if (r.owner === null) {
+      out.push(r);
+      continue;
+    }
+    const key = `${r.owner}|${r.bggId}|${r.year}`;
+    const cur = best.get(key);
+    if (
+      !cur ||
+      r.rank < cur.rank ||
+      (r.rank === cur.rank &&
+        (r.score > cur.score || (r.score === cur.score && r.id < cur.id)))
+    )
+      best.set(key, r);
+  }
+  return [...out, ...best.values()].sort((a, b) => a.id - b.id);
 }
 
 const MOST_PLAYED = 5;
