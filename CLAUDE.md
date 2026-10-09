@@ -40,7 +40,10 @@ A separate `commitlint` job runs on pull requests only.
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
   react-refresh).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
-  state), `usePlayedCounts`, `useAuthError` (reads then strips `?error=` from the URL),
+  state), `usePlayedCounts` (server-backed per-member counts via `/api/me/played`, with a
+  import of the legacy `played_counts_<year>` localStorage key the first time that
+  year is viewed while signed in, see
+  `lib/playedMigration.ts`), `useAuthError` (reads then strips `?error=` from the URL),
   `useProfile` (public profile), `useDisplayName` (PUT own display name).
 - `src/components/` — presentational + container components (`.tsx`). `ProfilePage`
   (`/profile`) and `PublicProfile` (`/players/:discordId`) render in `AdminShell` outside
@@ -60,6 +63,10 @@ A separate `commitlint` job runs on pull requests only.
     `testing.ts` has `fakeData()` for route tests. Game metadata (players, image) lives only in
     `game_metadata` (`db/bggRepo.ts` `upsertMetadata`, shared with the import); the `game`
     table holds just `bgg_id` and a nullable name, and `/api/games` full-joins the two.
+  - Played counts: `played.ts` (pure validation), `routes/played.ts` (`GET /api/me/played?year=`,
+    `PUT /api/me/played/:year/:bggId`, `POST /api/me/played/:year/import`), `db/playedStore.ts`
+    (the `PlayedStore` behind `deps.played`; table `played_count`, one row per member, year and
+    game); `testing.ts` has `fakePlayed()`.
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
 
 ## Conventions

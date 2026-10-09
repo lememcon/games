@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
+import {
+  fakeData,
+  fakeLinks,
+  fakePlayed,
+  fakeProfiles,
+  fakeStore,
+} from "../testing";
 import type { AppUser, LinkableUser, PlayerLink } from "../types";
 
 const ADMIN: AppUser = {
@@ -48,6 +54,7 @@ function makeApp(names: Record<string, string> = {}) {
     data: fakeData().data,
     links: fake.links,
     profiles: fakeProfiles().profiles,
+    played: fakePlayed().played,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

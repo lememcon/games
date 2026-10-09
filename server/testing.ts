@@ -10,6 +10,8 @@ import type {
   LegacyScoreRow,
   LinkStore,
   LinkableUser,
+  PlayedCounts,
+  PlayedStore,
   PlayerLink,
   Profile,
   ProfileStore,
@@ -227,4 +229,45 @@ export function fakeProfiles(
     getProfile: async (discordId) => profiles.get(discordId) ?? null,
   };
   return { profiles: store, calls, names };
+}
+
+/** In-memory PlayedStore for tests; refuses years that were not given. */
+export function fakePlayed(
+  initial: { years?: number[]; counts?: Record<string, PlayedCounts> } = {},
+) {
+  const years = new Set(initial.years ?? [2025]);
+  /** Counts by `discordId:year`. */
+  const rows = new Map<string, PlayedCounts>(
+    Object.entries(initial.counts ?? {}),
+  );
+  const calls: { discordId: string; year: number; bggId?: number }[] = [];
+  const bucket = (discordId: string, year: number) => {
+    const key = `${discordId}:${year}`;
+    if (!rows.has(key)) rows.set(key, {});
+    return rows.get(key)!;
+  };
+  const played: PlayedStore = {
+    get: async (discordId, year) => {
+      calls.push({ discordId, year });
+      return years.has(year) ? { ...bucket(discordId, year) } : null;
+    },
+    set: async (discordId, year, bggId, count) => {
+      calls.push({ discordId, year, bggId });
+      if (!years.has(year))
+        return { ok: false, status: 404, error: "unknown_year" };
+      const counts = bucket(discordId, year);
+      if (count === 0) delete counts[bggId];
+      else counts[bggId] = count;
+      return { ok: true, value: null };
+    },
+    importCounts: async (discordId, year, incoming) => {
+      calls.push({ discordId, year });
+      if (!years.has(year))
+        return { ok: false, status: 404, error: "unknown_year" };
+      const counts = bucket(discordId, year);
+      for (const [id, count] of incoming) counts[id] ??= count;
+      return { ok: true, value: { ...counts } };
+    },
+  };
+  return { played, rows, calls };
 }

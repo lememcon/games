@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
 import { PROTECTED_ADMIN_IDS } from "./roles";
-import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "./testing";
+import {
+  fakeData,
+  fakeLinks,
+  fakePlayed,
+  fakeProfiles,
+  fakeStore,
+} from "./testing";
 import type { AdminUser, AppUser } from "./types";
 
 const BASE = "https://api.lememcon.com";
@@ -46,6 +52,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     data: fakeData().data,
     links: fakeLinks().links,
     profiles: fakeProfiles().profiles,
+    played: fakePlayed().played,
     resolveSession: async (headers) => {
       const cookie = headers.get("cookie");
       const who = cookie?.startsWith("as=") && users[cookie.slice(3)];
@@ -125,6 +132,7 @@ describe("GET /api/me display names", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
       resolveSession: async () => ({ user }),
     });
 

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
+import {
+  fakeData,
+  fakeLinks,
+  fakePlayed,
+  fakeProfiles,
+  fakeStore,
+} from "../testing";
 import type { AppUser, Profile } from "../types";
 
 const WEB = "https://games.lememcon.com";
@@ -43,6 +49,7 @@ function makeApp() {
     data: fakeData().data,
     links: fakeLinks().links,
     profiles: fake.profiles,
+    played: fakePlayed().played,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

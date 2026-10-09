@@ -27,14 +27,16 @@ you've already played. Live at **[games.lememcon.com](https://games.lememcon.com
   score-normalizing max rescale to match.
 - **Filter by player count** — games whose min/max player counts don't fit the
   current selection are hidden.
-- **Played counter** — increment/decrement a per-game play count, persisted in
-  `localStorage` per year, with an option to hide games you've played.
+- **Played counter** — increment/decrement a per-game play count, saved to your
+  account per year (so it follows you across browsers), with an option to hide
+  games you've played. Counts a browser stored locally before this are imported
+  the first time that year is viewed while signed in.
 - **Year switcher** — pick any imported year; each year is a separate import.
 - **Game detail pages** — per-game view with the BoardGameGeek cover image,
   player-count bounds, and a table of every player's rank and score.
 
 State that should survive reloads (selected year, player filter, hide-played
-toggle, and play counts) is stored in `localStorage`.
+toggle) is stored in `localStorage`; play counts live in the database, per member.
 
 ## Tech stack
 

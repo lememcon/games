@@ -232,3 +232,9 @@ export interface ImportProblem {
   path: string;
   message: string;
 }
+
+// The signed-in member's play counts for a year, by bgg id; absent means zero.
+// Body of GET /api/me/played and of POST /api/me/played/:year/import.
+export interface PlayedCountsResponse {
+  counts: Record<string, number>;
+}

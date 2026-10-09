@@ -41,6 +41,9 @@ const state = vi.hoisted(() => ({
   years: {} as { years: string[]; loading: boolean; error: boolean },
   games: {} as { games: GamesData; loading: boolean; error: boolean },
   useData: vi.fn(),
+  played: {} as Record<string, number>,
+  incPlayed: vi.fn(),
+  usePlayedCounts: vi.fn(),
 }));
 vi.mock("@/hooks/useData", () => ({
   default: (year: string | null) => {
@@ -50,6 +53,17 @@ vi.mock("@/hooks/useData", () => ({
 }));
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
+vi.mock("@/hooks/usePlayedCounts", () => ({
+  default: (year: string) => {
+    state.usePlayedCounts(year);
+    return [
+      (id: string) => state.played[id] ?? 0,
+      state.incPlayed,
+      vi.fn(),
+      state.played,
+    ];
+  },
+}));
 
 const member: ApprovedUser = {
   discordId: "1",
@@ -70,10 +84,25 @@ describe("Scoreboard", () => {
     state.data = loadedData;
     state.years = { years: ["2025", "2026"], loading: false, error: false };
     state.games = { games: {}, loading: false, error: false };
+    state.played = {};
   });
   afterEach(() => {
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
+  });
+
+  it("gives the played counts the year only once the years have loaded", () => {
+    state.years = { years: [], loading: true, error: false };
+    const { rerender } = render();
+    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
+
+    state.years = { years: ["2025", "2026"], loading: false, error: false };
+    rerender(
+      <MantineProvider>
+        <Scoreboard user={member} />
+      </MantineProvider>,
+    );
+    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("2026");
   });
 
   it("renders the game detail on /games/:id", () => {
@@ -120,24 +149,13 @@ describe("Scoreboard", () => {
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
   });
 
-  it("loads the stored played counts once the years resolve", async () => {
+  it("counts plays through the played counter", async () => {
     const user = userEvent.setup();
-    localStorage.setItem("played_counts_2026", JSON.stringify({ "11": 3 }));
-    state.years = { years: [], loading: true, error: false };
-    const { rerender } = render();
+    render();
 
-    state.years = { years: ["2025", "2026"], loading: false, error: false };
-    rerender(
-      <MantineProvider>
-        <Scoreboard user={member} />
-      </MantineProvider>,
-    );
     await user.click(await screen.findByRole("button", { name: "+" }));
 
-    expect(JSON.parse(localStorage.getItem("played_counts_2026")!)).toEqual({
-      "11": 4,
-    });
-    expect(localStorage.getItem("played_counts_")).toBeNull();
+    expect(state.incPlayed).toHaveBeenCalledWith("11");
   });
 
   it("shows skeletons while the data loads", () => {
@@ -184,7 +202,7 @@ describe("Scoreboard", () => {
 
   it("congratulates when every ranked game is hidden as played", () => {
     localStorage.setItem("hide_played", "true");
-    localStorage.setItem(`played_counts_2026`, JSON.stringify({ 11: 1 }));
+    state.played = { 11: 1 };
     const { getByText } = render();
 
     expect(getByText(/played every ranked game/)).toBeInTheDocument();

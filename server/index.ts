@@ -9,6 +9,7 @@ import { createDb } from "./db";
 import { createBggRepo } from "./db/bggRepo";
 import { createDataStore } from "./db/dataStore";
 import { createLinkStore } from "./db/linkStore";
+import { createPlayedStore } from "./db/playedStore";
 import { createProfileStore } from "./db/profileStore";
 import { createUserStore } from "./db/userStore";
 import { loadEnv } from "./env";
@@ -27,6 +28,7 @@ const bgg = createBggService({
 const data = createDataStore(db);
 const links = createLinkStore(db);
 const profiles = createProfileStore(db);
+const played = createPlayedStore(db);
 
 const app = createApp({
   baseUrl: env.BETTER_AUTH_URL,
@@ -38,6 +40,7 @@ const app = createApp({
   data,
   links,
   profiles,
+  played,
 });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
