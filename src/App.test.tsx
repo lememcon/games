@@ -44,6 +44,7 @@ const setGate = (over: Partial<typeof gate.value>) => {
   };
 };
 const user = { discordId: "1", name: "Sam", image: null };
+const approvedExtras = { displayName: null, discordName: "Sam" };
 
 describe("App gate", () => {
   beforeEach(() => {
@@ -130,7 +131,12 @@ describe("App gate", () => {
   });
 
   it("renders the app without an Admin link for members", async () => {
-    setGate({ me: { status: "approved", user: { ...user, role: "member" } } });
+    setGate({
+      me: {
+        status: "approved",
+        user: { ...user, ...approvedExtras, role: "member" },
+      },
+    });
     render(<App />);
     expect(
       screen.getByRole("heading", { name: "LememCon" }),
@@ -144,7 +150,12 @@ describe("App gate", () => {
 
   it("renders the app with an Admin link and /admin for admins", async () => {
     window.history.pushState({}, "", "/admin");
-    setGate({ me: { status: "approved", user: { ...user, role: "admin" } } });
+    setGate({
+      me: {
+        status: "approved",
+        user: { ...user, ...approvedExtras, role: "admin" },
+      },
+    });
     render(<App />);
     expect(screen.getByText("Loading members...")).toBeInTheDocument();
     // The admin area never touches score, year or game data.
