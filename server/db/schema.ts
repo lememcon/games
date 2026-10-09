@@ -6,9 +6,11 @@ import {
   index,
   integer,
   pgTable,
+  serial,
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -129,3 +131,60 @@ export const gameMetadata = pgTable("game_metadata", {
   ext: text("ext"),
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
+
+/** An imported year of scores. */
+export const year = pgTable("year", {
+  year: integer("year").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  /** Discord id of the admin who imported it. */
+  importedBy: text("imported_by"),
+  sourceFilename: text("source_filename"),
+});
+
+/**
+ * Names for games keyed by BoardGameGeek id. Metadata (players, image) lives in
+ * `game_metadata`; a game with no name row, or a null name, is metadata-only
+ * until a score row names it.
+ */
+export const game = pgTable("game", {
+  bggId: integer("bgg_id").primaryKey(),
+  name: text("name"),
+});
+
+/** Players are the same person when names differ only by case. */
+export const player = pgTable(
+  "player",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("player_name_lower_idx").on(sql`lower(${table.name})`),
+  ],
+);
+
+export const score = pgTable(
+  "score",
+  {
+    id: serial("id").primaryKey(),
+    year: integer("year")
+      .notNull()
+      .references(() => year.year, { onDelete: "cascade" }),
+    bggId: integer("bgg_id")
+      .notNull()
+      .references(() => game.bggId),
+    playerId: integer("player_id")
+      .notNull()
+      .references(() => player.id),
+    score: integer("score").notNull(),
+    rank: integer("rank").notNull(),
+  },
+  (table) => [
+    unique("score_year_game_player_unique").on(
+      table.year,
+      table.bggId,
+      table.playerId,
+    ),
+    index("score_year_idx").on(table.year),
+  ],
+);
