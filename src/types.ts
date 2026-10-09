@@ -57,3 +57,34 @@ export interface SelectedGame {
   players: Record<string, SelectedGamePlayer>;
   image?: string;
 }
+
+// Account model served by the API (GET /api/me, GET /api/admin/users).
+export type Role = "member" | "admin";
+export type Status = "pending" | "approved";
+
+export interface MeUser {
+  discordId: string;
+  name: string;
+  image: string | null;
+}
+
+export interface ApprovedUser extends MeUser {
+  role: Role;
+}
+
+export type Me =
+  | { status: "anonymous" }
+  | { status: "pending"; user: MeUser }
+  | { status: "approved"; user: ApprovedUser };
+
+export interface AdminUser {
+  discordId: string;
+  name: string;
+  image: string | null;
+  username: string;
+  role: Role;
+  status: Status;
+  // True for built-in admins, which the server refuses to change.
+  locked: boolean;
+  createdAt: string;
+}
