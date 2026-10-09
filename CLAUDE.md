@@ -75,8 +75,9 @@ A separate `commitlint` job runs on pull requests only.
   and the test files themselves.
 - **Server test patterns**: dependencies are injected, never real. `createApp` takes a fake
   `resolveSession` and `authHandler`; `createSessionResolver` takes a fake `auth` and a fake
-  `Db` that stubs the one select chain; static serving uses a temp directory created per
-  suite; `createAuth` is given `{} as Db` and only exercises paths that never query. No test
+  `Db` that stubs the one select chain; `app.test.ts` serves a per-suite temp directory, while
+  `static.test.ts` mounts `process.cwd()` to cover the `staticDir === cwd` (root `"."`)
+  branch; `createAuth` is given `{} as Db` and only exercises paths that never query. No test
   needs Postgres or the network.
 - **No integration or e2e tests yet.** Unit tests with injected deps cover the logic;
   a real-Postgres or browser suite is deliberately deferred.

@@ -68,11 +68,18 @@ describe("GameCard", () => {
     expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
-  it("wraps the chip color palette for ranks past the medals", () => {
+  it("uses the palette for ranks past the medals", () => {
     const { getByText } = renderCard({ rank: 4 });
 
     expect(getByText("Rank 4")).toBeInTheDocument();
     expect(getByText("4")).toHaveStyle({ background: PALETTE[3] });
+  });
+
+  it("wraps the chip color palette past its length", () => {
+    const rank = PALETTE.length + 1;
+    const { getByText } = renderCard({ rank });
+
+    expect(getByText(String(rank))).toHaveStyle({ background: PALETTE[0] });
   });
 
   it("forwards the play-count increment", async () => {
