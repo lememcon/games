@@ -108,7 +108,7 @@ src/
   lib/games.ts       Pure games-list aggregation and score math
   assets/            games.json, cover images, styles, logo
   test/              Vitest setup and shared render helpers
-server/              Hono API + static server, Better Auth, Drizzle schema (see Backend)
+server/              Hono API server, Better Auth, Drizzle schema (see Backend)
 ```
 
 ### Refreshing game metadata (`pnpm update`)
@@ -130,26 +130,47 @@ requests. Commit the regenerated `games.json` and new images.
 
 ## Backend
 
-A Hono server in `server/` serves `/api/*` and the built SPA (`dist/`) from one
-origin. Login is Discord OAuth via Better Auth; sessions live in PostgreSQL
-(Drizzle ORM). Roles are `anonymous`, `user` and `admin` (a user whose Discord id
-is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`, `GET /api/me`,
-`GET /api/admin/ping`, and Better Auth under `/api/auth/*`.
+The SPA is static and stays on Netlify at `games.lememcon.com`. The backend is a
+separate Hono server in `server/`, built from the `Dockerfile` and meant to run as
+an API-only service at `api.lememcon.com`. Login is Discord OAuth via Better Auth;
+sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `admin`
+(a user whose Discord id is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`,
+`GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`.
 
-Environment variables (see `.env.example`; a local `.env` is loaded automatically):
+The SPA and the API are different origins (same site). Not done yet: the CSRF check in
+`server/middleware.ts` accepts `Sec-Fetch-Site` `same-origin`/`none` or, when that header
+is absent, an `Origin` equal to `BETTER_AUTH_URL`. Browsers always send `Sec-Fetch-Site`,
+so a browser POST from `games.lememcon.com` to `api.lememcon.com`
+(`Sec-Fetch-Site: same-site`) gets a 403. There is also no CORS yet (it needs `cors()`
+with the web origin, credentials and preflight on `/api/*`), `trustedOrigins` in
+`server/auth.ts` lacks the web origin, the SPA makes no `/api` calls yet (future ones
+need an API base URL and `credentials: "include"`), and the server and image still
+serve and bundle the SPA (`server/static.ts`, `pnpm build` and the `dist/` copy in the
+`Dockerfile`), which the API host does not need. A host-only session cookie on
+`api.lememcon.com` with `credentials: "include"` should work because the hosts are
+same-site; a `.lememcon.com` cookie domain is only needed if that proves insufficient.
+
+An alternative is a Netlify rewrite of `/api/*` to the API host, so the browser sees
+one origin and the CSRF, CORS and cookie work is avoided. With that rewrite
+`BETTER_AUTH_URL` and the Discord redirect URI stay `https://games.lememcon.com`, so do
+not mix the two topologies.
+
+Environment variables (see `.env.example`; a local `.env` is loaded automatically).
+The Discord redirect URI is `https://api.lememcon.com/api/auth/callback/discord`.
 
 | Variable                | Purpose                                                  |
 | ----------------------- | -------------------------------------------------------- |
 | `DATABASE_URL`          | PostgreSQL connection string                             |
 | `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                     |
-| `BETTER_AUTH_URL`       | Public origin, e.g. `https://games.lememcon.com`         |
+| `BETTER_AUTH_URL`       | API origin, e.g. `https://api.lememcon.com`              |
 | `DISCORD_CLIENT_ID`     | Discord application client id                            |
 | `DISCORD_CLIENT_SECRET` | Discord application client secret                        |
 | `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role |
 | `PORT`                  | Listen port (default `8080`)                             |
+| `WEB_ORIGIN`            | Planned, not implemented yet: SPA origin for CORS/CSRF   |
 
 ```sh
-pnpm server:dev                          # watch mode (run `pnpm build` once for the SPA)
+pnpm server:dev                          # watch mode
 pnpm server:build && pnpm db:migrate     # compile, then apply migrations (separate from boot)
 pnpm server:start                        # run the compiled server
 pnpm db:generate                         # new migration after editing server/db/schema.ts
@@ -157,6 +178,18 @@ docker build -t lememcon-games .
 docker run --env-file .env lememcon-games node dist-server/migrate.js   # apply migrations before first start
 docker run --env-file .env -p 8080:8080 lememcon-games
 ```
+
+Locally the SPA (Vite on :3000) and the API (:8080) are also different origins on the
+same site, so the same CSRF 403 applies to POSTs. The planned local option is a Vite
+`server.proxy` for `/api` to `http://localhost:8080`, which makes local calls
+same-origin (not configured yet).
+
+### Deploying the backend
+
+Host-agnostic: build the `Dockerfile` and run the image on any container host behind
+TLS. Run `node dist-server/migrate.js` (with the production env) before starting any
+release that adds migrations; migrations are separate from boot. Point the `api` DNS
+record at the host and use `GET /healthz` as the health check.
 
 ## Testing & quality
 
@@ -181,8 +214,9 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck,
   tests with coverage, and a build on every push to `main` and every pull request. Pull
   requests also get their commit messages linted.
-- **Deployment** is handled by Netlify, which builds and publishes the `main`
-  branch to [games.lememcon.com](https://games.lememcon.com).
+- **Deployment** of the SPA is handled by Netlify, which builds and publishes the
+  `main` branch to [games.lememcon.com](https://games.lememcon.com). The backend image
+  is deployed separately (see Deploying the backend).
 
 ## License
 
