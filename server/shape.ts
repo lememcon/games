@@ -1,4 +1,5 @@
 /** Pure shaping between database rows and the API/legacy shapes. SQL stays in server/db. */
+import type { BggGame } from "./bgg/client";
 import type { NormalizedGame, NormalizedImport } from "./import";
 import type {
   GameRow,
@@ -38,6 +39,24 @@ export function toGamesMap(rows: readonly GameRow[]): GamesMap {
   }
   return map;
 }
+
+/** Games carrying metadata, as game_metadata rows; name-only games get none. */
+export const toMetadata = (games: readonly NormalizedGame[]): BggGame[] =>
+  games
+    .filter(
+      (g) =>
+        g.minPlayers !== null ||
+        g.maxPlayers !== null ||
+        g.imageUrl !== null ||
+        g.imageExt !== null,
+    )
+    .map((g) => ({
+      bggId: g.bggId,
+      minPlayers: g.minPlayers,
+      maxPlayers: g.maxPlayers,
+      imageUrl: g.imageUrl,
+      ext: g.imageExt,
+    }));
 
 export interface GamePlan {
   created: number;

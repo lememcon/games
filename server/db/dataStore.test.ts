@@ -44,9 +44,9 @@ beforeAll(async () => {
 afterAll(() => client.close());
 
 describe("data store", () => {
-  it("starts empty", async () => {
+  it("starts with the bundled game metadata and no scores", async () => {
     expect(await store.listYears()).toEqual([]);
-    expect(await store.getGames()).toEqual({});
+    expect(await store.getGames()).toEqual(realGames);
     expect(await store.getScores(2025)).toBeNull();
   });
 
@@ -63,10 +63,7 @@ describe("data store", () => {
       "SELECT count(*)::int AS n FROM game WHERE name IS NULL",
     );
     expect(rows[0].n).toBe(191);
-    expect(games["417258"]).toEqual({
-      players: { min: 2, max: 4 },
-      ext: ".png",
-    });
+    expect(games).toEqual(realGames);
   });
 
   it("imports sample-data.json as a year, backfilling names, and reads it back exactly", async () => {
@@ -162,5 +159,45 @@ describe("data store", () => {
       "SELECT count(*)::int AS n FROM player",
     );
     expect(rows[0].n).toBe(7);
+  });
+});
+
+describe("data store metadata", () => {
+  it("returns metadata-only games and name-only games", async () => {
+    await client.query(
+      "INSERT INTO game_metadata (bgg_id, min_players, max_players) VALUES (900100, 1, 3)",
+    );
+    await client.query("INSERT INTO game (bgg_id, name) VALUES (900101, 'N')");
+    const games = await store.getGames();
+    expect(games["900100"]).toEqual({ players: { min: 1, max: 3 } });
+    expect(games["900101"]).toEqual({});
+  });
+
+  it("keeps stored metadata when an upload carries none or other values", async () => {
+    await store.importData(
+      parsed({
+        games: {
+          "900100": { players: { min: 2, max: 2 } },
+          "900101": { players: { min: 4, max: 6 } },
+          "900102": {},
+        },
+      }),
+      context,
+    );
+    const games = await store.getGames();
+    expect(games["900100"]).toEqual({ players: { min: 2, max: 2 } });
+    expect(games["900101"]).toEqual({ players: { min: 4, max: 6 } });
+    expect(
+      (await client.query("SELECT 1 FROM game_metadata WHERE bgg_id = 900102"))
+        .rows,
+    ).toEqual([]);
+    const again = await store.importData(
+      parsed({ games: { "900100": {} } }),
+      context,
+    );
+    expect(again).toMatchObject({ ok: true });
+    expect((await store.getGames())["900100"]).toEqual({
+      players: { min: 2, max: 2 },
+    });
   });
 });

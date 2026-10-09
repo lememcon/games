@@ -11,6 +11,7 @@ import {
   summarize,
   toGamesMap,
   toLegacyRow,
+  toMetadata,
 } from "./shape";
 import type { GameRow, ScoreRow } from "./types";
 
@@ -112,6 +113,19 @@ describe("toGamesMap", () => {
     expect(
       toGamesMap([row({ minPlayers: 0, maxPlayers: 0 })])["1"].players,
     ).toEqual({ min: 0, max: 0 });
+  });
+});
+
+describe("toMetadata", () => {
+  it("keeps games with metadata and drops name-only ones", () => {
+    expect(
+      toMetadata([
+        game({ bggId: 1 }),
+        game({ bggId: 2, minPlayers: 2, maxPlayers: 4, imageExt: ".png" }),
+      ]),
+    ).toEqual([
+      { bggId: 2, minPlayers: 2, maxPlayers: 4, imageUrl: null, ext: ".png" },
+    ]);
   });
 });
 

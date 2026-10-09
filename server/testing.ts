@@ -3,12 +3,12 @@ import type { NormalizedImport } from "./import";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
 import type {
   BggRepo,
-  GameMetadataRow,
-  SettingRow,
   DataStore,
+  GameMetadataRow,
   GamesMap,
   ImportContext,
   LegacyScoreRow,
+  SettingRow,
   StoredUser,
   UserRow,
   UserStore,

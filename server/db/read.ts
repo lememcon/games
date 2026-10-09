@@ -1,8 +1,8 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { toGamesMap, toLegacyRow } from "../shape";
 import type { GamesMap, LegacyScoreRow } from "../types";
-import { game, player, score, year } from "./schema";
+import { game, gameMetadata, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
 /** Newest first. */
@@ -37,8 +37,20 @@ export async function getScores(
   return rows.map(toLegacyRow);
 }
 
-/** Every game, including those with no scores. */
+/** Every game with metadata or a name, including those with no scores. */
 export async function getGames(db: StoreDb): Promise<GamesMap> {
-  const rows = await db.select().from(game).orderBy(asc(game.bggId));
+  const bggId = sql<number>`coalesce(${gameMetadata.bggId}, ${game.bggId})`;
+  const rows = await db
+    .select({
+      bggId,
+      name: game.name,
+      minPlayers: gameMetadata.minPlayers,
+      maxPlayers: gameMetadata.maxPlayers,
+      imageUrl: gameMetadata.imageUrl,
+      imageExt: gameMetadata.ext,
+    })
+    .from(gameMetadata)
+    .fullJoin(game, eq(game.bggId, gameMetadata.bggId))
+    .orderBy(asc(bggId));
   return toGamesMap(rows);
 }

@@ -1,8 +1,9 @@
 import { inArray, sql } from "drizzle-orm";
 
 import type { NormalizedImport } from "../import";
-import { chunk, newPlayers, planGames, summarize } from "../shape";
+import { chunk, newPlayers, planGames, summarize, toMetadata } from "../shape";
 import type { ImportContext, ImportSummary, MutationResult } from "../types";
+import { upsertMetadata } from "./bggRepo";
 import { game, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
@@ -71,23 +72,17 @@ export async function importData(
         playerRows.map((p) => [p.name.toLowerCase(), p.id]),
       );
 
-      // Never overwrite a stored name; fill nulls; keep stored metadata when
-      // the upload has none.
+      // Never overwrite a stored name; fill nulls. Metadata goes to
+      // game_metadata, which keeps stored values when the upload has none.
       for (const games of chunk(input.games, CHUNK))
         await tx
           .insert(game)
-          .values(games)
+          .values(games.map((g) => ({ bggId: g.bggId, name: g.name })))
           .onConflictDoUpdate({
             target: game.bggId,
-            set: {
-              name: sql`coalesce(${game.name}, excluded.name)`,
-              minPlayers: sql`coalesce(excluded.min_players, ${game.minPlayers})`,
-              maxPlayers: sql`coalesce(excluded.max_players, ${game.maxPlayers})`,
-              imageUrl: sql`coalesce(excluded.image_url, ${game.imageUrl})`,
-              imageExt: sql`coalesce(excluded.image_ext, ${game.imageExt})`,
-              updatedAt: sql`now()`,
-            },
+            set: { name: sql`coalesce(${game.name}, excluded.name)` },
           });
+      await upsertMetadata(tx, toMetadata(input.games), new Date());
 
       for (const rows of chunk(input.scores, CHUNK))
         await tx.insert(score).values(

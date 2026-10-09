@@ -49,7 +49,9 @@ A separate `commitlint` job runs on pull requests only.
     `/api/years/:year/scores`, `/api/games`), `routes/import.ts`
     (`POST /api/admin/import`, admin only, 5 MB limit). SQL is thin and lives in
     `db/import.ts`, `db/read.ts` and `db/dataStore.ts` (the `DataStore` behind `deps.data`);
-    `testing.ts` has `fakeData()` for route tests.
+    `testing.ts` has `fakeData()` for route tests. Game metadata (players, image) lives only in
+    `game_metadata` (`db/bggRepo.ts` `upsertMetadata`, shared with the import); the `game`
+    table holds just `bgg_id` and a nullable name, and `/api/games` full-joins the two.
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
 
 ## Conventions

@@ -193,12 +193,14 @@ session; optional `?filename=` is stored with the year). Two shapes:
   Creates the year and its scores; an existing year is refused with `409` (there is no
   replace). Extra feed fields are dropped.
 - **Games-only upload**: `{ "games": {...} }` or a bare `games.json`. Creates no year; it only
-  adds or updates game metadata (player counts, image URL and extension). Games without
-  scores are stored without a name until a score row names them.
+  adds or updates game metadata (player counts, image URL and extension). Metadata lives in
+  `game_metadata` (shared with the BoardGameGeek download); an upload never replaces a stored
+  value with a missing one, and a stored `"custom"` image is kept. The `game` table holds only
+  the name, which stays empty until a score row names the game.
 
 `sample-data.json` has no year, so add `"year": 2025` (or the right year) to it before
 uploading it as a year upload. `src/assets/games.json` uploads as is (its `"custom"` image
-marker is stored as no image URL; the bundled cover is used). Rules: 20,000 score rows at
+marker is read as no image URL; the bundled cover is used). Rules: 20,000 score rows at
 most, strings up to 200 characters, https image URLs only, extensions `.jpg .jpeg .png .webp
 .gif`, no two game ids sharing a name, and players that differ only by case are one player
 (first spelling wins; a warning says so). A game's stored name is never overwritten; a
