@@ -35,10 +35,16 @@ describe("PlayerName", () => {
     const link = getByRole("link", { name: "alice" });
     expect(link).toHaveAttribute("href", "/players/42");
     expect(link).toHaveStyle({ color: rgb(PALETTE[2]) });
+    expect(link).toHaveStyle({ textDecoration: "underline dotted" });
   });
 
   it("is plain text without a discord id", () => {
-    const { queryByRole } = renderWithMantine(<PlayerName name="alice" />);
+    const { queryByRole, getByText } = renderWithMantine(
+      <PlayerName name="alice" />,
+    );
     expect(queryByRole("link")).toBeNull();
+    expect(getByText("alice").getAttribute("style") ?? "").not.toContain(
+      "underline",
+    );
   });
 });
