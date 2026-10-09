@@ -14,6 +14,12 @@ export default defineConfig({
   server: {
     open: true,
     port: 3000,
+    // Local dev needs the API (pnpm server:dev), Postgres and Discord keys.
+    proxy: {
+      "/api": {
+        target: process.env.API_PROXY_TARGET ?? "http://localhost:8080",
+      },
+    },
   },
   test: {
     globals: true,
@@ -33,6 +39,18 @@ export default defineConfig({
           name: "server",
           environment: "node",
           include: ["server/**/*.test.ts"],
+          exclude: ["server/db/**"],
+        },
+      },
+      {
+        // Real SQL against in-process Postgres (PGlite); slower to boot.
+        extends: true,
+        test: {
+          name: "server-db",
+          environment: "node",
+          include: ["server/db/**/*.test.ts"],
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
     ],

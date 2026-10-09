@@ -1,5 +1,14 @@
 // Better Auth core tables (user, session, account, verification).
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  check,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -7,6 +16,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  /** Discord username (the display name in `name` can be spoofed). */
+  username: text("username"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -54,7 +65,15 @@ export const account = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("account_user_id_idx").on(table.userId)],
+  (table) => [
+    index("account_user_id_idx").on(table.userId),
+    // One Discord identity per login, one login per Discord identity.
+    unique("account_provider_account_unique").on(
+      table.providerId,
+      table.accountId,
+    ),
+    unique("account_user_provider_unique").on(table.userId, table.providerId),
+  ],
 );
 
 export const verification = pgTable(
@@ -71,4 +90,22 @@ export const verification = pgTable(
       .notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+/** Authorization state, keyed by the immutable Discord snowflake. */
+export const appUser = pgTable(
+  "app_user",
+  {
+    discordId: text("discord_id").primaryKey(),
+    role: text("role").notNull().default("member"),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    check("app_user_role_check", sql`${table.role} in ('member', 'admin')`),
+    check(
+      "app_user_status_check",
+      sql`${table.status} in ('pending', 'approved')`,
+    ),
+  ],
 );
