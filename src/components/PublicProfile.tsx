@@ -1,5 +1,3 @@
-import { Link } from "wouter";
-
 import {
   Alert,
   Avatar,
@@ -14,7 +12,6 @@ import {
 import StatTile from "@/components/StatTile";
 import TopGamesByYear from "@/components/TopGamesByYear";
 import useProfile from "@/hooks/useProfile";
-import { formatAvgRank, formatWinRate, ordinal } from "@/lib/profile";
 
 const PublicProfile = ({ discordId }: { discordId: string }) => {
   const state = useProfile(discordId);
@@ -35,7 +32,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
     );
   }
 
-  const { name, image, stats } = state.profile;
+  const { name, image, stats, totalPlays } = state.profile;
 
   return (
     <Stack mt="md">
@@ -43,24 +40,12 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
         <Avatar src={image} name={name} size="lg" />
         <Title order={2}>{name}</Title>
       </Group>
+      <SimpleGrid cols={2}>
+        {stats && <StatTile label="years of data" value={`${stats.years}`} />}
+        <StatTile label="total plays" value={`${totalPlays}`} />
+      </SimpleGrid>
       {stats ? (
-        <>
-          <SimpleGrid cols={{ base: 2, sm: 5 }}>
-            <StatTile label="games" value={`${stats.games}`} />
-            <StatTile label="wins" value={`${stats.wins}`} />
-            <StatTile label="win rate" value={formatWinRate(stats.winRate)} />
-            <StatTile label="avg rank" value={formatAvgRank(stats.avgRank)} />
-            <StatTile label="podiums" value={`${stats.podiums}`} />
-          </SimpleGrid>
-          <Title order={4}>Most played</Title>
-          {stats.mostPlayed.map((g) => (
-            <Text key={g.bggId}>
-              <Link href={`/games/${g.bggId}`}>{g.game}</Link> {g.plays} plays,
-              best {ordinal(g.bestRank)} ({g.bestScore})
-            </Text>
-          ))}
-          <TopGamesByYear topByYear={stats.topByYear} />
-        </>
+        <TopGamesByYear topByYear={stats.topByYear} />
       ) : (
         <Text c="dimmed">No scores are linked to this member yet.</Text>
       )}

@@ -252,15 +252,6 @@ export interface ProfileScore {
   rank: number;
 }
 
-export interface MostPlayedGame {
-  bggId: number;
-  game: string;
-  plays: number;
-  /** Best (lowest) rank and the best score achieved at that rank. */
-  bestRank: number;
-  bestScore: number;
-}
-
 /** One of a member's best finishes in a year. */
 export interface TopGame {
   bggId: number;
@@ -277,14 +268,8 @@ export interface YearTopGames {
 }
 
 export interface ProfileStats {
-  games: number;
-  wins: number;
-  /** Fraction from 0 to 1. */
-  winRate: number;
-  avgRank: number;
-  /** Finishes in the top three. */
-  podiums: number;
-  mostPlayed: MostPlayedGame[];
+  /** Years with at least one score. */
+  years: number;
   /** Best finishes per year, newest year first; years without scores are absent. */
   topByYear: YearTopGames[];
 }
@@ -298,6 +283,8 @@ export interface Profile {
   linkedPlayers: string[];
   /** Null when no player is linked. */
   stats: ProfileStats | null;
+  /** Score rows across all players and years. */
+  totalPlays: number;
 }
 
 /** All SQL for display names and profiles lives behind this interface (server/db/profileStore.ts). */

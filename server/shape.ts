@@ -130,8 +130,6 @@ export function collapseMemberScores<T extends MemberScore>(
   return [...out, ...best.values()].sort((a, b) => a.id - b.id);
 }
 
-const MOST_PLAYED = 5;
-const PODIUM = 3;
 const TOP_PER_YEAR = 10;
 
 /** Each year's best finishes: rank, then score (high first), game name, bgg id. */
@@ -162,41 +160,8 @@ export function toProfileStats(
   scores: readonly ProfileScore[] | null,
 ): ProfileStats | null {
   if (scores === null) return null;
-  const games = scores.length;
-  const wins = scores.filter((s) => s.rank === 1).length;
-  const byGame = new Map<number, ProfileScore[]>();
-  for (const s of scores)
-    byGame.set(s.bggId, [...(byGame.get(s.bggId) ?? []), s]);
-  const mostPlayed = [...byGame.values()]
-    .map((plays) => {
-      const bestRank = Math.min(...plays.map((p) => p.rank));
-      return {
-        bggId: plays[0].bggId,
-        game: plays[0].game,
-        plays: plays.length,
-        bestRank,
-        bestScore: Math.max(
-          ...plays.filter((p) => p.rank === bestRank).map((p) => p.score),
-        ),
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.plays - a.plays ||
-        a.bestRank - b.bestRank ||
-        a.game.localeCompare(b.game) ||
-        a.bggId - b.bggId,
-    )
-    .slice(0, MOST_PLAYED);
-  return {
-    games,
-    wins,
-    winRate: games ? wins / games : 0,
-    avgRank: games ? scores.reduce((sum, s) => sum + s.rank, 0) / games : 0,
-    podiums: scores.filter((s) => s.rank <= PODIUM).length,
-    mostPlayed,
-    topByYear: topByYear(scores),
-  };
+  const top = topByYear(scores);
+  return { years: top.length, topByYear: top };
 }
 
 /** The games.json shape. Null columns are omitted so gameBounds sees undefined. */

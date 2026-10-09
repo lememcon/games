@@ -419,19 +419,11 @@ describe("toProfileStats", () => {
     expect(toProfileStats(null)).toBeNull();
   });
 
-  it("is all zeros for a player with no scores", () => {
-    expect(toProfileStats([])).toEqual({
-      games: 0,
-      wins: 0,
-      winRate: 0,
-      avgRank: 0,
-      podiums: 0,
-      mostPlayed: [],
-      topByYear: [],
-    });
+  it("is empty for a player with no scores", () => {
+    expect(toProfileStats([])).toEqual({ years: 0, topByYear: [] });
   });
 
-  it("computes tiles and most played games", () => {
+  it("counts years and lists top games", () => {
     const stats = toProfileStats([
       s(1, "Wingspan", 1, 87),
       s(1, "Wingspan", 3, 60),
@@ -441,16 +433,7 @@ describe("toProfileStats", () => {
       s(3, "Root", 5),
     ]);
     expect(stats).toEqual({
-      games: 6,
-      wins: 2,
-      winRate: 2 / 6,
-      avgRank: 16 / 6,
-      podiums: 4,
-      mostPlayed: [
-        { bggId: 1, game: "Wingspan", plays: 3, bestRank: 1, bestScore: 90 },
-        { bggId: 2, game: "Azul", plays: 2, bestRank: 2, bestScore: 74 },
-        { bggId: 3, game: "Root", plays: 1, bestRank: 5, bestScore: 10 },
-      ],
+      years: 1,
       topByYear: [
         {
           year: 2026,
@@ -466,24 +449,6 @@ describe("toProfileStats", () => {
         },
       ],
     });
-  });
-
-  it("breaks ties by best rank, then name, and keeps the top five", () => {
-    const stats = toProfileStats([
-      s(1, "Zulu", 2),
-      s(2, "Alpha", 2),
-      s(3, "Mike", 1),
-      s(4, "Bravo", 3),
-      s(5, "Echo", 3),
-      s(6, "Delta", 4),
-    ])!;
-    expect(stats.mostPlayed.map((g) => g.game)).toEqual([
-      "Mike",
-      "Alpha",
-      "Zulu",
-      "Bravo",
-      "Echo",
-    ]);
   });
 
   describe("topByYear", () => {

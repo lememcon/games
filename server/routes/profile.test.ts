@@ -34,14 +34,7 @@ const profile: Profile = {
   image: "pat.png",
   linkedPlayers: ["pat"],
   stats: {
-    games: 1,
-    wins: 1,
-    winRate: 1,
-    avgRank: 1,
-    podiums: 1,
-    mostPlayed: [
-      { bggId: 7, game: "Root", plays: 1, bestRank: 1, bestScore: 90 },
-    ],
+    years: 1,
     topByYear: [
       {
         year: 2026,
@@ -50,6 +43,7 @@ const profile: Profile = {
       },
     ],
   },
+  totalPlays: 12,
 };
 
 function makeApp() {
@@ -195,6 +189,7 @@ describe("GET /api/profiles/:discordId", () => {
       "linkedPlayers",
       "name",
       "stats",
+      "totalPlays",
     ]);
     expect(body).toEqual(profile);
   });
