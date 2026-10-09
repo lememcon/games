@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 
+import { bggRoutes } from "./bgg/routes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { mountStatic } from "./static";
 import type { AppDeps, AppEnv } from "./types";
@@ -23,7 +24,7 @@ export function createApp(deps: AppDeps) {
       // Exact match on the one configured origin; anything else gets no CORS headers.
       origin: (origin) => (origin === deps.webOrigin ? origin : null),
       credentials: true,
-      allowMethods: ["GET", "POST", "PATCH", "DELETE"],
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowHeaders: ["content-type"],
     }),
   );
@@ -45,6 +46,7 @@ export function createApp(deps: AppDeps) {
   });
   api.use("/admin/*", requireAdmin);
   api.route("/admin", adminRoutes(deps.store));
+  if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);
 

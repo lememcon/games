@@ -1,5 +1,13 @@
+import type { BggGame } from "./bgg/client";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
-import type { StoredUser, UserRow, UserStore } from "./types";
+import type {
+  BggRepo,
+  GameMetadataRow,
+  SettingRow,
+  StoredUser,
+  UserRow,
+  UserStore,
+} from "./types";
 
 export type FakeUser = Partial<StoredUser> & UserRow;
 
@@ -53,4 +61,37 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     },
   };
   return { store, users, repaired, logins };
+}
+
+/** In-memory BggRepo for tests; mirrors the upsert rules of the SQL repo. */
+export function fakeBggRepo() {
+  const settings = new Map<string, SettingRow & { updatedBy: string }>();
+  const rows = new Map<number, GameMetadataRow>();
+  const writes: BggGame[][] = [];
+  const repo: BggRepo = {
+    getSetting: async (key) => settings.get(key) ?? null,
+    setSetting: async (key, value, updatedBy) => {
+      settings.set(key, { value, updatedBy, updatedAt: new Date(0) });
+    },
+    deleteSetting: async (key) => {
+      settings.delete(key);
+    },
+    listMetadata: async () => [...rows.values()],
+    upsertMetadata: async (games, fetchedAt) => {
+      writes.push(games);
+      for (const g of games) {
+        const old = rows.get(g.bggId);
+        const custom = old?.imageUrl === "custom";
+        rows.set(g.bggId, {
+          bggId: g.bggId,
+          minPlayers: g.minPlayers ?? old?.minPlayers ?? null,
+          maxPlayers: g.maxPlayers ?? old?.maxPlayers ?? null,
+          imageUrl: custom ? "custom" : (g.imageUrl ?? old?.imageUrl ?? null),
+          ext: custom ? old.ext : (g.ext ?? old?.ext ?? null),
+          fetchedAt,
+        });
+      }
+    },
+  };
+  return { repo, settings, rows, writes };
 }
