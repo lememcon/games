@@ -114,6 +114,19 @@ describe("metadata", () => {
     expect(row.fetchedAt).toEqual(new Date("2026-03-01"));
   });
 
+  it("takes the new extension with a new image and keeps it without one", async () => {
+    await repo.upsertMetadata([game(900004)], new Date(0));
+    await repo.upsertMetadata([game(900004, { ext: ".png" })], new Date(1));
+    const find = async () =>
+      (await repo.listMetadata()).find((r) => r.bggId === 900004)!;
+    expect((await find()).ext).toBe(".png");
+    await repo.upsertMetadata(
+      [game(900004, { imageUrl: null, ext: ".gif" })],
+      new Date(2),
+    );
+    expect((await find()).ext).toBe(".png");
+  });
+
   it("ignores an empty batch", async () => {
     await expect(repo.upsertMetadata([], new Date())).resolves.toBeUndefined();
   });

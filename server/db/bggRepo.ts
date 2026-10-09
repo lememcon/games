@@ -56,7 +56,7 @@ export function createBggRepo(db: BggDb): BggRepo {
             maxPlayers: sql`coalesce(${excluded("max_players")}, ${existing(gameMetadata.maxPlayers)})`,
             // A custom image is curated by hand: keep it and its extension.
             imageUrl: sql`case when ${isCustom} then ${existing(gameMetadata.imageUrl)} else coalesce(${excluded("image_url")}, ${existing(gameMetadata.imageUrl)}) end`,
-            ext: sql`case when ${isCustom} then ${existing(gameMetadata.ext)} else coalesce(${excluded("ext")}, ${existing(gameMetadata.ext)}) end`,
+            ext: sql`case when ${isCustom} then ${existing(gameMetadata.ext)} when ${excluded("image_url")} is not null then ${excluded("ext")} else ${existing(gameMetadata.ext)} end`,
             fetchedAt,
           },
         });

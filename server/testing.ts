@@ -87,7 +87,11 @@ export function fakeBggRepo() {
           minPlayers: g.minPlayers ?? old?.minPlayers ?? null,
           maxPlayers: g.maxPlayers ?? old?.maxPlayers ?? null,
           imageUrl: custom ? "custom" : (g.imageUrl ?? old?.imageUrl ?? null),
-          ext: custom ? old.ext : (g.ext ?? old?.ext ?? null),
+          ext: custom
+            ? old.ext
+            : g.imageUrl != null
+              ? (g.ext ?? null)
+              : (old?.ext ?? null),
           fetchedAt,
         });
       }
