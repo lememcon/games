@@ -9,6 +9,7 @@ import type { AdminUser } from "@/types";
 const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
   discordId,
   name: `Name${discordId}`,
+  displayName: null,
   image: null,
   username: `user${discordId}`,
   role: "member",
@@ -191,5 +192,23 @@ describe("AdminPage", () => {
     renderWithMantine(<AdminPage meId="3" />);
     await pickRole("Role for Name2", "Member");
     expect(hook.setRole).not.toHaveBeenCalled();
+  });
+
+  it("links approved members to their profile, but not pending accounts", () => {
+    setHook({
+      users: [
+        user("10", { status: "pending", name: "Newbie" }),
+        user("2", { name: "Amy", displayName: "Ames" }),
+      ],
+    });
+    renderWithMantine(<AdminPage meId="3" />);
+
+    expect(screen.getByRole("link", { name: "Ames" })).toHaveAttribute(
+      "href",
+      "/players/2",
+    );
+    expect(screen.getByText("Discord name: Amy")).toBeInTheDocument();
+    expect(screen.getByText("Newbie")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Newbie" })).toBeNull();
   });
 });

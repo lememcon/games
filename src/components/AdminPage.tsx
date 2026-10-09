@@ -27,12 +27,19 @@ const BUILT_IN = "Built-in admin, can't be changed";
 type Confirm =
   { kind: "remove"; user: AdminUser } | { kind: "demote"; user: AdminUser };
 
+// Only approved members have a public profile to link to.
 const Account = ({ user }: { user: AdminUser }) => (
   <Group gap="xs" wrap="nowrap">
     <Avatar src={user.image} name={user.name} size="sm" />
     <div>
       <Text size="sm">
-        {user.name}
+        {user.status === "approved" ? (
+          <Link href={`/players/${user.discordId}`}>
+            {user.displayName ?? user.name}
+          </Link>
+        ) : (
+          (user.displayName ?? user.name)
+        )}
         {user.locked && (
           <Text span size="xs" c="dimmed">
             {" "}
@@ -40,6 +47,11 @@ const Account = ({ user }: { user: AdminUser }) => (
           </Text>
         )}
       </Text>
+      {user.displayName && (
+        <Text size="xs" c="dimmed">
+          Discord name: {user.name}
+        </Text>
+      )}
       <Text size="xs" c="dimmed">
         {user.username
           ? `Discord username: ${user.username}`

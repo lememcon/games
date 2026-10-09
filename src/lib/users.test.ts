@@ -6,6 +6,7 @@ import type { AdminUser } from "@/types";
 const user = (discordId: string, status: AdminUser["status"]): AdminUser => ({
   discordId,
   name: discordId,
+  displayName: null,
   image: null,
   username: discordId,
   role: "member",
