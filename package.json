@@ -81,7 +81,7 @@
     "drizzle-orm": "^0.45.4",
     "fast-xml-parser": "^5.11.2",
     "hono": "^4.13.13",
-    "lucide-react": "^0.514.0",
+    "lucide-react": "^1.54.0",
     "pg": "^8.23.1",
     "ramda": "^0.32.0",
     "react": "^19.3.0",
