@@ -279,8 +279,39 @@ describe("getProfile", () => {
           { bggId: 1, game: "Root", plays: 2, bestRank: 1, bestScore: 90 },
           { bggId: 2, game: "Azul", plays: 1, bestRank: 3, bestScore: 40 },
         ],
+        topByYear: [
+          {
+            year: 2026,
+            total: 1,
+            games: [{ bggId: 1, game: "Root", rank: 2, score: 70 }],
+          },
+          {
+            year: 2025,
+            total: 2,
+            games: [
+              { bggId: 1, game: "Root", rank: 1, score: 90 },
+              { bggId: 2, game: "Azul", rank: 3, score: 40 },
+            ],
+          },
+        ],
       },
     });
+  });
+
+  it("excludes other players' scores from the yearly top games", async () => {
+    await importScores(2025, [
+      row({ player: "amy", rank: 2, score: 80 }),
+      row({ player: "bob", rank: 1, score: 99 }),
+    ]);
+    await link("amy", ALEX);
+    await link("bob", JO);
+    expect((await store.getProfile(ALEX))!.stats!.topByYear).toEqual([
+      {
+        year: 2025,
+        total: 1,
+        games: [{ bggId: 1, game: "Root", rank: 2, score: 80 }],
+      },
+    ]);
   });
 
   it("gives a linked player with no scores zeroed stats", async () => {
@@ -289,6 +320,7 @@ describe("getProfile", () => {
     expect((await store.getProfile(ALEX))!.stats).toMatchObject({
       games: 0,
       mostPlayed: [],
+      topByYear: [],
     });
   });
 });

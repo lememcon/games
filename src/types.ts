@@ -108,6 +108,20 @@ export interface ProfileGame {
   bestScore: number;
 }
 
+export interface TopGame {
+  bggId: number;
+  game: string;
+  rank: number;
+  score: number;
+}
+
+export interface YearTopGames {
+  year: number;
+  // All scores that year; `games` holds at most the best few.
+  total: number;
+  games: TopGame[];
+}
+
 export interface ProfileStats {
   games: number;
   wins: number;
@@ -116,6 +130,7 @@ export interface ProfileStats {
   avgRank: number;
   podiums: number;
   mostPlayed: ProfileGame[];
+  topByYear: YearTopGames[];
 }
 
 export interface Profile {

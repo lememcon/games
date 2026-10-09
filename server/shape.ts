@@ -9,6 +9,7 @@ import type {
   ProfileScore,
   ProfileStats,
   ScoreRow,
+  YearTopGames,
 } from "./types";
 
 export function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -74,6 +75,30 @@ export function createNameResolver(
 
 const MOST_PLAYED = 5;
 const PODIUM = 3;
+const TOP_PER_YEAR = 10;
+
+/** Each year's best finishes: rank, then score (high first), game name, bgg id. */
+function topByYear(scores: readonly ProfileScore[]): YearTopGames[] {
+  const byYear = new Map<number, ProfileScore[]>();
+  for (const s of scores)
+    byYear.set(s.year, [...(byYear.get(s.year) ?? []), s]);
+  return [...byYear]
+    .sort(([a], [b]) => b - a)
+    .map(([year, rows]) => ({
+      year,
+      total: rows.length,
+      games: rows
+        .sort(
+          (a, b) =>
+            a.rank - b.rank ||
+            b.score - a.score ||
+            a.game.localeCompare(b.game) ||
+            a.bggId - b.bggId,
+        )
+        .slice(0, TOP_PER_YEAR)
+        .map(({ bggId, game, rank, score }) => ({ bggId, game, rank, score })),
+    }));
+}
 
 /** Stats over all of a player's scores; null input means no player is linked. */
 export function toProfileStats(
@@ -113,6 +138,7 @@ export function toProfileStats(
     avgRank: games ? scores.reduce((sum, s) => sum + s.rank, 0) / games : 0,
     podiums: scores.filter((s) => s.rank <= PODIUM).length,
     mostPlayed,
+    topByYear: topByYear(scores),
   };
 }
 

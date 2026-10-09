@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 
 import StatTile from "@/components/StatTile";
+import TopGamesByYear from "@/components/TopGamesByYear";
 import useProfile from "@/hooks/useProfile";
 import { formatAvgRank, formatWinRate, ordinal } from "@/lib/profile";
 
@@ -58,6 +59,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
               best {ordinal(g.bestRank)} ({g.bestScore})
             </Text>
           ))}
+          <TopGamesByYear topByYear={stats.topByYear} />
         </>
       ) : (
         <Text c="dimmed">No scores are linked to this member yet.</Text>

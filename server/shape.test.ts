@@ -314,7 +314,8 @@ describe("toProfileStats", () => {
     game: string,
     rank: number,
     score = 10,
-  ): ProfileScore => ({ bggId, game, rank, score });
+    year = 2026,
+  ): ProfileScore => ({ year, bggId, game, rank, score });
 
   it("is null when no player is linked", () => {
     expect(toProfileStats(null)).toBeNull();
@@ -328,6 +329,7 @@ describe("toProfileStats", () => {
       avgRank: 0,
       podiums: 0,
       mostPlayed: [],
+      topByYear: [],
     });
   });
 
@@ -351,6 +353,20 @@ describe("toProfileStats", () => {
         { bggId: 2, game: "Azul", plays: 2, bestRank: 2, bestScore: 74 },
         { bggId: 3, game: "Root", plays: 1, bestRank: 5, bestScore: 10 },
       ],
+      topByYear: [
+        {
+          year: 2026,
+          total: 6,
+          games: [
+            { bggId: 1, game: "Wingspan", rank: 1, score: 90 },
+            { bggId: 1, game: "Wingspan", rank: 1, score: 87 },
+            { bggId: 2, game: "Azul", rank: 2, score: 74 },
+            { bggId: 1, game: "Wingspan", rank: 3, score: 60 },
+            { bggId: 2, game: "Azul", rank: 4, score: 50 },
+            { bggId: 3, game: "Root", rank: 5, score: 10 },
+          ],
+        },
+      ],
     });
   });
 
@@ -370,5 +386,59 @@ describe("toProfileStats", () => {
       "Bravo",
       "Echo",
     ]);
+  });
+
+  describe("topByYear", () => {
+    const top = (scores: ProfileScore[]) => toProfileStats(scores)!.topByYear;
+
+    it("sorts by rank, then score descending, then name, then bgg id", () => {
+      const [y] = top([
+        s(4, "Same", 2, 50),
+        s(3, "Same", 2, 50),
+        s(2, "Beta", 2, 50),
+        s(1, "Alpha", 2, 70),
+        s(5, "Zed", 1, 10),
+      ]);
+      expect(y.games.map((g) => g.bggId)).toEqual([5, 1, 2, 3, 4]);
+    });
+
+    it("keeps ties at the same rank", () => {
+      const [y] = top([s(1, "A", 1, 5), s(2, "B", 1, 9)]);
+      expect(y.games.map((g) => [g.game, g.rank])).toEqual([
+        ["B", 1],
+        ["A", 1],
+      ]);
+    });
+
+    it("lists years newest first and skips years without scores", () => {
+      const years = top([
+        s(1, "A", 1, 1, 2024),
+        s(1, "A", 1, 1, 2026),
+        s(1, "A", 1, 1, 2025),
+      ]).map((y) => y.year);
+      expect(years).toEqual([2026, 2025, 2024]);
+    });
+
+    it("does not dedupe games across years", () => {
+      const years = top([s(1, "A", 1, 1, 2025), s(1, "A", 2, 1, 2026)]);
+      expect(years.map((y) => y.games.map((g) => g.bggId))).toEqual([[1], [1]]);
+    });
+
+    const many = (n: number) =>
+      Array.from({ length: n }, (_, i) => s(i + 1, `G${i}`, i + 1));
+
+    it("keeps exactly 10 without trimming", () => {
+      const [y] = top(many(10));
+      expect(y.total).toBe(10);
+      expect(y.games).toHaveLength(10);
+    });
+
+    it("keeps the best 10 of 11 and counts all", () => {
+      const [y] = top(many(11));
+      expect(y.total).toBe(11);
+      expect(y.games.map((g) => g.rank)).toEqual([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      ]);
+    });
   });
 });
