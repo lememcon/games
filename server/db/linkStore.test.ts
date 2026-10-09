@@ -119,9 +119,35 @@ describe("setLink", () => {
     expect((await playerRows())[0].discord_id).toBeNull();
   });
 
-  it("allows two players to link to one member", async () => {
+  it("refuses a second player for the same member", async () => {
     await store.setLink(await idOf("amy"), ALEX);
-    expect((await store.setLink(await idOf("bob"), ALEX)).ok).toBe(true);
+    expect(await store.setLink(await idOf("bob"), ALEX)).toEqual({
+      ok: false,
+      status: 409,
+      error: "already_linked",
+    });
+    expect((await playerRows())[1].discord_id).toBeNull();
+  });
+
+  it("refuses a player named like another member's display name", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'AMY' WHERE discord_id = $1`,
+      [JO],
+    );
+    expect(await store.setLink(await idOf("amy"), ALEX)).toEqual({
+      ok: false,
+      status: 409,
+      error: "name_taken",
+    });
+    expect((await playerRows())[0].discord_id).toBeNull();
+  });
+
+  it("allows a player named like the linked member's own display name", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'AMY' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect((await store.setLink(await idOf("amy"), ALEX)).ok).toBe(true);
   });
 
   it("refuses an unknown player or member", async () => {

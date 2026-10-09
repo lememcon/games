@@ -237,3 +237,87 @@ describe("data store metadata", () => {
     });
   });
 });
+
+describe("display names", () => {
+  const MEMBER = "555444333222111000";
+
+  it("shows display names and discord_id only when resolving names", async () => {
+    await client.query(
+      `INSERT INTO app_user (discord_id, status, display_name) VALUES ($1, 'approved', 'Dee')`,
+      [MEMBER],
+    );
+    await store.importData(
+      upload(2098, [
+        row({ player: "deedee" }),
+        row({ player: "other", rank: 2 }),
+      ]),
+      context,
+    );
+    await client.query(
+      `UPDATE player SET discord_id = $1 WHERE name = 'deedee'`,
+      [MEMBER],
+    );
+
+    expect(
+      (await store.getScores(2098, true))!.map((r) => [r.player, r.discord_id]),
+    ).toEqual([
+      ["Dee", MEMBER],
+      ["other", undefined],
+    ]);
+    expect(
+      (await store.getScores(2098))!.map((r) => [r.player, r.discord_id]),
+    ).toEqual([
+      ["deedee", undefined],
+      ["other", undefined],
+    ]);
+
+    await client.query(
+      `UPDATE app_user SET display_name = NULL WHERE discord_id = $1`,
+      [MEMBER],
+    );
+    expect((await store.getScores(2098, true))![0]).toMatchObject({
+      player: "deedee",
+      discord_id: MEMBER,
+    });
+
+    await client.query(
+      `UPDATE app_user SET status = 'pending', display_name = 'Dee' WHERE discord_id = $1`,
+      [MEMBER],
+    );
+    expect((await store.getScores(2098, true))![0]).not.toHaveProperty(
+      "discord_id",
+    );
+    expect((await store.getScores(2098, true))![0].player).toBe("deedee");
+  });
+
+  it("refuses an upload that adds a player named like a display name, rolling back", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'Taken' WHERE discord_id = $1`,
+      [MEMBER],
+    );
+    const result = await store.importData(
+      upload(2097, [
+        row({ player: "fresh" }),
+        row({ player: "TAKEN", rank: 2 }),
+      ]),
+      context,
+    );
+    expect(result).toEqual({ ok: false, status: 409, error: "name_taken" });
+    expect(await store.getScores(2097)).toBeNull();
+    expect(
+      (await client.query(`SELECT 1 FROM player WHERE name = 'fresh'`)).rows,
+    ).toEqual([]);
+  });
+
+  it("still accepts an upload reusing the linked player's own name", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'deedee' WHERE discord_id = $1`,
+      [MEMBER],
+    );
+    const result = await store.importData(
+      upload(2096, [row({ player: "DeeDee" })]),
+      context,
+    );
+    expect(result).toMatchObject({ ok: true, value: { players: { new: 0 } } });
+  });
+});

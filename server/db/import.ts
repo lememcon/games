@@ -4,7 +4,7 @@ import type { NormalizedImport } from "../import";
 import { chunk, newPlayers, planGames, summarize, toMetadata } from "../shape";
 import type { ImportContext, ImportSummary, MutationResult } from "../types";
 import { upsertMetadata } from "./bggRepo";
-import { game, player, score, year } from "./schema";
+import { appUser, game, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const CHUNK = 500;
@@ -16,6 +16,9 @@ export function pgCode(error: unknown): string | undefined {
   const code = e?.code ?? e?.cause?.code;
   return typeof code === "string" ? code : undefined;
 }
+
+/** A new data-file player has the same name as a member's display name. */
+class NameClash extends Error {}
 
 /**
  * Writes an upload in one transaction. A year upload inserts the year first, so
@@ -57,6 +60,17 @@ export async function importData(
         existingPlayers.map((p) => p.name),
         input.players,
       );
+      // A new player named like a member's display name could impersonate them.
+      const lowerFresh = fresh.map((n) => n.toLowerCase());
+      const clash = lowerFresh.length
+        ? await tx
+            .select({ id: appUser.discordId })
+            .from(appUser)
+            .where(inArray(sql`lower(${appUser.displayName})`, lowerFresh))
+            .limit(1)
+        : [];
+      if (clash.length) throw new NameClash();
+
       // Players are only ever inserted, never updated: an upload must never
       // touch player.discord_id, or it would silently unlink members. Do not
       // turn this into an upsert whose `set` clause covers that column.
@@ -105,6 +119,8 @@ export async function importData(
       };
     });
   } catch (error) {
+    if (error instanceof NameClash)
+      return { ok: false, status: 409, error: "name_taken" };
     if (input.year !== null && pgCode(error) === UNIQUE_VIOLATION)
       return { ok: false, status: 409, error: "year_exists" };
     throw error;

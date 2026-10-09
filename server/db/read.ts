@@ -1,8 +1,8 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { toGamesMap, toLegacyRow } from "../shape";
 import type { GamesMap, LegacyScoreRow } from "../types";
-import { game, gameMetadata, player, score, year } from "./schema";
+import { appUser, game, gameMetadata, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
 /** Newest first. */
@@ -14,10 +14,15 @@ export async function listYears(db: StoreDb): Promise<number[]> {
   return rows.map((r) => r.year);
 }
 
-/** Null when the year is unknown. Rows come back in insertion order. */
+/**
+ * Null when the year is unknown. Rows come back in insertion order. With
+ * `resolveNames`, players linked to an approved member show that member's
+ * display name (when set) and carry their `discord_id`.
+ */
 export async function getScores(
   db: StoreDb,
   value: number,
+  resolveNames = false,
 ): Promise<LegacyScoreRow[] | null> {
   const [found] = await db.select().from(year).where(eq(year.year, value));
   if (!found) return null;
@@ -25,13 +30,23 @@ export async function getScores(
     .select({
       bggId: score.bggId,
       gameName: game.name,
-      playerName: player.name,
+      playerName: resolveNames
+        ? sql<string>`coalesce(${appUser.displayName}, ${player.name})`
+        : player.name,
+      discordId: resolveNames ? appUser.discordId : sql<null>`null`,
       score: score.score,
       rank: score.rank,
     })
     .from(score)
     .innerJoin(game, eq(game.bggId, score.bggId))
     .innerJoin(player, eq(player.id, score.playerId))
+    .leftJoin(
+      appUser,
+      and(
+        resolveNames ? eq(appUser.discordId, player.discordId) : sql`false`,
+        eq(appUser.status, "approved"),
+      ),
+    )
     .where(eq(score.year, value))
     .orderBy(asc(score.id));
   return rows.map(toLegacyRow);

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 
 import type { LinkStore, PlayerLinks } from "../types";
 import { pgCode } from "./import";
@@ -6,6 +6,7 @@ import { account, appUser, player, score, user } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const FOREIGN_KEY_VIOLATION = "23503";
+const UNIQUE_VIOLATION = "23505";
 
 // One Discord account per app_user (unique provider + account id), so these
 // joins cannot fan out; a member with no login row is simply not listed.
@@ -59,17 +60,42 @@ export function createLinkStore(db: StoreDb): LinkStore {
 
     async setLink(playerId, discordId) {
       try {
-        const rows = await db
-          .update(player)
-          .set({ discordId })
-          .where(eq(player.id, playerId))
-          .returning({ id: player.id });
-        return rows.length
-          ? { ok: true, value: null }
-          : { ok: false, status: 404, error: "unknown_player" };
+        return await db.transaction(async (tx) => {
+          const [found] = await tx
+            .select({ name: player.name })
+            .from(player)
+            .where(eq(player.id, playerId));
+          if (!found)
+            return { ok: false as const, status: 404, error: "unknown_player" };
+
+          if (discordId !== null) {
+            // The shown name must not impersonate another member.
+            const [clash] = await tx
+              .select({ id: appUser.discordId })
+              .from(appUser)
+              .where(
+                and(
+                  sql`lower(${appUser.displayName}) = lower(${found.name})`,
+                  ne(appUser.discordId, discordId),
+                ),
+              )
+              .limit(1);
+            if (clash)
+              return { ok: false as const, status: 409, error: "name_taken" };
+          }
+
+          await tx
+            .update(player)
+            .set({ discordId })
+            .where(eq(player.id, playerId));
+          return { ok: true as const, value: null };
+        });
       } catch (error) {
-        if (pgCode(error) === FOREIGN_KEY_VIOLATION)
+        const code = pgCode(error);
+        if (code === FOREIGN_KEY_VIOLATION)
           return { ok: false, status: 404, error: "unknown_user" };
+        if (code === UNIQUE_VIOLATION)
+          return { ok: false, status: 409, error: "already_linked" };
         throw error;
       }
     },
