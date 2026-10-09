@@ -15,6 +15,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 
+import BggDataPanel from "@/components/admin/BggDataPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
 import { splitUsers, timeAgo } from "@/lib/users";
 import type { AdminUser, Role } from "@/types";
@@ -216,6 +217,8 @@ const AdminPage = ({ meId }: { meId: string }) => {
           </Button>
         </Group>
       </Modal>
+
+      <BggDataPanel />
     </Stack>
   );
 };

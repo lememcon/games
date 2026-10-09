@@ -24,6 +24,9 @@ const hook = vi.hoisted(() => ({
   setRole: vi.fn(),
   remove: vi.fn(),
 }));
+vi.mock("@/components/admin/BggDataPanel", () => ({
+  default: () => <div>bgg panel</div>,
+}));
 vi.mock("@/hooks/useAdminUsers", () => ({ default: () => hook.value }));
 
 const setHook = (over: Record<string, unknown> = {}) => {
@@ -76,6 +79,11 @@ describe("AdminPage", () => {
     expect(
       screen.getByText("(built-in)", { exact: false }),
     ).toBeInTheDocument();
+  });
+
+  it("mounts the BGG data panel below the member tables", () => {
+    renderWithMantine(<AdminPage meId="3" />);
+    expect(screen.getByText("bgg panel")).toBeInTheDocument();
   });
 
   it("shows a fallback when the Discord username is unknown", () => {
