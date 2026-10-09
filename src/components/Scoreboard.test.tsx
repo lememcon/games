@@ -43,6 +43,7 @@ const state = vi.hoisted(() => ({
   useData: vi.fn(),
   played: {} as Record<string, number>,
   incPlayed: vi.fn(),
+  usePlayedCounts: vi.fn(),
 }));
 vi.mock("@/hooks/useData", () => ({
   default: (year: string | null) => {
@@ -53,12 +54,15 @@ vi.mock("@/hooks/useData", () => ({
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
 vi.mock("@/hooks/usePlayedCounts", () => ({
-  default: () => [
-    (id: string) => state.played[id] ?? 0,
-    state.incPlayed,
-    vi.fn(),
-    state.played,
-  ],
+  default: (year: string) => {
+    state.usePlayedCounts(year);
+    return [
+      (id: string) => state.played[id] ?? 0,
+      state.incPlayed,
+      vi.fn(),
+      state.played,
+    ];
+  },
 }));
 
 const member: ApprovedUser = {
@@ -85,6 +89,20 @@ describe("Scoreboard", () => {
   afterEach(() => {
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
+  });
+
+  it("gives the played counts the year only once the years have loaded", () => {
+    state.years = { years: [], loading: true, error: false };
+    const { rerender } = render();
+    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
+
+    state.years = { years: ["2025", "2026"], loading: false, error: false };
+    rerender(
+      <MantineProvider>
+        <Scoreboard user={member} />
+      </MantineProvider>,
+    );
+    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("2026");
   });
 
   it("renders the game detail on /games/:id", () => {

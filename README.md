@@ -30,7 +30,7 @@ you've already played. Live at **[games.lememcon.com](https://games.lememcon.com
 - **Played counter** — increment/decrement a per-game play count, saved to your
   account per year (so it follows you across browsers), with an option to hide
   games you've played. Counts a browser stored locally before this are imported
-  once on the next load.
+  the first time that year is viewed while signed in.
 - **Year switcher** — pick any imported year; each year is a separate import.
 - **Game detail pages** — per-game view with the BoardGameGeek cover image,
   player-count bounds, and a table of every player's rank and score.

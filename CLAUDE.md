@@ -41,7 +41,8 @@ A separate `commitlint` job runs on pull requests only.
   react-refresh).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
   state), `usePlayedCounts` (server-backed per-member counts via `/api/me/played`, with a
-  one-time import of the legacy `played_counts_<year>` localStorage key, see
+  import of the legacy `played_counts_<year>` localStorage key the first time that
+  year is viewed while signed in, see
   `lib/playedMigration.ts`), `useAuthError` (reads then strips `?error=` from the URL),
   `useProfile` (public profile), `useDisplayName` (PUT own display name).
 - `src/components/` — presentational + container components (`.tsx`). `ProfilePage`

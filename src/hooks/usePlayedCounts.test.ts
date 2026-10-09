@@ -124,7 +124,7 @@ describe("usePlayedCounts", () => {
     expect(puts("100")).toHaveLength(2);
   });
 
-  it("sends nothing more when the latest value matches the confirmed one", async () => {
+  it("sends the reverted value once the in-flight write settles", async () => {
     const { result, puts } = await loaded();
 
     inc(result, "100");
@@ -134,6 +134,34 @@ describe("usePlayedCounts", () => {
     expect(getCount(result)("100")).toBe(0);
     await waitFor(() => expect(puts("100")).toHaveLength(2));
     expect(puts("100")[1].body).toEqual({ count: 0 });
+  });
+
+  it("sends nothing more when the latest value equals the one in flight", async () => {
+    const { result, puts } = await loaded();
+
+    inc(result, "100");
+    dec(result, "100");
+    inc(result, "100");
+    await answer(puts("100")[0], 200);
+
+    expect(getCount(result)("100")).toBe(1);
+    expect(puts("100")).toHaveLength(1);
+  });
+
+  it("keeps sending the latest value after the year changes", async () => {
+    const { result, puts, rerender, calls } = await loaded();
+
+    inc(result, "100");
+    inc(result, "100");
+    rerender({ y: "2026" });
+    await answer(puts("100")[0], 200);
+
+    await waitFor(() => expect(puts("100")).toHaveLength(2));
+    expect(puts("100")[1]).toMatchObject({
+      path: "/me/played/2025/100",
+      body: { count: 2 },
+    });
+    expect(calls.some((c) => c.path === "/me/played?year=2026")).toBe(true);
   });
 
   it("removes the entry when the count drops to zero", async () => {
@@ -276,18 +304,28 @@ describe("usePlayedCounts", () => {
     expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
   });
 
-  it("does not retry an unknown year", async () => {
+  it("asks again, without importing, when an unknown year comes back", async () => {
+    localStorage.setItem("played_counts_1999", JSON.stringify({ "100": 2 }));
     const f = makeFetch();
-    const { result, rerender } = renderHook(() =>
-      usePlayedCounts("1999", f.fetchImpl),
+    const { rerender } = renderHook(
+      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      {
+        initialProps: { y: "1999" },
+      },
     );
-
     await answer(f.calls[0], 404, { error: "unknown_year" });
-    rerender();
-    inc(result, "100");
 
-    expect(f.calls).toHaveLength(1);
-    expect(result.current[3]).toEqual({});
+    rerender({ y: "2025" });
+    rerender({ y: "1999" });
+
+    expect(f.calls).toHaveLength(3);
+    expect(f.calls[2]).toMatchObject({
+      path: "/me/played?year=1999",
+      method: "GET",
+    });
+    await answer(f.calls[2], 404, { error: "unknown_year" });
+    expect(f.calls.some((c) => c.path.endsWith("/import"))).toBe(false);
+    expect(localStorage.getItem("played_counts_1999")).not.toBeNull();
   });
 
   describe("migrating localStorage", () => {

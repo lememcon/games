@@ -23,7 +23,7 @@ Netlify). It is entirely read-only:
   to the database, per member (`played_count`, `/api/me/played`).
 
 There is no backend, no database, no auth, and no way to write data from the SPA (a
-`server/` API now exists but the SPA does not call it yet). **Goal:** turn it into a
+`server/` API now exists and the SPA calls it for play counts, auth and admin). **Goal:** turn it into a
 stateful full-stack app where Postgres behind a Hono API is the source of truth for scores,
 game metadata, shared play counts, and per-user preferences, with in-app admin forms
 (Discord login via Better Auth) to create/edit data — while keeping the

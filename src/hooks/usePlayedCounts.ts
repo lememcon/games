@@ -56,13 +56,13 @@ function flush(
     )
     .then((ok) => {
       s.inFlight.delete(id);
-      if (s.cancelled) return;
       if (ok) s.confirmed = withCount(s.confirmed, id, want);
       // A newer change is sent as is (after a failure too); otherwise a
-      // failed write goes back to what the server has.
+      // failed write goes back to what the server has. A cancelled session
+      // still sends what was wanted but no longer updates the screen.
       else if ((s.desired[id] ?? 0) === want) {
         s.desired = withCount(s.desired, id, s.confirmed[id] ?? 0);
-        onRollback(s.desired);
+        if (!s.cancelled) onRollback(s.desired);
       }
       flush(s, id, fetchImpl, onRollback);
     });
