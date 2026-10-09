@@ -156,16 +156,34 @@ Consequences:
 Environment variables (see `.env.example`; a local `.env` is loaded automatically).
 With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com/api/auth/callback/discord`.
 
-| Variable                | Purpose                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | PostgreSQL connection string                                                          |
-| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                                                  |
-| `BETTER_AUTH_URL`       | Public origin users see: `https://games.lememcon.com`; `http://localhost:3000` in dev |
-| `DISCORD_CLIENT_ID`     | Discord application client id                                                         |
-| `DISCORD_CLIENT_SECRET` | Discord application client secret                                                     |
-| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role                              |
-| `PORT`                  | Listen port (default `8080`)                                                          |
-| `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                            |
+| Variable                | Purpose                                                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string                                                                                                        |
+| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                                                                                                |
+| `BETTER_AUTH_URL`       | Public origin users see: `https://games.lememcon.com`; `http://localhost:3000` in dev                                               |
+| `DISCORD_CLIENT_ID`     | Discord application client id                                                                                                       |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret                                                                                                   |
+| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role                                                                            |
+| `PORT`                  | Listen port (default `8080`)                                                                                                        |
+| `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                                                                          |
+| `COOKIE_DOMAIN`         | Session cookie parent domain, e.g. `.lememcon.com`; only for cross-origin login                                                     |
+| `VITE_API_URL`          | Netlify build variable (not read by the server): API origin the SPA calls; unset means relative `/api`. Changing it needs a rebuild |
+
+Two ways to run login in production; pick one and do not mix them:
+
+| Setting                | 1. Proxy (default)                                     | 2. Cross-origin                                      |
+| ---------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| `BETTER_AUTH_URL`      | `https://games.lememcon.com`                           | `https://api.lememcon.com`                           |
+| `WEB_ORIGIN`           | unset                                                  | `https://games.lememcon.com`                         |
+| `COOKIE_DOMAIN`        | unset                                                  | `.lememcon.com`                                      |
+| Netlify `VITE_API_URL` | unset (delete it, then rebuild)                        | `https://api.lememcon.com`                           |
+| Discord redirect URI   | `https://games.lememcon.com/api/auth/callback/discord` | `https://api.lememcon.com/api/auth/callback/discord` |
+
+- `BETTER_AUTH_URL` should be `https` in production (it turns on secure cookies; `http` is for local dev only).
+- Discord login does not work on Netlify deploy previews: the redirect URI and cookies
+  are tied to the production hostnames.
+- The API env vars, the Netlify `VITE_API_URL` setting and the Discord redirect URI live
+  outside this repository, so changing mode means updating all of them.
 
 ```sh
 pnpm server:dev                          # watch mode

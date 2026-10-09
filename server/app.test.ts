@@ -277,6 +277,17 @@ describe("cors", () => {
     }
   });
 
+  it("keeps CORS headers on a csrf rejection for the web origin", async () => {
+    const res = await makeApp().app.request("/api/anything", {
+      method: "POST",
+      headers: { "sec-fetch-site": "cross-site", origin: WEB },
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "forbidden_origin" });
+    expect(res.headers.get("access-control-allow-origin")).toBe(WEB);
+    expect(res.headers.get("access-control-allow-credentials")).toBe("true");
+  });
+
   it("sends no CORS headers to an unexpected or unconfigured origin", async () => {
     const other = await makeApp().app.request("/api/me", {
       headers: { origin: "https://evil.example" },
