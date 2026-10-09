@@ -229,6 +229,16 @@ rotating that secret means entering the key again. Download progress lives in me
 so this assumes a single server instance. `pnpm update` stays until the app reads
 metadata from the database.
 
+### Player links (admin)
+
+Admins link each score-sheet player to an app member in the "Player links" section of
+the admin page (`GET /api/admin/player-links`, `PATCH /api/admin/players/:id` with
+`{ "discordId": "<id>" }` to link or `{ "discordId": null }` to unlink). Pending members
+can be linked too. Several players may point at one member. A link is stored on the
+player row and persists across score uploads: an upload never changes it, a name that
+differs only by case is the same player, and new names arrive unlinked. Removing a
+member clears their links but keeps the player and its scores.
+
 ### Deploying the backend
 
 Host-agnostic: build the `Dockerfile` and run the image on any container host behind
