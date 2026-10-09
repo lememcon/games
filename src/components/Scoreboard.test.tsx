@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import AuthedApp from "@/components/AuthedApp";
+import Scoreboard from "@/components/Scoreboard";
 import { renderWithMantine } from "@/test/utils";
-import type { ApprovedUser, Data } from "@/types";
+import type { ApprovedUser, Data, GamesData } from "@/types";
 
 const emptyData: Data = {
   loading: false,
@@ -32,13 +32,22 @@ const loadedData: Data = {
   max: 100,
 };
 
-// The mocked hook reads from a hoisted holder so each test can swap in a
-// different Data shape (loaded, loading, error, empty).
-const state = vi.hoisted(() => ({ data: {} as Data }));
-vi.mock("@/hooks/useData", () => ({ default: () => state.data }));
-vi.mock("@/hooks/useAdminUsers", () => ({
-  default: () => ({ users: [], loading: true, error: false }),
+// The mocked hooks read from a hoisted holder so each test can swap in a
+// different shape (loaded, loading, error, empty).
+const state = vi.hoisted(() => ({
+  data: {} as Data,
+  years: {} as { years: string[]; loading: boolean; error: boolean },
+  games: {} as { games: GamesData; loading: boolean; error: boolean },
+  useData: vi.fn(),
 }));
+vi.mock("@/hooks/useData", () => ({
+  default: (year: string | null) => {
+    state.useData(year);
+    return state.data;
+  },
+}));
+vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
+vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
 
 const member: ApprovedUser = {
   discordId: "1",
@@ -49,12 +58,14 @@ const member: ApprovedUser = {
 const admin: ApprovedUser = { ...member, role: "admin" };
 
 const render = (user: ApprovedUser = member) =>
-  renderWithMantine(<AuthedApp user={user} />);
+  renderWithMantine(<Scoreboard user={user} />);
 
-describe("AuthedApp", () => {
+describe("Scoreboard", () => {
   beforeEach(() => {
     localStorage.clear();
     state.data = loadedData;
+    state.years = { years: ["2025", "2026"], loading: false, error: false };
+    state.games = { games: {}, loading: false, error: false };
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -97,9 +108,10 @@ describe("AuthedApp", () => {
     const { container } = render();
 
     // The year Select has id="year"; the MultiSelect also renders a textbox,
-    // so target the year input directly. Default year is the current year.
+    // so target the year input directly. The default is the newest year.
     await user.click(container.querySelector("#year")!);
     await user.click(await screen.findByText("2025"));
+    expect(state.useData).toHaveBeenLastCalledWith("2025");
 
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
   });
@@ -148,26 +160,75 @@ describe("AuthedApp", () => {
 
   it("congratulates when every ranked game is hidden as played", () => {
     localStorage.setItem("hide_played", "true");
-    const year = `${new Date().getFullYear()}`;
-    localStorage.setItem(`played_counts_${year}`, JSON.stringify({ 11: 1 }));
+    localStorage.setItem(`played_counts_2026`, JSON.stringify({ 11: 1 }));
     const { getByText } = render();
 
     expect(getByText(/played every ranked game/)).toBeInTheDocument();
   });
 
-  it("redirects members away from /admin", () => {
-    window.history.pushState({}, "", "/admin");
-    const { getByText } = render();
-
-    expect(window.location.pathname).toBe("/");
-    expect(getByText("Filter By Players")).toBeInTheDocument();
+  it("uses the newest year when none is stored", () => {
+    render();
+    expect(state.useData).toHaveBeenLastCalledWith("2026");
   });
 
-  it("renders the admin page for admins on /admin", () => {
-    window.history.pushState({}, "", "/admin");
-    render(admin);
+  it("uses a stored year that is in the list (compared as a string)", () => {
+    localStorage.setItem("year", JSON.stringify("2025"));
+    render();
+    expect(state.useData).toHaveBeenLastCalledWith("2025");
+  });
 
-    expect(window.location.pathname).toBe("/admin");
-    expect(screen.getByText("Loading members...")).toBeInTheDocument();
+  it("falls back to the newest year when the stored one has no scores", () => {
+    localStorage.setItem("year", JSON.stringify("2019"));
+    render();
+    expect(state.useData).toHaveBeenLastCalledWith("2026");
+  });
+
+  it("fetches no scores until the years are known", () => {
+    state.years = { years: [], loading: true, error: false };
+    state.data = { ...emptyData, loading: true };
+    const { container } = render();
+
+    expect(state.useData).toHaveBeenLastCalledWith(null);
+    expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
+  });
+
+  it("waits for the game details", () => {
+    state.games = { games: {}, loading: true, error: false };
+    const { container } = render();
+    expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
+  });
+
+  it("shows an error when the years fail to load", () => {
+    state.years = { years: [], loading: false, error: true };
+    const { getByText } = render();
+    expect(getByText(/Couldn.t load the years/)).toBeInTheDocument();
+    expect(state.useData).toHaveBeenLastCalledWith(null);
+  });
+
+  it("shows a separate error when the game details fail to load", () => {
+    state.games = { games: {}, loading: false, error: true };
+    const { getByText, queryByText } = render();
+    expect(getByText(/Couldn.t load the game details/)).toBeInTheDocument();
+    expect(queryByText(/Couldn.t load the scores/)).toBeNull();
+  });
+
+  it("shows an empty state when there are no years", () => {
+    state.years = { years: [], loading: false, error: false };
+    state.data = { ...emptyData, loading: true };
+    const { getByText, queryByRole } = render();
+
+    expect(getByText("No scores yet")).toBeInTheDocument();
+    expect(queryByRole("link", { name: "Import scores" })).toBeNull();
+  });
+
+  it("links admins from the empty state to the import page", () => {
+    state.years = { years: [], loading: false, error: false };
+    state.data = { ...emptyData, loading: true };
+    const { getByRole } = render(admin);
+
+    expect(getByRole("link", { name: "Import scores" })).toHaveAttribute(
+      "href",
+      "/admin/import",
+    );
   });
 });

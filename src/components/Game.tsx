@@ -1,31 +1,26 @@
-import gamesJson from "@/assets/games.json";
 import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
-import { gameBounds } from "@/lib/games";
+import { realBounds, resolveImage } from "@/lib/games";
+import bundledImages from "@/lib/images";
 import type { Data, GamesData } from "@/types";
 
-const games = gamesJson as GamesData;
+interface GameProps {
+  data: Data;
+  gameData: GamesData;
+  id: string;
+}
 
-const images = import.meta.glob("@/assets/games/*", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-
-const Game = ({ data, id }: { data: Data; id: string }) => {
+const Game = ({ data, gameData, id }: GameProps) => {
   const max = data.max;
   const players = data.by_id[id];
 
   if (!players || players.length === 0) {
     return null;
   }
-  const game = games[id];
-  const image = game
-    ? game.image
-      ? images[`/src/assets/games/${id}${game.ext}`]
-      : null
-    : null;
-  const bounds = game && game.players ? gameBounds(games, id) : null;
+  const meta = gameData[id];
+  const image = resolveImage(id, meta, bundledImages) ?? null;
+  const bounds = realBounds(meta);
 
   return (
     <div>

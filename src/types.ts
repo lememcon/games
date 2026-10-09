@@ -1,8 +1,8 @@
 // Shared domain model for the app. Types are derived from how the data is
 // actually consumed in the components, hooks, and lib.
 
-// A single per-player score row from the remote `player_game_scores` array
-// (https://data.lememcon.com/<year>.json).
+// A single per-player score row from the `player_game_scores` array served by
+// GET /api/years/:year/scores.
 export interface PlayerGameScore {
   bgg_id: number;
   game: string;
@@ -11,11 +11,12 @@ export interface PlayerGameScore {
   rank: number;
 }
 
-// The value shape in src/assets/games.json, keyed by BoardGameGeek id (string).
+// The value shape served by GET /api/games, keyed by BoardGameGeek id
+// (string). Custom or imageless games have a null image; bounds may be null.
 export interface GameMeta {
-  players?: { min: number; max: number };
-  image?: string;
-  ext?: string;
+  players?: { min: number | null; max: number | null };
+  image?: string | null;
+  ext?: string | null;
 }
 
 export type GamesData = Record<string, GameMeta>;

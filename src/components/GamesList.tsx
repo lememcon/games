@@ -1,5 +1,6 @@
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
+import { realBounds } from "@/lib/games";
 import type { GamesData, SelectedGame } from "@/types";
 
 interface GamesListProps {
@@ -14,12 +15,8 @@ interface GamesListProps {
 
 // Only show real bounds; games missing metadata leave the range blank rather
 // than printing the 0-99 default.
-const boundsFor = (gameData: GamesData, game: SelectedGame) => {
-  const meta = gameData[game.id];
-  return meta && meta.players
-    ? { min: meta.players.min, max: meta.players.max }
-    : null;
-};
+const boundsFor = (gameData: GamesData, game: SelectedGame) =>
+  realBounds(gameData[game.id]);
 
 // The ranked list: the top three as podium GameCards, everyone else as compact
 // GameRows. Rank is the game's position in the already-sorted list.

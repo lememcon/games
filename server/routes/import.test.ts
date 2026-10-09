@@ -41,7 +41,7 @@ const sameOrigin = {
 };
 const post = (
   app: ReturnType<typeof makeApp>["app"],
-  body: BodyInit,
+  body: string,
   who = "admin",
   headers: Record<string, string> = {},
   query = "",
@@ -125,7 +125,10 @@ describe("POST /api/admin/import", () => {
       JSON.stringify({ year: 1, player_game_scores: [{}], secret: "x" }),
     );
     expect(res.status).toBe(422);
-    const body = await res.json();
+    const body = (await res.json()) as {
+      error: string;
+      errors: object[];
+    };
     expect(body.error).toBe("invalid_import");
     expect(body.errors.length).toBeGreaterThan(1);
     for (const e of body.errors)
@@ -164,7 +167,6 @@ describe("POST /api/admin/import", () => {
       method: "POST",
       headers: { ...sameOrigin, cookie: "as=admin" },
       body,
-      // @ts-expect-error Node's fetch requires duplex for streamed bodies
       duplex: "half",
     });
     expect(res.status).toBe(413);
@@ -184,7 +186,6 @@ describe("POST /api/admin/import", () => {
       method: "POST",
       headers: { ...sameOrigin, cookie: "as=admin" },
       body,
-      // @ts-expect-error Node's fetch requires duplex for streamed bodies
       duplex: "half",
     });
     expect(res.status).toBe(201);
