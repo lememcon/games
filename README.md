@@ -179,7 +179,7 @@ Two ways to run login in production; pick one and do not mix them:
 | Netlify `VITE_API_URL` | unset (delete it, then rebuild)                        | `https://api.lememcon.com`                           |
 | Discord redirect URI   | `https://games.lememcon.com/api/auth/callback/discord` | `https://api.lememcon.com/api/auth/callback/discord` |
 
-- `BETTER_AUTH_URL` must be `https` in both modes (it turns on secure cookies).
+- `BETTER_AUTH_URL` should be `https` in production (it turns on secure cookies; `http` is for local dev only).
 - Discord login does not work on Netlify deploy previews: the redirect URI and cookies
   are tied to the production hostnames.
 - The API env vars, the Netlify `VITE_API_URL` setting and the Discord redirect URI live
