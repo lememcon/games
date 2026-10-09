@@ -24,7 +24,7 @@ const base: Profile = {
   discordId: "5",
   name: "Kel",
   image: null,
-  linkedPlayer: "kelsin",
+  linkedPlayers: ["kelsin"],
   stats: {
     games: 42,
     wins: 11,

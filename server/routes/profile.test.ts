@@ -32,7 +32,7 @@ const profile: Profile = {
   discordId: PAT,
   name: "Pat",
   image: "pat.png",
-  linkedPlayer: "pat",
+  linkedPlayers: ["pat"],
   stats: {
     games: 1,
     wins: 1,
@@ -192,7 +192,7 @@ describe("GET /api/profiles/:discordId", () => {
     expect(Object.keys(body).sort()).toEqual([
       "discordId",
       "image",
-      "linkedPlayer",
+      "linkedPlayers",
       "name",
       "stats",
     ]);

@@ -209,11 +209,14 @@ describe("database constraints", () => {
     );
   });
 
-  it("links a member to one player at most, but allows many unlinked players", async () => {
+  it("links a member to several players, and allows many unlinked players", async () => {
     await client.exec(`INSERT INTO player (name) VALUES ('a'), ('b'), ('c')`);
     await link("a", ALEX);
-    await expect(link("b", ALEX)).rejects.toThrow(/player_discord_id_idx/);
-    await link("b", JO);
+    await link("b", ALEX);
+    expect(
+      (await client.query("SELECT 1 FROM player WHERE discord_id IS NOT NULL"))
+        .rows,
+    ).toHaveLength(2);
     expect(
       (await client.query("SELECT 1 FROM player WHERE discord_id IS NULL"))
         .rows,
@@ -232,7 +235,7 @@ describe("getProfile", () => {
       discordId: ALEX,
       name: "Alex",
       image: null,
-      linkedPlayer: null,
+      linkedPlayers: [],
       stats: null,
     });
   });
@@ -268,7 +271,7 @@ describe("getProfile", () => {
       discordId: ALEX,
       name: "Alex",
       image: null,
-      linkedPlayer: "amy",
+      linkedPlayers: ["amy"],
       stats: {
         games: 3,
         wins: 1,
@@ -312,6 +315,50 @@ describe("getProfile", () => {
         games: [{ bggId: 1, game: "Root", rank: 2, score: 80 }],
       },
     ]);
+  });
+
+  it("combines the stats of all of a member's names", async () => {
+    await importScores(2025, [
+      row({ player: "amy", rank: 1, score: 90 }),
+      row({ bgg_id: 2, game: "Azul", player: "kc", rank: 4, score: 10 }),
+    ]);
+    await importScores(2026, [
+      row({ player: "kc", rank: 2, score: 70 }),
+      row({ player: "bob", rank: 1, score: 99 }),
+    ]);
+    await link("kc", ALEX);
+    await link("amy", ALEX);
+    const profile = (await store.getProfile(ALEX))!;
+    expect(profile.linkedPlayers).toEqual(["amy", "kc"]);
+    expect(profile.stats).toMatchObject({
+      games: 3,
+      wins: 1,
+      podiums: 2,
+      avgRank: 7 / 3,
+      mostPlayed: [
+        { bggId: 1, game: "Root", plays: 2, bestRank: 1, bestScore: 90 },
+        { bggId: 2, game: "Azul", plays: 1, bestRank: 4, bestScore: 10 },
+      ],
+    });
+    expect(profile.stats!.topByYear.map((y) => [y.year, y.total])).toEqual([
+      [2026, 1],
+      [2025, 2],
+    ]);
+  });
+
+  it("counts one row when two names scored the same game and year", async () => {
+    await importScores(2025, [
+      row({ player: "amy", rank: 3, score: 40 }),
+      row({ player: "kc", rank: 1, score: 90 }),
+    ]);
+    await link("amy", ALEX);
+    await link("kc", ALEX);
+    expect((await store.getProfile(ALEX))!.stats).toMatchObject({
+      games: 1,
+      wins: 1,
+      mostPlayed: [{ plays: 1, bestRank: 1, bestScore: 90 }],
+      topByYear: [{ year: 2025, total: 1 }],
+    });
   });
 
   it("gives a linked player with no scores zeroed stats", async () => {

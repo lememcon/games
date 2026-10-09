@@ -137,7 +137,7 @@ export interface Profile {
   discordId: string;
   name: string;
   image: string | null;
-  linkedPlayer: string | null;
+  linkedPlayers: string[];
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
 }

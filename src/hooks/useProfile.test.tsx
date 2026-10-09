@@ -8,7 +8,7 @@ const profile: Profile = {
   discordId: "1",
   name: "Kel",
   image: null,
-  linkedPlayer: null,
+  linkedPlayers: [],
   stats: null,
 };
 const json = (body: unknown, status = 200) =>

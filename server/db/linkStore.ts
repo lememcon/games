@@ -6,7 +6,6 @@ import { account, appUser, player, score, user } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const FOREIGN_KEY_VIOLATION = "23503";
-const UNIQUE_VIOLATION = "23505";
 
 // One Discord account per app_user (unique provider + account id), so these
 // joins cannot fan out; a member with no login row is simply not listed.
@@ -100,8 +99,6 @@ export function createLinkStore(db: StoreDb): LinkStore {
         const code = pgCode(error);
         if (code === FOREIGN_KEY_VIOLATION)
           return { ok: false, status: 404, error: "unknown_user" };
-        if (code === UNIQUE_VIOLATION)
-          return { ok: false, status: 409, error: "already_linked" };
         throw error;
       }
     },

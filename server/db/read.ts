@@ -1,6 +1,11 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { createNameResolver, toGamesMap, toLegacyRow } from "../shape";
+import {
+  collapseMemberScores,
+  createNameResolver,
+  toGamesMap,
+  toLegacyRow,
+} from "../shape";
 import type { GamesMap, LegacyScoreRow } from "../types";
 import {
   account,
@@ -28,7 +33,8 @@ export async function listYears(db: StoreDb): Promise<number[]> {
  * `resolveNames`, players linked to an approved member show that member's
  * display name, else their Discord name (unless it clashes with another name;
  * see `createNameResolver`), else the data-file name, and carry their
- * `discord_id`.
+ * `discord_id`. A member's names share one shown name, and when several of
+ * them scored the same game only the best row is kept.
  */
 export async function getScores(
   db: StoreDb,
@@ -41,6 +47,8 @@ export async function getScores(
     resolveNames ? condition : sql`false`;
   const rows = await db
     .select({
+      id: score.id,
+      playerId: player.id,
       bggId: score.bggId,
       gameName: game.name,
       dataName: player.name,
@@ -73,7 +81,13 @@ export async function getScores(
   if (!resolveNames)
     return rows.map((r) => toLegacyRow({ ...r, playerName: r.dataName }));
   const [players, members] = await Promise.all([
-    db.select({ name: player.name }).from(player),
+    db
+      .select({
+        id: player.id,
+        name: player.name,
+        discordId: player.discordId,
+      })
+      .from(player),
     db
       .select({
         discordId: appUser.discordId,
@@ -91,11 +105,10 @@ export async function getScores(
       .leftJoin(user, eq(user.id, account.userId))
       .where(eq(appUser.status, "approved")),
   ]);
-  const resolve = createNameResolver(
-    players.map((p) => p.name),
-    members,
-  );
-  return rows.map((r) => toLegacyRow({ ...r, playerName: resolve(r) }));
+  const resolve = createNameResolver(players, members);
+  return collapseMemberScores(
+    rows.map((r) => ({ ...r, year: value, owner: r.discordId })),
+  ).map((r) => toLegacyRow({ ...r, playerName: resolve(r) }));
 }
 
 /** Every game with metadata or a name, including those with no scores. */

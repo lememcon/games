@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { parseImport, type NormalizedGame } from "./import";
 import {
   chunk,
+  collapseMemberScores,
   createNameResolver,
   newPlayers,
   planGames,
@@ -15,6 +16,7 @@ import {
   toMetadata,
   toProfileStats,
 } from "./shape";
+import type { MemberScore } from "./shape";
 import type { GameRow, ProfileScore, ScoreRow } from "./types";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -45,59 +47,147 @@ describe("createNameResolver", () => {
     displayName: string | null,
     discordName: string | null,
   ) => ({ discordId, displayName, discordName });
+  const pl = (id: number, name: string, discordId: string | null = null) => ({
+    id,
+    name,
+    discordId,
+  });
   const parts = (
+    playerId: number,
     dataName: string,
     displayName: string | null,
     discordName: string | null,
     discordId: string | null = null,
-  ) => ({ dataName, displayName, discordName, discordId });
+  ) => ({ playerId, dataName, displayName, discordName, discordId });
 
   it("prefers the display name, even when it matches another name", () => {
     const resolve = createNameResolver(
-      ["amy", "bob"],
+      [pl(1, "amy", "1"), pl(2, "bob")],
       [member("1", "bob", "Amy")],
     );
-    expect(resolve(parts("amy", "bob", "Amy", "1"))).toBe("bob");
+    expect(resolve(parts(1, "amy", "bob", "Amy", "1"))).toBe("bob");
   });
 
   it("uses the Discord name when nothing clashes", () => {
-    const resolve = createNameResolver(["amy"], [member("1", null, "Ames")]);
-    expect(resolve(parts("amy", null, "Ames", "1"))).toBe("Ames");
+    const resolve = createNameResolver(
+      [pl(1, "amy", "1")],
+      [member("1", null, "Ames")],
+    );
+    expect(resolve(parts(1, "amy", null, "Ames", "1"))).toBe("Ames");
   });
 
   it("falls back to the data-file name on a clash with another player, any case", () => {
     const resolve = createNameResolver(
-      ["amy", "bob"],
+      [pl(1, "amy", "1"), pl(2, "bob")],
       [member("1", null, "BOB")],
     );
-    expect(resolve(parts("amy", null, "BOB", "1"))).toBe("amy");
+    expect(resolve(parts(1, "amy", null, "BOB", "1"))).toBe("amy");
   });
 
-  it("does not count the player's own data-file name as a clash", () => {
-    const resolve = createNameResolver(["amy"], [member("1", null, "AMY")]);
-    expect(resolve(parts("amy", null, "AMY", "1"))).toBe("AMY");
+  it("falls back on a clash with a data name of a different member", () => {
+    const resolve = createNameResolver(
+      [pl(1, "amy", "1"), pl(2, "bob", "2")],
+      [member("1", null, "Bob"), member("2", null, "Rob")],
+    );
+    expect(resolve(parts(1, "amy", null, "Bob", "1"))).toBe("amy");
+  });
+
+  it("does not count the member's own data-file names as a clash", () => {
+    const resolve = createNameResolver(
+      [pl(1, "amy", "1"), pl(2, "AMY2", "1")],
+      [member("1", null, "amy2")],
+    );
+    expect(resolve(parts(1, "amy", null, "amy2", "1"))).toBe("amy2");
+  });
+
+  it("shows one fixed data name for all of a member's names on a clash", () => {
+    const resolve = createNameResolver(
+      [pl(5, "kc", "1"), pl(3, "kelsin", "1"), pl(9, "pat", "2")],
+      [member("1", null, "Pat"), member("2", null, "Rob")],
+    );
+    expect(resolve(parts(5, "kc", null, "Pat", "1"))).toBe("kelsin");
+    expect(resolve(parts(3, "kelsin", null, "Pat", "1"))).toBe("kelsin");
+  });
+
+  it("counts a player linked to a pending member as unlinked", () => {
+    const resolve = createNameResolver(
+      [pl(1, "amy", "1"), pl(2, "bob", "9")],
+      [member("1", null, "bob")],
+    );
+    expect(resolve(parts(1, "amy", null, "bob", "1"))).toBe("amy");
   });
 
   it("sends members sharing a Discord name back to their data-file names", () => {
     const resolve = createNameResolver(
-      ["amy", "bob"],
+      [pl(1, "amy", "1"), pl(2, "bob", "2")],
       [member("1", null, "Pat"), member("2", null, "pat")],
     );
-    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
-    expect(resolve(parts("bob", null, "pat", "2"))).toBe("bob");
+    expect(resolve(parts(1, "amy", null, "Pat", "1"))).toBe("amy");
+    expect(resolve(parts(2, "bob", null, "pat", "2"))).toBe("bob");
   });
 
   it("clashes with another member's display name", () => {
     const resolve = createNameResolver(
-      ["amy", "bob"],
+      [pl(1, "amy", "1"), pl(2, "bob", "2")],
       [member("1", null, "Pat"), member("2", "PAT", "other")],
     );
-    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
+    expect(resolve(parts(1, "amy", null, "Pat", "1"))).toBe("amy");
   });
 
   it("keeps the data-file name when there is no Discord name", () => {
-    const resolve = createNameResolver(["amy"], []);
-    expect(resolve(parts("amy", null, null))).toBe("amy");
+    const resolve = createNameResolver([pl(1, "amy")], []);
+    expect(resolve(parts(1, "amy", null, null))).toBe("amy");
+  });
+});
+
+describe("collapseMemberScores", () => {
+  const r = (
+    id: number,
+    rank: number,
+    score: number,
+    over: Partial<MemberScore> = {},
+  ): MemberScore => ({
+    id,
+    owner: "1",
+    bggId: 1,
+    year: 2025,
+    rank,
+    score,
+    ...over,
+  });
+
+  it("keeps the best rank for a member, game and year", () => {
+    expect(collapseMemberScores([r(1, 3, 99), r(2, 1, 10)])).toEqual([
+      r(2, 1, 10),
+    ]);
+  });
+
+  it("breaks a rank tie by the highest score, then the lowest id", () => {
+    expect(collapseMemberScores([r(1, 1, 10), r(2, 1, 20)])).toEqual([
+      r(2, 1, 20),
+    ]);
+    expect(collapseMemberScores([r(4, 1, 10), r(3, 1, 10)])).toEqual([
+      r(3, 1, 10),
+    ]);
+    expect(collapseMemberScores([r(3, 1, 10), r(4, 1, 10)])).toEqual([
+      r(3, 1, 10),
+    ]);
+  });
+
+  it("keeps rows of other games, years and members, in id order", () => {
+    const rows = [
+      r(1, 1, 1, { owner: "2" }),
+      r(2, 1, 1),
+      r(3, 1, 1, { bggId: 2 }),
+      r(4, 1, 1, { year: 2026 }),
+      r(5, 2, 1),
+    ];
+    expect(collapseMemberScores(rows).map((x) => x.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("leaves rows without an owner untouched", () => {
+    const rows = [r(1, 1, 1, { owner: null }), r(2, 1, 1, { owner: null })];
+    expect(collapseMemberScores(rows)).toEqual(rows);
   });
 });
 

@@ -294,6 +294,37 @@ describe("display names", () => {
     expect((await store.getScores(2098, true))![0].player).toBe("deedee");
   });
 
+  it("shows one name for a member's names and collapses a repeated game and year", async () => {
+    const dual = "314159265358979323";
+    await client.query(
+      `INSERT INTO app_user (discord_id, status, display_name) VALUES ($1, 'approved', 'Dual')`,
+      [dual],
+    );
+    await store.importData(
+      upload(2091, [
+        row({ player: "dual1", rank: 3, score: 5 }),
+        row({ player: "dual2", rank: 1, score: 9 }),
+        row({ bgg_id: 2, game: "Azul", player: "dual1", rank: 2 }),
+      ]),
+      context,
+    );
+    await client.query(
+      `UPDATE player SET discord_id = $1 WHERE name LIKE 'dual%'`,
+      [dual],
+    );
+    expect(
+      (await store.getScores(2091, true))!.map((r) => [
+        r.player,
+        r.game,
+        r.rank,
+      ]),
+    ).toEqual([
+      ["Dual", "Root", 1],
+      ["Dual", "Azul", 2],
+    ]);
+    expect(await store.getScores(2091)).toHaveLength(3);
+  });
+
   it("falls back to the data-file name for an approved member with no login", async () => {
     const other = "999888777666555444";
     await client.query(

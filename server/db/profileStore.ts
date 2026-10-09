@@ -1,6 +1,6 @@
-import { and, eq, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
-import { toProfileStats } from "../shape";
+import { collapseMemberScores, toProfileStats } from "../shape";
 import type { ProfileStore } from "../types";
 import { lockDisplayNames, pgCode } from "./import";
 import { account, appUser, game, player, score, user } from "./schema";
@@ -96,29 +96,48 @@ export function createProfileStore(
         );
       if (!member) return null;
 
-      const [linked] = await db
+      const linked = await db
         .select({ id: player.id, name: player.name })
         .from(player)
         .where(eq(player.discordId, discordId));
-      const scores = linked
-        ? await db
-            .select({
-              year: score.year,
-              bggId: score.bggId,
-              game: sql<string>`coalesce(${game.name}, '')`,
-              score: score.score,
-              rank: score.rank,
-            })
-            .from(score)
-            .innerJoin(game, eq(game.bggId, score.bggId))
-            .where(eq(score.playerId, linked.id))
+      const scores = linked.length
+        ? collapseMemberScores(
+            (
+              await db
+                .select({
+                  id: score.id,
+                  year: score.year,
+                  bggId: score.bggId,
+                  game: sql<string>`coalesce(${game.name}, '')`,
+                  score: score.score,
+                  rank: score.rank,
+                })
+                .from(score)
+                .innerJoin(game, eq(game.bggId, score.bggId))
+                .where(
+                  inArray(
+                    score.playerId,
+                    linked.map((p) => p.id),
+                  ),
+                )
+                .orderBy(score.id)
+            ).map((r) => ({ ...r, owner: discordId })),
+          ).map(({ year, bggId, game, score, rank }) => ({
+            year,
+            bggId,
+            game,
+            score,
+            rank,
+          }))
         : null;
 
       return {
         discordId,
         name: member.displayName ?? member.discordName ?? "Unknown",
         image: member.image,
-        linkedPlayer: linked?.name ?? null,
+        linkedPlayers: linked
+          .map((p) => p.name)
+          .sort((a, b) => a.localeCompare(b)),
         stats: toProfileStats(scores),
       };
     },
