@@ -42,7 +42,11 @@ const ScorePopover = ({
             (player: SelectedGamePlayer) => (
               <Table.Tr key={player.name}>
                 <Table.Td>
-                  <PlayerName name={player.name} discordId={player.discordId} />
+                  <PlayerName
+                    name={player.name}
+                    discordId={player.discordId}
+                    image={player.discordImage}
+                  />
                 </Table.Td>
                 <Table.Td>{player.rank}</Table.Td>
                 <Table.Td>

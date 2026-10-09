@@ -33,7 +33,7 @@ export async function listYears(db: StoreDb): Promise<number[]> {
  * `resolveNames`, players linked to an approved member show that member's
  * display name, else their Discord name (unless it clashes with another name;
  * see `createNameResolver`), else the data-file name, and carry their
- * `discord_id`. A member's names share one shown name, and when several of
+ * `discord_id` and, when the member has one, `discord_image`. A member's names share one shown name, and when several of
  * them scored the same game only the best row is kept.
  */
 export async function getScores(
@@ -54,6 +54,7 @@ export async function getScores(
       displayName: appUser.displayName,
       discordName: user.name,
       discordId: resolveNames ? appUser.discordId : sql<null>`null`,
+      discordImage: resolveNames ? user.image : sql<null>`null`,
       score: score.score,
       rank: score.rank,
     })

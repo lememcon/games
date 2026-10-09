@@ -32,6 +32,10 @@ const isHttpsUrl = (value: string | null | undefined): value is string => {
   }
 };
 
+// An avatar URL when it is a valid https URL, else none.
+export const avatarUrl = (value: string | null | undefined) =>
+  isHttpsUrl(value) ? value : undefined;
+
 // Cover image for a game: the bundled file for this id and ext, then the
 // game's image URL when it is a valid https URL, else none.
 export const resolveImage = (
@@ -122,6 +126,9 @@ export const buildSelectedGames = ({
         rank: item.rank,
         score: item.score,
         ...(item.discord_id ? { discordId: item.discord_id } : {}),
+        ...(avatarUrl(item.discord_image)
+          ? { discordImage: avatarUrl(item.discord_image) }
+          : {}),
       };
     }
   }

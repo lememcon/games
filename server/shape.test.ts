@@ -217,6 +217,24 @@ describe("toLegacyRow", () => {
     });
   });
 
+  it("includes discord_image only when set", () => {
+    const base: ScoreRow = {
+      bggId: 1,
+      gameName: "Root",
+      playerName: "a",
+      score: 1,
+      rank: 1,
+      discordId: "7",
+    };
+    expect(
+      toLegacyRow({ ...base, discordImage: "https://x/a.png" }),
+    ).toMatchObject({ discord_id: "7", discord_image: "https://x/a.png" });
+    expect(toLegacyRow({ ...base, discordImage: null })).not.toHaveProperty(
+      "discord_image",
+    );
+    expect(toLegacyRow(base)).not.toHaveProperty("discord_image");
+  });
+
   it("never emits a null game name", () => {
     expect(
       toLegacyRow({

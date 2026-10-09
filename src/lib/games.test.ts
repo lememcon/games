@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  avatarUrl,
   buildSelectedGames,
   computeMaxScores,
   gameBounds,
@@ -114,6 +115,18 @@ describe("resolveImage", () => {
   });
 });
 
+describe("avatarUrl", () => {
+  it("keeps https urls and drops everything else", () => {
+    expect(avatarUrl("https://cdn.example/a.png")).toBe(
+      "https://cdn.example/a.png",
+    );
+    expect(avatarUrl("http://cdn.example/a.png")).toBeUndefined();
+    expect(avatarUrl("not a url")).toBeUndefined();
+    expect(avatarUrl(undefined)).toBeUndefined();
+    expect(avatarUrl(null)).toBeUndefined();
+  });
+});
+
 describe("computeMaxScores", () => {
   const data: Data = {
     loading: false,
@@ -194,6 +207,32 @@ describe("buildSelectedGames", () => {
     });
 
     expect(root.players.alice.discordId).toBe("7");
+  });
+
+  it("carries a linked player's https avatar onto their entry", () => {
+    const row = (player: string, discord_image: string) => ({
+      player,
+      game: "Root",
+      rank: 1,
+      score: 50,
+      bgg_id: 100,
+      discord_id: "7",
+      discord_image,
+    });
+    const [root] = buildSelectedGames({
+      byPlayer: {
+        alice: [row("alice", "https://cdn.example/a.png")],
+        bob: [row("bob", "http://cdn.example/b.png")],
+      },
+      players: [],
+      gameData,
+      images: {},
+      hidePlayed: false,
+      getPlayedCount: noPlayed,
+    });
+
+    expect(root.players.alice.discordImage).toBe("https://cdn.example/a.png");
+    expect(root.players.bob).not.toHaveProperty("discordImage");
   });
 
   it("skips a selected player with no scores", () => {

@@ -32,6 +32,21 @@ describe("PlayerScoresTable", () => {
     expect(getByText("20")).toBeInTheDocument();
   });
 
+  it("shows an avatar for https images only", () => {
+    const { container } = renderWithMantine(
+      <PlayerScoresTable
+        players={[
+          { ...players[0], discord_id: "7", discord_image: "https://x/a.png" },
+          { ...players[1], discord_id: "8", discord_image: "http://x/b.png" },
+        ]}
+        max={100}
+      />,
+    );
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute("src", "https://x/a.png");
+  });
+
   it("links only the players that have a discord id", () => {
     const { getByRole, queryByRole } = renderWithMantine(
       <PlayerScoresTable

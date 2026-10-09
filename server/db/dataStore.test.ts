@@ -283,6 +283,18 @@ describe("display names", () => {
       discord_id: MEMBER,
     });
     expect((await store.getScores(2098))![0].player).toBe("deedee");
+    expect(cleared[0]).not.toHaveProperty("discord_image");
+
+    const avatar = "https://cdn.discordapp.com/avatars/1/a.png";
+    await client.query(`UPDATE "user" SET image = $1 WHERE name = $2`, [
+      avatar,
+      "DeeDiscord",
+    ]);
+    const withImage = (await store.getScores(2098, true))!;
+    expect(withImage[0].discord_image).toBe(avatar);
+    expect(withImage[1]).not.toHaveProperty("discord_image");
+    for (const r of (await store.getScores(2098))!)
+      expect(r).not.toHaveProperty("discord_image");
 
     await client.query(
       `UPDATE app_user SET status = 'pending', display_name = 'Dee' WHERE discord_id = $1`,
@@ -292,6 +304,9 @@ describe("display names", () => {
       "discord_id",
     );
     expect((await store.getScores(2098, true))![0].player).toBe("deedee");
+    expect((await store.getScores(2098, true))![0]).not.toHaveProperty(
+      "discord_image",
+    );
   });
 
   it("shows one name for a member's names and collapses a repeated game and year", async () => {

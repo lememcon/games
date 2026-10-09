@@ -129,10 +129,17 @@ export function fakeData(
     getScores: async (year, resolveNames = false) => {
       scoreCalls.push({ year, resolveNames });
       const rows = years.get(year);
-      // Like the SQL store, only approved callers get `discord_id`.
+      // Like the SQL store, only approved callers get `discord_id`, and
+      // `discord_image` only with it.
       return rows
-        ? rows.map(({ discord_id, ...rest }) =>
-            resolveNames && discord_id ? { ...rest, discord_id } : rest,
+        ? rows.map(({ discord_id, discord_image, ...rest }) =>
+            resolveNames && discord_id
+              ? {
+                  ...rest,
+                  discord_id,
+                  ...(discord_image ? { discord_image } : {}),
+                }
+              : rest,
           )
         : null;
     },

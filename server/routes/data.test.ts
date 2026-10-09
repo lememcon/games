@@ -29,7 +29,15 @@ const PENDING: AppUser = { ...MEMBER, status: "pending" };
 function makeApp(user: AppUser | null = null) {
   const { data, scoreCalls } = fakeData({
     years: {
-      2025: [rows[0], { ...rows[1], discord_id: "222222222222222222" }],
+      2025: [
+        rows[0],
+        {
+          ...rows[1],
+          discord_id: "222222222222222222",
+          discord_image: "https://cdn.example/a.png",
+        },
+        { ...rows[0], player: "orphan", discord_image: "https://x/o.png" },
+      ],
       2026: [],
     },
     games: {
@@ -74,7 +82,9 @@ describe("GET /api/years/:year/scores", () => {
     const app = makeApp();
     const res = await app.request("/api/years/2025/scores");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ player_game_scores: rows });
+    expect(await res.json()).toEqual({
+      player_game_scores: [rows[0], rows[1], { ...rows[0], player: "orphan" }],
+    });
     expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: false }]);
   });
 
@@ -84,7 +94,12 @@ describe("GET /api/years/:year/scores", () => {
     expect(await res.json()).toEqual({
       player_game_scores: [
         rows[0],
-        { ...rows[1], discord_id: MEMBER.discordId },
+        {
+          ...rows[1],
+          discord_id: MEMBER.discordId,
+          discord_image: "https://cdn.example/a.png",
+        },
+        { ...rows[0], player: "orphan" },
       ],
     });
     expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: true }]);

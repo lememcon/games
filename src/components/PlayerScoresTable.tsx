@@ -4,6 +4,7 @@ import { descend, map, prop, sort } from "ramda";
 
 import PlayerName from "@/components/PlayerName";
 import Score from "@/components/Score";
+import { avatarUrl } from "@/lib/games";
 import type { PlayerGameScore } from "@/types";
 
 interface PlayerScoresTableProps {
@@ -26,7 +27,11 @@ const PlayerScoresTable = ({ players, max }: PlayerScoresTableProps) => (
         (player: PlayerGameScore) => (
           <Table.Tr key={player.player}>
             <Table.Td>
-              <PlayerName name={player.player} discordId={player.discord_id} />
+              <PlayerName
+                name={player.player}
+                discordId={player.discord_id}
+                image={avatarUrl(player.discord_image)}
+              />
             </Table.Td>
             <Table.Td style={{ verticalAlign: "middle" }}>
               <Score score={player.score} max={max} />
