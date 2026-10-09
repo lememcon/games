@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 
 import {
   Alert,
@@ -84,7 +85,12 @@ const AdminPage = ({ meId }: { meId: string }) => {
 
   return (
     <Stack mt="md">
-      <Title order={2}>Manage members</Title>
+      <Group justify="space-between">
+        <Title order={2}>Manage members</Title>
+        <Button component={Link} href="/admin/import" variant="light">
+          Import scores
+        </Button>
+      </Group>
       {actionError && (
         <Alert color="red" role="alert">
           {actionError}

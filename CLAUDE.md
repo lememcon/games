@@ -43,6 +43,15 @@ A separate `commitlint` job runs on pull requests only.
   resolver), `middleware.ts` (csrf, session, admin guard), `static.ts` (SPA + cache headers; no longer needed by the API host),
   `env.ts` (env parsing), `types.ts`, `db/` (Drizzle client + schema), `index.ts` (boot),
   `migrate.ts` (separate migration command).
+  - Game data: `import.ts` (pure upload validation, `parseImport`, year and games-only
+    shapes), `shape.ts` (pure shaping: legacy row shape, games map, chunking, rename
+    detection, counts), `routes/data.ts` (public `GET /api/years`,
+    `/api/years/:year/scores`, `/api/games`), `routes/import.ts`
+    (`POST /api/admin/import`, admin only, 5 MB limit). SQL is thin and lives in
+    `db/import.ts`, `db/read.ts` and `db/dataStore.ts` (the `DataStore` behind `deps.data`);
+    `testing.ts` has `fakeData()` for route tests. Game metadata (players, image) lives only in
+    `game_metadata` (`db/bggRepo.ts` `upsertMetadata`, shared with the import); the `game`
+    table holds just `bgg_id` and a nullable name, and `/api/games` full-joins the two.
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
 
 ## Conventions
@@ -53,12 +62,12 @@ A separate `commitlint` job runs on pull requests only.
 - **Colocated tests.** Every source file has a sibling `Name.test.tsx`/`Name.test.ts`.
   Adding or changing behavior means updating the sibling test — the 90% coverage gate
   (`vite.config.ts`) blocks CI otherwise.
-- **SPA and API are cross-origin siblings (current assumption: direct cross-origin
-  calls; a Netlify `/api/*` rewrite is a documented alternative in README Backend, topology
-  decision pending).** Do not assume same-origin cookies, CSRF or
-  static serving. This includes local dev (Vite :3000 vs API :8080, same-site); the
-  planned local option is a Vite `server.proxy` for `/api`. The CSRF/CORS/`WEB_ORIGIN`
-  changes needed for this are not done yet (see README Backend).
+- **SPA and API are same-origin from the browser's view (default topology).** Netlify
+  proxies `/api/*` to `https://api.lememcon.com/api/:splat` (`public/_redirects`), and Vite
+  proxies `/api` to `:8080` in dev, so the SPA needs no CORS or cross-site cookie.
+  `BETTER_AUTH_URL` and the Discord redirect therefore use the games.lememcon.com origin
+  (`http://localhost:3000` locally). The server still supports direct cross-origin calls
+  (`WEB_ORIGIN`, CORS, CSRF origin check); do not mix the two. See README Backend.
 - **Keep logic out of components.** Non-trivial computation belongs in `src/lib/games.ts`
   so it can be tested without rendering. Follow the existing pure-function pattern.
 - **Imports are auto-sorted** by `@ianvs/prettier-plugin-sort-imports` (order defined in

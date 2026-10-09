@@ -36,6 +36,13 @@
       "when": 1791563611483,
       "tag": "0004_seed_bundled_games",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791565751665,
+      "tag": "0005_smooth_human_fly",
+      "breakpoints": true
     }
   ]
 }

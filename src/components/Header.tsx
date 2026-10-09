@@ -9,9 +9,10 @@ import { signOut } from "@/lib/auth";
 import type { ApprovedUser } from "@/types";
 
 interface HeaderProps {
-  year: string;
-  years: string[];
-  onYearChange: (value: string | null) => void;
+  // The year picker is only shown when years are given (not on admin pages).
+  year?: string;
+  years?: string[];
+  onYearChange?: (value: string | null) => void;
   user?: ApprovedUser;
 }
 
@@ -35,14 +36,16 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
       <Group h="100%" px="md">
         <img src={logo} height="40px" alt="LememCon logo" />
         <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
-        <Select
-          id="year"
-          value={year}
-          data={years}
-          onChange={onYearChange}
-          w={92}
-          classNames={{ input: "tray-year" }}
-        />
+        {years && (
+          <Select
+            id="year"
+            value={year}
+            data={years}
+            onChange={onYearChange}
+            w={92}
+            classNames={{ input: "tray-year" }}
+          />
+        )}
         <img src={bgg} height="24px" className="mantine-visible-from-sm" />
         {user && (
           <Menu position="bottom-end">

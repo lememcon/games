@@ -3,21 +3,46 @@ import { descend, keys, prop, sort, values } from "ramda";
 import type {
   Bounds,
   Data,
+  GameMeta,
   GamesData,
   PlayerGameScore,
   SelectedGame,
 } from "@/types";
 
-// Player-count bounds for a game, with the same 0/99 defaults App used when a
-// game has no metadata in games.json.
-export const gameBounds = (gameData: GamesData, id: string): Bounds => {
-  const meta = gameData[id];
-
-  if (meta && meta.players) {
-    return { min: meta.players.min, max: meta.players.max };
+// The real player-count bounds for a game, or null when the metadata is
+// missing or incomplete (the API sends null min/max for games without them).
+export const realBounds = (meta: GameMeta | undefined): Bounds | null => {
+  const players = meta?.players;
+  if (players && players.min !== null && players.max !== null) {
+    return { min: players.min, max: players.max };
   }
+  return null;
+};
 
-  return { min: 0, max: 99 };
+// Player-count bounds for a game, defaulting to 0/99 when they are unknown.
+export const gameBounds = (gameData: GamesData, id: string): Bounds =>
+  realBounds(gameData[id]) ?? { min: 0, max: 99 };
+
+const isHttpsUrl = (value: string | null | undefined): value is string => {
+  if (!value) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+// Cover image for a game: the bundled file for this id and ext, then the
+// game's image URL when it is a valid https URL, else none.
+export const resolveImage = (
+  id: string,
+  meta: GameMeta | undefined,
+  images: Record<string, string>,
+): string | undefined => {
+  if (!meta) return undefined;
+  const bundled = meta.ext ? images[`/src/assets/games/${id}${meta.ext}`] : "";
+  if (bundled) return bundled;
+  return isHttpsUrl(meta.image) ? meta.image : undefined;
 };
 
 // Max score used to normalize the Score cells. individualMax is a single
@@ -86,10 +111,8 @@ export const buildSelectedGames = ({
           max,
           players: {},
         };
-        if (meta && meta.image) {
-          selectedGames[item.game].image =
-            images[`/src/assets/games/${id}${meta.ext}`];
-        }
+        const image = resolveImage(id, meta, images);
+        if (image) selectedGames[item.game].image = image;
       }
 
       const game = selectedGames[item.game];

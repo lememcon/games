@@ -31,6 +31,11 @@ const renderHeader = (props: Partial<ComponentProps<typeof Header>> = {}) =>
   );
 
 describe("Header", () => {
+  it("omits the year picker when no years are given", () => {
+    const { queryByRole } = renderHeader({ years: undefined });
+    expect(queryByRole("textbox")).toBeNull();
+  });
+
   it("shows the current year in the selector", () => {
     const { getByRole } = renderHeader();
     expect(getByRole("textbox")).toHaveValue("2025");

@@ -59,6 +59,15 @@ describe("apiFetch", () => {
     });
   });
 
+  it("keeps the parsed error body on the ApiError", async () => {
+    const body = { errors: [{ path: "year", message: "bad" }] };
+    const fetchImpl = vi.fn().mockResolvedValue(json(body, 422));
+    const err = (await apiFetch("/x", {}, fetchImpl).catch(
+      (e) => e,
+    )) as ApiError;
+    expect(err.body).toEqual(body);
+  });
+
   it("falls back to the status when the error body is not JSON", async () => {
     const fetchImpl = vi
       .fn()

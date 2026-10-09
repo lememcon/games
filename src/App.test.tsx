@@ -23,9 +23,13 @@ const gate = vi.hoisted(() => ({
   },
   retry: vi.fn(),
   useData: vi.fn(),
+  useYears: vi.fn(),
+  useGames: vi.fn(),
 }));
 vi.mock("@/hooks/useMe", () => ({ default: () => gate.value }));
 vi.mock("@/hooks/useData", () => ({ default: gate.useData }));
+vi.mock("@/hooks/useYears", () => ({ default: gate.useYears }));
+vi.mock("@/hooks/useGames", () => ({ default: gate.useGames }));
 vi.mock("@/hooks/useAdminUsers", () => ({
   default: () => ({ users: [], loading: true, error: false }),
 }));
@@ -45,6 +49,12 @@ describe("App gate", () => {
   beforeEach(() => {
     localStorage.clear();
     gate.useData.mockReturnValue(emptyData);
+    gate.useYears.mockReturnValue({
+      years: ["2025"],
+      loading: false,
+      error: false,
+    });
+    gate.useGames.mockReturnValue({ games: {}, loading: false, error: false });
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -121,6 +131,10 @@ describe("App gate", () => {
     setGate({ me: { status: "approved", user: { ...user, role: "admin" } } });
     render(<App />);
     expect(screen.getByText("Loading members...")).toBeInTheDocument();
+    // The admin area never touches score, year or game data.
+    expect(gate.useData).not.toHaveBeenCalled();
+    expect(gate.useYears).not.toHaveBeenCalled();
+    expect(gate.useGames).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByLabelText("Account menu"));
     expect(

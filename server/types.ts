@@ -1,5 +1,6 @@
 import type { BggGame } from "./bgg/client";
 import type { BggService } from "./bgg/service";
+import type { NormalizedImport } from "./import";
 
 export type Role = "member" | "admin";
 export type Status = "pending" | "approved";
@@ -50,6 +51,8 @@ export interface AppDeps {
   store: UserStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
+  /** Years, games and scores: public reads and the admin import. */
+  data: DataStore;
 }
 
 export type AppEnv = { Variables: { user: AppUser | null } };
@@ -117,4 +120,65 @@ export interface BggRepo {
    * its image and extension; fields BGG omitted keep their stored value.
    */
   upsertMetadata(games: BggGame[], fetchedAt: Date): Promise<void>;
+}
+
+/** A score row in the shape the app has always consumed (`player_game_scores`). */
+export interface LegacyScoreRow {
+  bgg_id: number;
+  game: string;
+  player: string;
+  score: number;
+  rank: number;
+}
+
+/** A score joined with its game and player names, as read from the database. */
+export interface ScoreRow {
+  bggId: number;
+  gameName: string | null;
+  playerName: string;
+  score: number;
+  rank: number;
+}
+
+export interface GameRow {
+  bggId: number;
+  name: string | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  imageUrl: string | null;
+  imageExt: string | null;
+}
+
+/** The games.json shape, keyed by bgg_id. */
+export type GamesMap = Record<
+  string,
+  { players?: { min: number; max: number }; image?: string; ext?: string }
+>;
+
+export interface ImportSummary {
+  year: number | null;
+  scores: number;
+  games: { new: number; updated: number };
+  players: { new: number; total: number };
+  warnings: string[];
+}
+
+export interface ImportContext {
+  /** Discord id of the importing admin. */
+  importedBy: string;
+  sourceFilename: string | null;
+}
+
+/** All SQL for years, games and scores lives behind this interface (server/db/dataStore.ts). */
+export interface DataStore {
+  /** Newest first. */
+  listYears(): Promise<number[]>;
+  /** Null when the year is unknown. */
+  getScores(year: number): Promise<LegacyScoreRow[] | null>;
+  getGames(): Promise<GamesMap>;
+  /** One transaction; refuses with 409 when the year already exists. */
+  importData(
+    input: NormalizedImport,
+    context: ImportContext,
+  ): Promise<MutationResult<ImportSummary>>;
 }

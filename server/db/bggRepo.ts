@@ -41,25 +41,36 @@ export function createBggRepo(db: BggDb): BggRepo {
 
     listMetadata: () => db.select().from(gameMetadata),
 
-    async upsertMetadata(games: BggGame[], fetchedAt) {
-      if (games.length === 0) return;
-      const existing = (col: AnyPgColumn) => sql`${col}`;
-      const excluded = (name: string) => sql`excluded.${sql.identifier(name)}`;
-      const isCustom = sql`${existing(gameMetadata.imageUrl)} = ${CUSTOM}`;
-      await db
-        .insert(gameMetadata)
-        .values(games.map((g) => ({ ...g, fetchedAt })))
-        .onConflictDoUpdate({
-          target: gameMetadata.bggId,
-          set: {
-            minPlayers: sql`coalesce(${excluded("min_players")}, ${existing(gameMetadata.minPlayers)})`,
-            maxPlayers: sql`coalesce(${excluded("max_players")}, ${existing(gameMetadata.maxPlayers)})`,
-            // A custom image is curated by hand: keep it and its extension.
-            imageUrl: sql`case when ${isCustom} then ${existing(gameMetadata.imageUrl)} else coalesce(${excluded("image_url")}, ${existing(gameMetadata.imageUrl)}) end`,
-            ext: sql`case when ${isCustom} then ${existing(gameMetadata.ext)} when ${excluded("image_url")} is not null then ${excluded("ext")} else ${existing(gameMetadata.ext)} end`,
-            fetchedAt,
-          },
-        });
-    },
+    upsertMetadata: (games, fetchedAt) => upsertMetadata(db, games, fetchedAt),
   };
+}
+
+/**
+ * Inserts or refreshes metadata rows. Stored values survive a null in the
+ * incoming row, and a "custom" image keeps its image and extension. Shared with
+ * the game data import so there is one set of rules.
+ */
+export async function upsertMetadata(
+  db: BggDb,
+  games: BggGame[],
+  fetchedAt: Date,
+) {
+  if (games.length === 0) return;
+  const existing = (col: AnyPgColumn) => sql`${col}`;
+  const excluded = (name: string) => sql`excluded.${sql.identifier(name)}`;
+  const isCustom = sql`${existing(gameMetadata.imageUrl)} = ${CUSTOM}`;
+  await db
+    .insert(gameMetadata)
+    .values(games.map((g) => ({ ...g, fetchedAt })))
+    .onConflictDoUpdate({
+      target: gameMetadata.bggId,
+      set: {
+        minPlayers: sql`coalesce(${excluded("min_players")}, ${existing(gameMetadata.minPlayers)})`,
+        maxPlayers: sql`coalesce(${excluded("max_players")}, ${existing(gameMetadata.maxPlayers)})`,
+        // A custom image is curated by hand: keep it and its extension.
+        imageUrl: sql`case when ${isCustom} then ${existing(gameMetadata.imageUrl)} else coalesce(${excluded("image_url")}, ${existing(gameMetadata.imageUrl)}) end`,
+        ext: sql`case when ${isCustom} then ${existing(gameMetadata.ext)} when ${excluded("image_url")} is not null then ${excluded("ext")} else ${existing(gameMetadata.ext)} end`,
+        fetchedAt,
+      },
+    });
 }

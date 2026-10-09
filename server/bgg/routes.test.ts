@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../app";
-import { fakeBggRepo, fakeStore } from "../testing";
+import { fakeBggRepo, fakeData, fakeStore } from "../testing";
 import type { AppUser } from "../types";
 import type { BggBatch, BggClient } from "./client";
 import { createBggService } from "./service";
@@ -60,6 +60,7 @@ function setup(over: { fetchThings?: BggClient["fetchThings"] } = {}) {
     staticDir: ".",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
+    data: fakeData().data,
     bgg,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
@@ -140,6 +141,7 @@ describe("admin guard", () => {
       staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
+      data: fakeData().data,
       resolveSession: async () => ({ user: users.admin }),
     });
     const res = await app.request("/api/admin/bgg/key");
@@ -233,6 +235,7 @@ describe("POST /key/test", () => {
       staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
+      data: fakeData().data,
       resolveSession: async () => ({ user: users.admin }),
       bgg: frozen,
     });
@@ -269,6 +272,7 @@ describe("status, download and job", () => {
       staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
+      data: fakeData().data,
       resolveSession: async () => ({ user: users.admin }),
       bgg: createBggService({
         repo: s.repo,
