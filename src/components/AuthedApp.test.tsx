@@ -45,12 +45,9 @@ describe("AuthedApp", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
-  it.each(["/admin"])(
-    "redirects members away from %s",
-    (path) => {
-      at(path, member);
-      expect(window.location.pathname).toBe("/");
-      expect(screen.getByText("scoreboard")).toBeInTheDocument();
-    },
-  );
+  it.each(["/admin"])("redirects members away from %s", (path) => {
+    at(path, member);
+    expect(window.location.pathname).toBe("/");
+    expect(screen.getByText("scoreboard")).toBeInTheDocument();
+  });
 });
