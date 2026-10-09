@@ -200,9 +200,12 @@ enforced at 90% for statements, branches, functions, and lines across both (see
 entry points and DB wiring). Run one project with
 `pnpm vitest run --project web` or `--project server`.
 
-Server tests inject their dependencies (a fake session resolver, a fake `Db`, a
-temporary static directory), so they need neither PostgreSQL nor the network.
-There are no integration or end-to-end tests yet.
+Server tests inject their dependencies (a fake session resolver, an in-memory user
+store, a temporary static directory), and a third `server-db` project runs the real
+migrations and SQL on an in-process PGlite database, so none need an external
+PostgreSQL or the network. Running the app locally (`pnpm dev` proxies `/api` to
+`pnpm server:dev`) needs the server, PostgreSQL and Discord keys. There are no
+end-to-end tests yet.
 
 [Lefthook](https://github.com/evilmartians/lefthook) runs pre-commit hooks —
 Prettier, ESLint, typecheck, and the related Vitest tests — plus commit-message linting.
