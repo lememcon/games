@@ -33,6 +33,11 @@ const renderHeader = (props: Partial<ComponentProps<typeof Header>> = {}) =>
   );
 
 describe("Header", () => {
+  it("frames the logo", () => {
+    const { container } = renderHeader();
+    expect(container.querySelector('img[alt=""]')).toHaveClass("tray-logo");
+  });
+
   it("omits the year picker when no years are given", () => {
     const { queryByRole } = renderHeader({ years: undefined });
     expect(queryByRole("combobox")).toBeNull();

@@ -57,7 +57,13 @@ const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
     <Center mih="70vh" px="md">
       <Paper withBorder shadow="md" radius="lg" p="xl" w="100%" maw={400}>
         <Stack align="center" gap="md">
-          <img src={logo} width={120} height={136} alt="" />
+          <img
+            src={logo}
+            width={120}
+            height={136}
+            alt=""
+            className="tray-logo tray-logo--lg"
+          />
           <Title order={2} ta="center">
             Sign in to LememCon
           </Title>

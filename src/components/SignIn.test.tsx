@@ -24,6 +24,14 @@ describe("SignIn", () => {
     expect(button.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
+  it("frames the large logo", () => {
+    const { container } = renderWithMantine(<SignIn />);
+    expect(container.querySelector('img[alt=""]')).toHaveClass(
+      "tray-logo",
+      "tray-logo--lg",
+    );
+  });
+
   it("redirects to the URL returned by the server", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", {
