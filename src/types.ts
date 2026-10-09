@@ -9,6 +9,8 @@ export interface PlayerGameScore {
   player: string;
   score: number;
   rank: number;
+  // Only sent to approved users, and only for players linked to a member.
+  discord_id?: string;
 }
 
 // The value shape served by GET /api/games, keyed by BoardGameGeek id
@@ -46,6 +48,7 @@ export interface SelectedGamePlayer {
   name: string;
   rank: number;
   score: number;
+  discordId?: string;
 }
 
 // An aggregated game row produced by buildSelectedGames.
@@ -69,7 +72,10 @@ export interface MeUser {
   image: string | null;
 }
 
+// `name` is the resolved name (display name, else the Discord name).
 export interface ApprovedUser extends MeUser {
+  displayName: string | null;
+  discordName: string;
   role: Role;
 }
 
@@ -80,7 +86,9 @@ export type Me =
 
 export interface AdminUser {
   discordId: string;
+  // The Discord name; displayName is the member's own choice, if any.
   name: string;
+  displayName: string | null;
   image: string | null;
   username: string | null;
   role: Role;
@@ -88,6 +96,40 @@ export interface AdminUser {
   // True for built-in admins, which the server refuses to change.
   locked: boolean;
   createdAt: string;
+}
+
+// Public profiles (GET /api/profiles/:discordId) and the display-name setter
+// (PUT /api/me/display-name).
+export interface ProfileGame {
+  bggId: number;
+  game: string;
+  plays: number;
+  bestRank: number;
+  bestScore: number;
+}
+
+export interface ProfileStats {
+  games: number;
+  wins: number;
+  // 0..1
+  winRate: number;
+  avgRank: number;
+  podiums: number;
+  mostPlayed: ProfileGame[];
+}
+
+export interface Profile {
+  discordId: string;
+  name: string;
+  image: string | null;
+  linkedPlayer: string | null;
+  // Null when no score-sheet player is linked to the member.
+  stats: ProfileStats | null;
+}
+
+export interface DisplayNameResult {
+  name: string;
+  displayName: string | null;
 }
 
 // Player links admin (GET /api/admin/player-links): which app member, if any,
