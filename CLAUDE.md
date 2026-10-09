@@ -6,8 +6,9 @@ Project guidance for Claude Code. See `README.md` for the human-facing overview.
 
 Single-page app that ranks and filters LememCon board-game scores. Built with React 19,
 Vite, and Mantine 8, routed with wouter, data munged with ramda. Written in TypeScript.
-Deployed to games.lememcon.com via Netlify (auto-builds `main`). A Hono + Better Auth +
-Drizzle/PostgreSQL server in `server/` serves `/api/*` and the built SPA from one origin.
+Netlify serves the static SPA at games.lememcon.com (auto-builds `main`). The backend
+(`server/`, Hono + Better Auth + Drizzle/PostgreSQL) is deployed separately from the
+`Dockerfile` to the API subdomain, api.lememcon.com.
 
 ## Commands
 
@@ -39,7 +40,7 @@ A separate `commitlint` job runs on pull requests only.
 - `src/assets/` — `games.json`, cover images (refreshed by `pnpm update`), styles.
 - `src/test/setup.ts` — Vitest setup; jsdom shims for Mantine (see below).
 - `server/` — Node server. `app.ts` (`createApp`, routes), `auth.ts` (Better Auth, session
-  resolver), `middleware.ts` (csrf, session, admin guard), `static.ts` (SPA + cache headers),
+  resolver), `middleware.ts` (csrf, session, admin guard), `static.ts` (SPA + cache headers; no longer needed by the API host),
   `env.ts` (env parsing), `types.ts`, `db/` (Drizzle client + schema), `index.ts` (boot),
   `migrate.ts` (separate migration command).
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
@@ -52,6 +53,10 @@ A separate `commitlint` job runs on pull requests only.
 - **Colocated tests.** Every source file has a sibling `Name.test.tsx`/`Name.test.ts`.
   Adding or changing behavior means updating the sibling test — the 90% coverage gate
   (`vite.config.ts`) blocks CI otherwise.
+- **SPA and API are cross-origin siblings.** Do not assume same-origin cookies, CSRF or
+  static serving. This includes local dev (Vite :3000 vs API :8080, same-site); the
+  planned local option is a Vite `server.proxy` for `/api`. The CSRF/CORS/`WEB_ORIGIN`
+  changes needed for this are not done yet (see README Backend).
 - **Keep logic out of components.** Non-trivial computation belongs in `src/lib/games.ts`
   so it can be tested without rendering. Follow the existing pure-function pattern.
 - **Imports are auto-sorted** by `@ianvs/prettier-plugin-sort-imports` (order defined in
