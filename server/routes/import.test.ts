@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeStore } from "../testing";
+import { fakeData, fakeLinks, fakeStore } from "../testing";
 import type { AppUser } from "../types";
 import { MAX_BODY_BYTES } from "./import";
 
@@ -27,6 +27,7 @@ function makeApp() {
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data: fake.data,
+    links: fakeLinks().links,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

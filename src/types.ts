@@ -90,6 +90,28 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// Player links admin (GET /api/admin/player-links): which app member, if any,
+// each score-sheet player is.
+export interface PlayerLink {
+  id: number;
+  name: string;
+  scoreCount: number;
+  discordId: string | null;
+  // Display name of the linked member; null when unlinked.
+  userName: string | null;
+}
+
+export interface LinkableUser {
+  discordId: string;
+  name: string;
+  status: Status;
+}
+
+export interface PlayerLinks {
+  players: PlayerLink[];
+  users: LinkableUser[];
+}
+
 // BoardGameGeek data admin (GET/PUT /api/admin/bgg/*). The key itself is never
 // returned: only whether it is set and a masked tail.
 export interface BggKeyInfo {

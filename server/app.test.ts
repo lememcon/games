@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "./app";
 import { PROTECTED_ADMIN_IDS } from "./roles";
 import { cacheControl } from "./static";
-import { fakeData, fakeStore } from "./testing";
+import { fakeData, fakeLinks, fakeStore } from "./testing";
 import type { AdminUser, AppUser } from "./types";
 
 const BASE = "https://api.lememcon.com";
@@ -62,6 +62,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     authHandler,
     store: fake.store,
     data: fakeData().data,
+    links: fakeLinks().links,
     resolveSession: async (headers) => {
       const cookie = headers.get("cookie");
       const who = cookie?.startsWith("as=") && users[cookie.slice(3)];
