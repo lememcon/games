@@ -4,8 +4,10 @@ export interface Env {
   BETTER_AUTH_URL: string;
   DISCORD_CLIENT_ID: string;
   DISCORD_CLIENT_SECRET: string;
-  /** Immutable Discord user ids (snowflakes) that get the admin role. */
-  ADMIN_DISCORD_IDS: string[];
+  /** Origin of the SPA allowed to call the API with credentials (CORS/CSRF). */
+  WEB_ORIGIN?: string;
+  /** Parent domain for the session cookie, e.g. .lememcon.com (unset on localhost). */
+  COOKIE_DOMAIN?: string;
   PORT: number;
 }
 
@@ -44,14 +46,13 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     }
   }
 
-  const adminIds = get("ADMIN_DISCORD_IDS")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
-  if (adminIds.some((id) => !/^\d{15,25}$/.test(id))) {
-    errors.push(
-      "ADMIN_DISCORD_IDS must be comma-separated numeric Discord ids",
-    );
+  let webOrigin: string | undefined;
+  if (get("WEB_ORIGIN")) {
+    try {
+      webOrigin = new URL(get("WEB_ORIGIN")).origin;
+    } catch {
+      errors.push("WEB_ORIGIN must be an absolute URL");
+    }
   }
 
   const port = get("PORT") ? Number(get("PORT")) : 8080;
@@ -69,7 +70,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     BETTER_AUTH_URL: get("BETTER_AUTH_URL"),
     DISCORD_CLIENT_ID: get("DISCORD_CLIENT_ID"),
     DISCORD_CLIENT_SECRET: get("DISCORD_CLIENT_SECRET"),
-    ADMIN_DISCORD_IDS: adminIds,
+    WEB_ORIGIN: webOrigin,
+    COOKIE_DOMAIN: get("COOKIE_DOMAIN") || undefined,
     PORT: port,
   };
 }

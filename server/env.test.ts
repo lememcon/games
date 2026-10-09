@@ -8,23 +8,26 @@ const valid = {
   BETTER_AUTH_URL: "https://games.lememcon.com",
   DISCORD_CLIENT_ID: "id",
   DISCORD_CLIENT_SECRET: "secret",
-  ADMIN_DISCORD_IDS: "123456789012345678, 223456789012345678",
 };
 
 describe("loadEnv", () => {
   it("parses a valid environment with defaults", () => {
     const env = loadEnv(valid);
     expect(env.PORT).toBe(8080);
-    expect(env.ADMIN_DISCORD_IDS).toEqual([
-      "123456789012345678",
-      "223456789012345678",
-    ]);
+    expect(env.WEB_ORIGIN).toBeUndefined();
+    expect(env.COOKIE_DOMAIN).toBeUndefined();
   });
 
-  it("allows an empty admin list and a custom port", () => {
-    const env = loadEnv({ ...valid, ADMIN_DISCORD_IDS: "", PORT: "3000" });
-    expect(env.ADMIN_DISCORD_IDS).toEqual([]);
+  it("accepts a custom port, web origin and cookie domain", () => {
+    const env = loadEnv({
+      ...valid,
+      PORT: "3000",
+      WEB_ORIGIN: "https://games.lememcon.com/some/path",
+      COOKIE_DOMAIN: ".lememcon.com",
+    });
     expect(env.PORT).toBe(3000);
+    expect(env.WEB_ORIGIN).toBe("https://games.lememcon.com");
+    expect(env.COOKIE_DOMAIN).toBe(".lememcon.com");
   });
 
   it("reports every missing variable", () => {
@@ -32,18 +35,18 @@ describe("loadEnv", () => {
     expect(() => loadEnv({})).toThrow(/DISCORD_CLIENT_SECRET is required/);
   });
 
-  it("rejects a short secret, bad URL, bad ids and bad port", () => {
+  it("rejects a short secret, bad URLs and bad port", () => {
     const run = () =>
       loadEnv({
         ...valid,
         BETTER_AUTH_SECRET: "short",
         BETTER_AUTH_URL: "nope",
-        ADMIN_DISCORD_IDS: "someone",
+        WEB_ORIGIN: "games",
         PORT: "0",
       });
     expect(run).toThrow(/at least 32 characters/);
     expect(run).toThrow(/absolute URL/);
-    expect(run).toThrow(/numeric Discord ids/);
+    expect(run).toThrow(/WEB_ORIGIN must be an absolute URL/);
     expect(run).toThrow(/PORT must be/);
   });
 
