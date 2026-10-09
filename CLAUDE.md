@@ -84,8 +84,10 @@ A separate `commitlint` job runs on pull requests only.
   `resolveSession` and `authHandler`; `createSessionResolver` takes a fake `auth` and a fake
   `Db` that stubs the one select chain; `app.test.ts` serves a per-suite temp directory, while
   `static.test.ts` mounts `process.cwd()` to cover the `staticDir === cwd` (root `"."`)
-  branch; `createAuth` is given `{} as Db` and only exercises paths that never query. No test
-  needs Postgres or the network.
+  branch; `createAuth` is given `{} as Db` and only exercises paths that never query. The
+  `server-db` project (`server/db/**`) runs the real migrations and SQL on in-process
+  PGlite. No test needs an external Postgres or the network; running the app locally
+  (`pnpm dev` proxies `/api` to `pnpm server:dev`) needs the server, Postgres and Discord keys.
 - **No integration or e2e tests yet.** Unit tests with injected deps cover the logic;
   a real-Postgres or browser suite is deliberately deferred.
 

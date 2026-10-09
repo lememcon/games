@@ -1,0 +1,155 @@
+import { Redirect, Route, Switch, useLocation } from "wouter";
+
+import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
+
+import { keys } from "ramda";
+
+import game_data from "@/assets/games.json";
+import AdminPage from "@/components/AdminPage";
+import Filters from "@/components/Filters";
+import Game from "@/components/Game";
+import GamesList from "@/components/GamesList";
+import Header from "@/components/Header";
+import { PlayerColorProvider } from "@/components/PlayerName";
+import useData from "@/hooks/useData";
+import useLocalState from "@/hooks/useLocalState";
+import usePlayedCounts from "@/hooks/usePlayedCounts";
+import { buildPlayerColors } from "@/lib/colors";
+import { buildSelectedGames, computeMaxScores } from "@/lib/games";
+import type { ApprovedUser } from "@/types";
+
+const images = import.meta.glob("@/assets/games/*", {
+  eager: true,
+  import: "default",
+}) as Record<string, string>;
+interface AuthedAppProps {
+  user: ApprovedUser;
+}
+
+const startYear = 2025;
+const currentYear = new Date().getFullYear();
+
+// Generate list of all years
+const allYears: string[] = [];
+for (let i = startYear; i <= currentYear; i++) {
+  allYears.push(`${i}`);
+}
+
+function AuthedApp({ user }: AuthedAppProps) {
+  const [year, setYear] = useLocalState("year", `${currentYear}`);
+  const data = useData(year);
+  const [players, setPlayers] = useLocalState<string[]>("players", []);
+  const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
+  const [getPlayedCount, incPlayedCount, decPlayedCount] =
+    usePlayedCounts(year);
+  const [_, setLocation] = useLocation();
+
+  const { individualMax, selectedMax } = computeMaxScores(data, players);
+  const playerColors = buildPlayerColors(keys(data.by_player));
+  const games = buildSelectedGames({
+    byPlayer: data.by_player,
+    players,
+    gameData: game_data,
+    images,
+    hidePlayed,
+    getPlayedCount,
+  });
+
+  const handleYear = (year: string | null) => {
+    if (year === null) return;
+    setPlayers([]);
+    setYear(year);
+    setLocation("/");
+  };
+
+  return (
+    <PlayerColorProvider value={playerColors}>
+      <AppShell header={{ height: 60 }} padding="md">
+        <Header
+          year={year}
+          years={allYears}
+          onYearChange={handleYear}
+          user={user}
+        />
+        <AppShell.Main>
+          <Switch>
+            <Route path="/admin">
+              {user.role === "admin" ? (
+                <AdminPage meId={user.discordId} />
+              ) : (
+                <Redirect to="/" />
+              )}
+            </Route>
+            <Route>
+              {data.loading ? (
+                <Stack gap="sm" mt="md">
+                  <Skeleton height={44} radius="md" />
+                  <Skeleton height={44} radius="md" />
+                  <Skeleton height={44} radius="md" />
+                  <Skeleton height={44} radius="md" />
+                </Stack>
+              ) : data.error ? (
+                <Stack align="center" gap="xs" mt="xl">
+                  <Title order={3}>Couldn&apos;t load the scores</Title>
+                  <Text c="dimmed" ta="center">
+                    The {year} scores didn&apos;t load. Check your connection
+                    and refresh the page.
+                  </Text>
+                </Stack>
+              ) : (
+                <Switch>
+                  <Route path="/games/:id">
+                    {(params) => <Game data={data} id={params.id} />}
+                  </Route>
+                  <Route>
+                    <Filters
+                      players={players}
+                      playerOptions={keys(data.by_player)}
+                      onPlayersChange={setPlayers}
+                      hidePlayed={hidePlayed}
+                      onHidePlayedChange={setHidePlayed}
+                      shown={games.length}
+                      total={keys(data.by_game).length}
+                    />
+                    {games.length === 0 ? (
+                      <Stack align="center" gap="xs" mt="xl">
+                        <Title order={3}>No games to rank</Title>
+                        <Text c="dimmed" ta="center">
+                          {players.length > 0
+                            ? "None of the ranked games include everyone you picked."
+                            : hidePlayed
+                              ? "You've played every ranked game. Nice work."
+                              : "Scores haven't been posted for this year yet."}
+                        </Text>
+                        {players.length > 0 && (
+                          <Button
+                            variant="light"
+                            onClick={() => setPlayers([])}
+                          >
+                            Clear players
+                          </Button>
+                        )}
+                      </Stack>
+                    ) : (
+                      <GamesList
+                        games={games}
+                        selectedMax={selectedMax}
+                        individualMax={individualMax}
+                        gameData={game_data}
+                        getPlayedCount={getPlayedCount}
+                        onInc={incPlayedCount}
+                        onDec={decPlayedCount}
+                      />
+                    )}
+                  </Route>
+                </Switch>
+              )}
+            </Route>
+          </Switch>
+        </AppShell.Main>
+      </AppShell>
+    </PlayerColorProvider>
+  );
+}
+
+export default AuthedApp;

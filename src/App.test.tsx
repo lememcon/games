@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "@/App";
-import type { Data } from "@/types";
+import type { Data, Me } from "@/types";
 
 const emptyData: Data = {
   loading: false,
@@ -14,129 +14,117 @@ const emptyData: Data = {
   max: 0,
 };
 
-const loadedData: Data = {
-  ...emptyData,
-  by_player: {
-    alice: [
-      { game: "Belfort", player: "alice", rank: 1, score: 50, bgg_id: 11 },
-    ],
-    bob: [{ game: "Belfort", player: "bob", rank: 2, score: 30, bgg_id: 11 }],
+const gate = vi.hoisted(() => ({
+  value: {} as {
+    me: Me | null;
+    error: boolean;
+    loading: boolean;
+    retry: () => void;
   },
-  by_id: {
-    11: [
-      { game: "Belfort", player: "alice", rank: 1, score: 50, bgg_id: 11 },
-      { game: "Belfort", player: "bob", rank: 2, score: 30, bgg_id: 11 },
-    ],
-  },
-  max: 100,
+  retry: vi.fn(),
+  useData: vi.fn(),
+}));
+vi.mock("@/hooks/useMe", () => ({ default: () => gate.value }));
+vi.mock("@/hooks/useData", () => ({ default: gate.useData }));
+vi.mock("@/hooks/useAdminUsers", () => ({
+  default: () => ({ users: [], loading: true, error: false }),
+}));
+
+const setGate = (over: Partial<typeof gate.value>) => {
+  gate.value = {
+    me: null,
+    error: false,
+    loading: false,
+    retry: gate.retry,
+    ...over,
+  };
 };
+const user = { discordId: "1", name: "Sam", image: null };
 
-// The mocked hook reads from a hoisted holder so each test can swap in a
-// different Data shape (loaded, loading, error, empty).
-const state = vi.hoisted(() => ({ data: {} as Data }));
-vi.mock("@/hooks/useData", () => ({ default: () => state.data }));
-
-describe("App", () => {
+describe("App gate", () => {
   beforeEach(() => {
     localStorage.clear();
-    state.data = loadedData;
+    gate.useData.mockReturnValue(emptyData);
   });
   afterEach(() => {
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
   });
 
-  it("renders the game detail on /games/:id", () => {
-    window.history.pushState({}, "", "/games/11");
-    const { getByRole, queryByText } = render(<App />);
-
-    expect(getByRole("heading", { name: "Belfort" })).toBeInTheDocument();
-    expect(queryByText("Filter By Players")).toBeNull();
-  });
-
-  it("renders the header and the games list", () => {
-    const { getByRole, getByText } = render(<App />);
-
-    expect(getByRole("heading", { name: "LememCon" })).toBeInTheDocument();
-    expect(getByRole("link", { name: "Belfort" })).toHaveAttribute(
-      "href",
-      "/games/11",
-    );
-    expect(getByText("Filter By Players")).toBeInTheDocument();
-    // Belfort aggregates 50 + 30 = 80; normalized against selectedMax
-    // (100 * 2 players = 200) that renders as 40.
-    expect(getByText("40")).toBeInTheDocument();
-  });
-
-  it("links each game row to its detail route", () => {
-    const { getByRole } = render(<App />);
-    expect(getByRole("link", { name: "Belfort" })).toHaveAttribute(
-      "href",
-      "/games/11",
-    );
-  });
-
-  it("clears the player filter when the year changes", async () => {
-    const user = userEvent.setup();
-    localStorage.setItem("players", JSON.stringify(["alice"]));
+  it("shows a loader before the first response", () => {
+    setGate({ loading: true });
     const { container } = render(<App />);
-
-    // The year Select has id="year"; the MultiSelect also renders a textbox,
-    // so target the year input directly. Default year is the current year.
-    await user.click(container.querySelector("#year")!);
-    await user.click(await screen.findByText("2025"));
-
-    expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+    expect(container.querySelector(".mantine-Loader-root")).toBeTruthy();
+    expect(gate.useData).not.toHaveBeenCalled();
   });
 
-  it("shows skeletons while the data loads", () => {
-    state.data = { ...emptyData, loading: true };
-    const { container, queryByText } = render(<App />);
-
-    expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
-    expect(queryByText("Filter By Players")).toBeNull();
+  it("shows sign-in for anonymous visitors", () => {
+    setGate({ me: { status: "anonymous" } });
+    render(<App />);
+    expect(
+      screen.getByRole("button", { name: "Sign in with Discord" }),
+    ).toBeInTheDocument();
+    expect(gate.useData).not.toHaveBeenCalled();
   });
 
-  it("shows an error message when the fetch fails", () => {
-    state.data = { ...emptyData, error: true };
-    const { getByText } = render(<App />);
-
-    expect(getByText(/Couldn.t load the scores/)).toBeInTheDocument();
+  it("shows the error state and retries", async () => {
+    setGate({ error: true });
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(gate.retry).toHaveBeenCalled();
+    expect(gate.useData).not.toHaveBeenCalled();
   });
 
-  it("shows an empty message when no games are ranked", () => {
-    state.data = emptyData;
-    const { getByText } = render(<App />);
-
-    expect(getByText(/Scores haven.t been posted/)).toBeInTheDocument();
+  it("disables Retry while a request is in flight", () => {
+    setGate({ error: true, loading: true });
+    render(<App />);
+    expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
   });
 
-  it("explains when no ranked game includes the selected players", () => {
-    state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
-    localStorage.setItem("players", JSON.stringify(["alice"]));
-    const { getByText } = render(<App />);
-
-    expect(getByText(/None of the ranked games include/)).toBeInTheDocument();
+  it("shows the pending screen and Check again refetches", async () => {
+    setGate({ me: { status: "pending", user } });
+    render(<App />);
+    expect(screen.getByText(/waiting for approval/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    expect(gate.retry).toHaveBeenCalled();
+    expect(gate.useData).not.toHaveBeenCalled();
   });
 
-  it("clears the selected players from the empty state", async () => {
-    const user = userEvent.setup();
-    state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
-    localStorage.setItem("players", JSON.stringify(["alice"]));
-    const { getByRole, queryByRole } = render(<App />);
+  it("lets the gate win over /admin for anonymous and pending users", () => {
+    window.history.pushState({}, "", "/admin");
+    setGate({ me: { status: "anonymous" } });
+    const { unmount } = render(<App />);
+    expect(screen.getByText("Sign in to LememCon")).toBeInTheDocument();
+    unmount();
 
-    await user.click(getByRole("button", { name: "Clear players" }));
-
-    expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
-    expect(queryByRole("button", { name: "Clear players" })).toBeNull();
+    setGate({ me: { status: "pending", user } });
+    render(<App />);
+    expect(screen.getByText(/waiting for approval/)).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/admin");
   });
 
-  it("congratulates when every ranked game is hidden as played", () => {
-    localStorage.setItem("hide_played", "true");
-    const year = `${new Date().getFullYear()}`;
-    localStorage.setItem(`played_counts_${year}`, JSON.stringify({ 11: 1 }));
-    const { getByText } = render(<App />);
+  it("renders the app without an Admin link for members", async () => {
+    setGate({ me: { status: "approved", user: { ...user, role: "member" } } });
+    render(<App />);
+    expect(
+      screen.getByRole("heading", { name: "LememCon" }),
+    ).toBeInTheDocument();
+    expect(gate.useData).toHaveBeenCalled();
 
-    expect(getByText(/played every ranked game/)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("Account menu"));
+    expect(await screen.findByText("Sign out")).toBeInTheDocument();
+    expect(screen.queryByText("Admin")).toBeNull();
+  });
+
+  it("renders the app with an Admin link and /admin for admins", async () => {
+    window.history.pushState({}, "", "/admin");
+    setGate({ me: { status: "approved", user: { ...user, role: "admin" } } });
+    render(<App />);
+    expect(screen.getByText("Loading members...")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Account menu"));
+    expect(
+      await screen.findByRole("menuitem", { name: "Admin", hidden: true }),
+    ).toBeInTheDocument();
   });
 });
