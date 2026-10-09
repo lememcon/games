@@ -198,7 +198,6 @@ export function createBggClient(
         });
         if (typeof result === "string") {
           const games = parseThings(result);
-          if (games.length === 0) throw new BggError("parse");
           const seen = new Set(games.map((g) => g.bggId));
           return { games, notFound: ids.filter((id) => !seen.has(id)) };
         }

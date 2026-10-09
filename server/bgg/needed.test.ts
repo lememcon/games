@@ -20,6 +20,8 @@ describe("toBggId / normalizeIds", () => {
     expect(toBggId(999999999)).toBe(999999999);
     expect(toBggId("1000000000")).toBeNull();
     expect(toBggId("-1")).toBeNull();
+    expect(toBggId(0)).toBeNull();
+    expect(toBggId("0")).toBeNull();
     expect(toBggId("1.5")).toBeNull();
     expect(toBggId("0x10")).toBeNull();
     expect(toBggId(null)).toBeNull();

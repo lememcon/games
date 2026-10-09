@@ -24,7 +24,7 @@ export class ScoresUnavailableError extends Error {
 export const toBggId = (value: unknown): number | null =>
   (typeof value === "string" || typeof value === "number") &&
   BGG_ID.test(String(value))
-    ? Number(value)
+    ? Number(value) || null
     : null;
 
 /** Validates and dedupes a client-supplied id list; null when it is not acceptable. */

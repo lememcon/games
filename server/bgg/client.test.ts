@@ -114,9 +114,19 @@ describe("fetchThings", () => {
     expect((await client.fetchThings([1, 2], KEY)).notFound).toEqual([2]);
   });
 
-  it("treats an empty result as an error rather than not-found", async () => {
+  it("reports every id as not found for an empty items root", async () => {
     const client = createBggClient({
       fetch: vi.fn().mockResolvedValue(ok("<items></items>")),
+    });
+    await expect(client.fetchThings([1, 2], KEY)).resolves.toEqual({
+      games: [],
+      notFound: [1, 2],
+    });
+  });
+
+  it("treats a missing items root as a parse error", async () => {
+    const client = createBggClient({
+      fetch: vi.fn().mockResolvedValue(ok("<errors></errors>")),
     });
     await expect(client.fetchThings([1], KEY)).rejects.toMatchObject({
       kind: "parse",
