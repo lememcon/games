@@ -121,6 +121,7 @@ export const buildSelectedGames = ({
         name: player,
         rank: item.rank,
         score: item.score,
+        ...(item.discord_id ? { discordId: item.discord_id } : {}),
       };
     }
   }

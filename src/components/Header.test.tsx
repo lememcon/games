@@ -14,6 +14,8 @@ vi.mock("@/lib/auth", () => ({ signOut }));
 const member: ApprovedUser = {
   discordId: "1",
   name: "Sam",
+  displayName: null,
+  discordName: "Sam",
   image: null,
   role: "member",
 };
@@ -112,5 +114,14 @@ describe("Header", () => {
         /Couldn.t sign out/,
       );
     });
+  });
+
+  it("links the account menu to the profile page", async () => {
+    const { getByLabelText, findByRole } = renderHeader({ user: member });
+    await userEvent.click(getByLabelText("Account menu"));
+
+    expect(
+      await findByRole("menuitem", { name: "My profile", hidden: true }),
+    ).toHaveAttribute("href", "/profile");
   });
 });

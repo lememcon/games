@@ -1,17 +1,26 @@
-import { createContext, useContext } from "react";
+import { useContext } from "react";
+import { Link } from "wouter";
 
 import { PALETTE } from "@/lib/colors";
+import { PlayerColorContext } from "@/lib/playerColors";
 
-// The global player -> color map, built once from every player (see App) so a
-// person keeps the same color in the filter, the score breakdown, and the
-// detail page. Empty by default; names fall back to the first palette color.
-const PlayerColorContext = createContext<Record<string, string>>({});
-export const PlayerColorProvider = PlayerColorContext.Provider;
+interface PlayerNameProps {
+  name: string;
+  // When set (approved viewers, linked players only), the name links to the
+  // member's public profile.
+  discordId?: string;
+}
 
 // A player's name in their assigned identity color.
-const PlayerName = ({ name }: { name: string }) => {
+const PlayerName = ({ name, discordId }: PlayerNameProps) => {
   const color = useContext(PlayerColorContext)[name] ?? PALETTE[0];
-  return <span style={{ color, fontWeight: 700 }}>{name}</span>;
+  const style = { color, fontWeight: 700 };
+  if (!discordId) return <span style={style}>{name}</span>;
+  return (
+    <Link href={`/players/${discordId}`} style={style}>
+      {name}
+    </Link>
+  );
 };
 
 export default PlayerName;

@@ -26,7 +26,7 @@ const PlayerScoresTable = ({ players, max }: PlayerScoresTableProps) => (
         (player: PlayerGameScore) => (
           <Table.Tr key={player.player}>
             <Table.Td>
-              <PlayerName name={player.player} />
+              <PlayerName name={player.player} discordId={player.discord_id} />
             </Table.Td>
             <Table.Td style={{ verticalAlign: "middle" }}>
               <Score score={player.score} max={max} />

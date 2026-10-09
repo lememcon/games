@@ -6,6 +6,8 @@ import type {
   GamesMap,
   ImportSummary,
   LegacyScoreRow,
+  ProfileScore,
+  ProfileStats,
   ScoreRow,
 } from "./types";
 
@@ -23,7 +25,52 @@ export const toLegacyRow = (r: ScoreRow): LegacyScoreRow => ({
   player: r.playerName,
   score: r.score,
   rank: r.rank,
+  ...(r.discordId ? { discord_id: r.discordId } : {}),
 });
+
+const MOST_PLAYED = 5;
+const PODIUM = 3;
+
+/** Stats over all of a player's scores; null input means no player is linked. */
+export function toProfileStats(
+  scores: readonly ProfileScore[] | null,
+): ProfileStats | null {
+  if (scores === null) return null;
+  const games = scores.length;
+  const wins = scores.filter((s) => s.rank === 1).length;
+  const byGame = new Map<number, ProfileScore[]>();
+  for (const s of scores)
+    byGame.set(s.bggId, [...(byGame.get(s.bggId) ?? []), s]);
+  const mostPlayed = [...byGame.values()]
+    .map((plays) => {
+      const bestRank = Math.min(...plays.map((p) => p.rank));
+      return {
+        bggId: plays[0].bggId,
+        game: plays[0].game,
+        plays: plays.length,
+        bestRank,
+        bestScore: Math.max(
+          ...plays.filter((p) => p.rank === bestRank).map((p) => p.score),
+        ),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.plays - a.plays ||
+        a.bestRank - b.bestRank ||
+        a.game.localeCompare(b.game) ||
+        a.bggId - b.bggId,
+    )
+    .slice(0, MOST_PLAYED);
+  return {
+    games,
+    wins,
+    winRate: games ? wins / games : 0,
+    avgRank: games ? scores.reduce((sum, s) => sum + s.rank, 0) / games : 0,
+    podiums: scores.filter((s) => s.rank <= PODIUM).length,
+    mostPlayed,
+  };
+}
 
 /** The games.json shape. Null columns are omitted so gameBounds sees undefined. */
 export function toGamesMap(rows: readonly GameRow[]): GamesMap {

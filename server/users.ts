@@ -7,6 +7,7 @@ function toAdminUser(stored: StoredUser): AdminUser {
   return {
     discordId: stored.discordId,
     name: stored.name ?? "Unknown",
+    displayName: stored.displayName,
     image: stored.image,
     username: stored.username,
     ...effectiveUser(stored.discordId, stored),

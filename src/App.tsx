@@ -87,7 +87,7 @@ function Gate() {
       />
     );
   }
-  return <AuthedApp user={me.user} />;
+  return <AuthedApp user={me.user} onUserChanged={retry} />;
 }
 
 function App() {

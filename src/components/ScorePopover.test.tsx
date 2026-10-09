@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import ScorePopover from "@/components/ScorePopover";
 import { renderWithMantine } from "@/test/utils";
@@ -39,5 +39,27 @@ describe("ScorePopover", () => {
 
     expect(await screen.findByText("alice")).toBeInTheDocument();
     expect(screen.getByText("bob")).toBeInTheDocument();
+  });
+
+  it("links linked players without bubbling clicks to the parent", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    renderWithMantine(
+      <div onClick={onClick}>
+        <ScorePopover
+          score={40}
+          players={{ ...players, alice: { ...players.alice, discordId: "7" } }}
+          selectedMax={100}
+          individualMax={50}
+        />
+      </div>,
+    );
+
+    await user.click(screen.getByText("40"));
+    onClick.mockClear();
+    const link = await screen.findByRole("link", { name: "alice" });
+    expect(link).toHaveAttribute("href", "/players/7");
+    await user.click(screen.getByText("bob"));
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

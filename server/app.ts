@@ -7,6 +7,7 @@ import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { dataRoutes } from "./routes/data";
 import { importRoutes } from "./routes/import";
 import { linkRoutes } from "./routes/links";
+import { profileRoutes } from "./routes/profile";
 import type { AppDeps, AppEnv } from "./types";
 import { adminRoutes } from "./users";
 
@@ -46,16 +47,24 @@ export function createApp(deps: AppDeps) {
   api.get("/me", (c) => {
     const user = c.get("user");
     if (!user) return c.json({ status: "anonymous" });
-    const { discordId, name, image, role, status } = user;
+    const { discordId, name, displayName, discordName, image, role, status } =
+      user;
     return status === "approved"
-      ? c.json({ status, user: { discordId, name, image, role } })
-      : c.json({ status, user: { discordId, name, image } });
+      ? c.json({
+          status,
+          user: { discordId, name, displayName, discordName, image, role },
+        })
+      : c.json({
+          status,
+          user: { discordId, name: discordName, image },
+        });
   });
   api.use("/admin/*", requireAdmin);
   api.route("/admin", adminRoutes(deps.store));
   if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
   api.route("/admin", importRoutes(deps.data));
   api.route("/admin", linkRoutes(deps.links));
+  api.route("/", profileRoutes(deps.profiles));
   api.route("/", dataRoutes(deps.data));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);

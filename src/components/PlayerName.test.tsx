@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import PlayerName, { PlayerColorProvider } from "@/components/PlayerName";
+import PlayerName from "@/components/PlayerName";
 import { PALETTE } from "@/lib/colors";
+import { PlayerColorProvider } from "@/lib/playerColors";
 import { renderWithMantine } from "@/test/utils";
 
 // jsdom normalizes an inline hex color to rgb(), so compare against the rgb form.
@@ -23,5 +24,21 @@ describe("PlayerName", () => {
   it("falls back to the first palette color for an unmapped name", () => {
     const { getByText } = renderWithMantine(<PlayerName name="ghost" />);
     expect(getByText("ghost")).toHaveStyle({ color: rgb(PALETTE[0]) });
+  });
+
+  it("links to the public profile when a discord id is given", () => {
+    const { getByRole } = renderWithMantine(
+      <PlayerColorProvider value={{ alice: PALETTE[2] }}>
+        <PlayerName name="alice" discordId="42" />
+      </PlayerColorProvider>,
+    );
+    const link = getByRole("link", { name: "alice" });
+    expect(link).toHaveAttribute("href", "/players/42");
+    expect(link).toHaveStyle({ color: rgb(PALETTE[2]) });
+  });
+
+  it("is plain text without a discord id", () => {
+    const { queryByRole } = renderWithMantine(<PlayerName name="alice" />);
+    expect(queryByRole("link")).toBeNull();
   });
 });

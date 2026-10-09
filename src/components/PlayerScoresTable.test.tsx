@@ -31,4 +31,18 @@ describe("PlayerScoresTable", () => {
     expect(getByText("80")).toBeInTheDocument();
     expect(getByText("20")).toBeInTheDocument();
   });
+
+  it("links only the players that have a discord id", () => {
+    const { getByRole, queryByRole } = renderWithMantine(
+      <PlayerScoresTable
+        players={[{ ...players[0], discord_id: "7" }, players[1]]}
+        max={100}
+      />,
+    );
+    expect(getByRole("link", { name: "alice" })).toHaveAttribute(
+      "href",
+      "/players/7",
+    );
+    expect(queryByRole("link", { name: "bob" })).toBeNull();
+  });
 });

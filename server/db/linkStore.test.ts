@@ -119,9 +119,61 @@ describe("setLink", () => {
     expect((await playerRows())[0].discord_id).toBeNull();
   });
 
-  it("allows two players to link to one member", async () => {
+  it("refuses a second player for the same member", async () => {
     await store.setLink(await idOf("amy"), ALEX);
-    expect((await store.setLink(await idOf("bob"), ALEX)).ok).toBe(true);
+    expect(await store.setLink(await idOf("bob"), ALEX)).toEqual({
+      ok: false,
+      status: 409,
+      error: "already_linked",
+    });
+    expect((await playerRows())[1].discord_id).toBeNull();
+  });
+
+  it("refuses a player named like another member's display name", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'AMY' WHERE discord_id = $1`,
+      [JO],
+    );
+    expect(await store.setLink(await idOf("amy"), ALEX)).toEqual({
+      ok: false,
+      status: 409,
+      error: "name_taken",
+    });
+    expect((await playerRows())[0].discord_id).toBeNull();
+  });
+
+  it("allows a player named like the linked member's own display name", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'AMY' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect((await store.setLink(await idOf("amy"), ALEX)).ok).toBe(true);
+  });
+
+  it("refuses unlinking when the member's display name would then match the player", async () => {
+    const id = await idOf("amy");
+    await store.setLink(id, ALEX);
+    await client.query(
+      `UPDATE app_user SET display_name = 'Amy' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect(await store.setLink(id, null)).toEqual({
+      ok: false,
+      status: 409,
+      error: "name_taken",
+    });
+    expect((await playerRows())[0].discord_id).toBe(ALEX);
+  });
+
+  it("allows unlinking when the display name differs", async () => {
+    const id = await idOf("amy");
+    await store.setLink(id, ALEX);
+    await client.query(
+      `UPDATE app_user SET display_name = 'Alex' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect((await store.setLink(id, null)).ok).toBe(true);
+    expect((await playerRows())[0].discord_id).toBeNull();
   });
 
   it("refuses an unknown player or member", async () => {

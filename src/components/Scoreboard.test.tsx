@@ -54,6 +54,8 @@ vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
 const member: ApprovedUser = {
   discordId: "1",
   name: "Sam",
+  displayName: null,
+  discordName: "Sam",
   image: null,
   role: "member",
 };

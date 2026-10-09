@@ -43,6 +43,7 @@ describe("migrations", () => {
     expect(await store.getOrCreate(ALEX)).toEqual({
       role: "member",
       status: "pending",
+      displayName: null,
     });
     await client.close();
   });
@@ -111,11 +112,13 @@ describe("user store", () => {
       expect(await store.getOrCreate(SAM)).toEqual({
         role: "member",
         status: "pending",
+        displayName: null,
       });
       await setRow(SAM, "member", "approved");
       expect(await store.getOrCreate(SAM)).toEqual({
         role: "member",
         status: "approved",
+        displayName: null,
       });
     });
 
@@ -267,6 +270,7 @@ describe("user store", () => {
       expect(await store.getOrCreate(ALEX)).toEqual({
         role: "member",
         status: "pending",
+        displayName: null,
       });
     });
 

@@ -172,6 +172,30 @@ describe("buildSelectedGames", () => {
     });
   });
 
+  it("carries a linked player's discord id onto their entry", () => {
+    const [root] = buildSelectedGames({
+      byPlayer: {
+        alice: [
+          {
+            player: "alice",
+            game: "Root",
+            rank: 1,
+            score: 50,
+            bgg_id: 100,
+            discord_id: "7",
+          },
+        ],
+      },
+      players: [],
+      gameData,
+      images: {},
+      hidePlayed: false,
+      getPlayedCount: noPlayed,
+    });
+
+    expect(root.players.alice.discordId).toBe("7");
+  });
+
   it("skips a selected player with no scores", () => {
     const games = buildSelectedGames({
       byPlayer,

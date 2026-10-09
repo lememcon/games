@@ -9,7 +9,12 @@ export type Status = "pending" | "approved";
 export interface AppUser {
   /** Immutable Discord snowflake; the identity used for all role checks. */
   discordId: string;
+  /** Shown name: the display name if set, else the Discord name. */
   name: string;
+  /** The name the member chose, if any. */
+  displayName: string | null;
+  /** Name from the Discord profile. */
+  discordName: string;
   image: string | null;
   role: Role;
   status: Status;
@@ -18,6 +23,8 @@ export interface AppUser {
 export interface AdminUser {
   discordId: string;
   name: string;
+  /** Name the member chose, if any. */
+  displayName: string | null;
   image: string | null;
   /** Discord username; differs from the spoofable display name. */
   username: string | null;
@@ -47,6 +54,8 @@ export interface AppDeps {
   authHandler: (request: Request) => Promise<Response>;
   /** Persistence for the admin routes. */
   store: UserStore;
+  /** Display names and public profiles. */
+  profiles: ProfileStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
   /** Years, games and scores: public reads and the admin import. */
@@ -60,6 +69,11 @@ export type AppEnv = { Variables: { user: AppUser | null } };
 export interface UserRow {
   role: Role;
   status: Status;
+}
+
+/** A user row with the name the member chose, if any. */
+export interface UserRecord extends UserRow {
+  displayName: string | null;
 }
 
 /** Why a change was refused; `status` is the HTTP status to answer with. */
@@ -76,7 +90,7 @@ export interface UserStore {
   /** Discord ids linked to a Better Auth user (exactly one is expected). */
   discordIds(userId: string): Promise<string[]>;
   /** Returns the row, creating a pending member when none exists. */
-  getOrCreate(discordId: string): Promise<UserRow>;
+  getOrCreate(discordId: string): Promise<UserRecord>;
   /** Forces a built-in admin's row to admin/approved; writes only on mismatch. */
   repairProtected(discordId: string): Promise<void>;
   list(): Promise<StoredUser[]>;
@@ -91,7 +105,7 @@ export interface UserStore {
 }
 
 /** A stored app user joined with its Better Auth profile, before `effectiveUser`. */
-export interface StoredUser extends UserRow {
+export interface StoredUser extends UserRecord {
   discordId: string;
   name: string | null;
   image: string | null;
@@ -129,6 +143,8 @@ export interface LegacyScoreRow {
   player: string;
   score: number;
   rank: number;
+  /** Linked approved member; only present in responses to approved sessions. */
+  discord_id?: string;
 }
 
 /** A score joined with its game and player names, as read from the database. */
@@ -138,6 +154,7 @@ export interface ScoreRow {
   playerName: string;
   score: number;
   rank: number;
+  discordId?: string | null;
 }
 
 export interface GameRow {
@@ -174,7 +191,11 @@ export interface DataStore {
   /** Newest first. */
   listYears(): Promise<number[]>;
   /** Null when the year is unknown. */
-  getScores(year: number): Promise<LegacyScoreRow[] | null>;
+  getScores(
+    year: number,
+    /** Approved callers get display names and `discord_id`; others the data-file name. */
+    resolveNames?: boolean,
+  ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;
   /** One transaction; refuses with 409 when the year already exists. */
   importData(
@@ -209,9 +230,66 @@ export interface PlayerLinks {
 export interface LinkStore {
   /** Players unlinked first, then by lower(name); members by name. */
   list(): Promise<PlayerLinks>;
-  /** Null unlinks. Refuses with 404 `unknown_player` or `unknown_user`. */
+  /**
+   * Null unlinks. Refuses with 404 `unknown_player` or `unknown_user`, and with
+   * 409 `name_taken` (the player's name is another member's display name) or
+   * `already_linked` (the member is linked to another player).
+   */
   setLink(
     playerId: number,
     discordId: string | null,
   ): Promise<MutationResult<null>>;
+}
+
+/** One score of a member's linked player, for profile stats. */
+export interface ProfileScore {
+  bggId: number;
+  game: string;
+  score: number;
+  rank: number;
+}
+
+export interface MostPlayedGame {
+  bggId: number;
+  game: string;
+  plays: number;
+  /** Best (lowest) rank and the best score achieved at that rank. */
+  bestRank: number;
+  bestScore: number;
+}
+
+export interface ProfileStats {
+  games: number;
+  wins: number;
+  /** Fraction from 0 to 1. */
+  winRate: number;
+  avgRank: number;
+  /** Finishes in the top three. */
+  podiums: number;
+  mostPlayed: MostPlayedGame[];
+}
+
+/** A member's public profile; never includes role, status or Discord username. */
+export interface Profile {
+  discordId: string;
+  name: string;
+  image: string | null;
+  /** Data-file name of the linked player, if an admin linked one. */
+  linkedPlayer: string | null;
+  /** Null when no player is linked. */
+  stats: ProfileStats | null;
+}
+
+/** All SQL for display names and profiles lives behind this interface (server/db/profileStore.ts). */
+export interface ProfileStore {
+  /**
+   * Null clears. Refuses with 409 `name_taken` when another member or a player
+   * not linked to this member has the name (case-insensitive).
+   */
+  setDisplayName(
+    discordId: string,
+    displayName: string | null,
+  ): Promise<MutationResult<{ displayName: string | null }>>;
+  /** Null unless the id is an approved member. */
+  getProfile(discordId: string): Promise<Profile | null>;
 }

@@ -9,7 +9,6 @@ import Filters from "@/components/Filters";
 import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
-import { PlayerColorProvider } from "@/components/PlayerName";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
@@ -18,6 +17,7 @@ import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
 import { buildSelectedGames, computeMaxScores } from "@/lib/games";
 import images from "@/lib/images";
+import { PlayerColorProvider } from "@/lib/playerColors";
 import type { ApprovedUser } from "@/types";
 
 interface ScoreboardProps {

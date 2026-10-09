@@ -12,6 +12,7 @@ import type {
   Role,
   Status,
   StoredUser,
+  UserRecord,
   UserRow,
   UserStore,
 } from "../types";
@@ -27,12 +28,19 @@ const toRow = (r: { role: string; status: string }): UserRow => ({
   status: r.status as Status,
 });
 
+const toRecord = (r: {
+  role: string;
+  status: string;
+  displayName: string | null;
+}): UserRecord => ({ ...toRow(r), displayName: r.displayName });
+
 function selectUsers(db: StoreDb | Tx, discordId?: string) {
   const query = db
     .select({
       discordId: appUser.discordId,
       role: appUser.role,
       status: appUser.status,
+      displayName: appUser.displayName,
       createdAt: appUser.createdAt,
       name: user.name,
       image: user.image,
@@ -109,7 +117,7 @@ export function createUserStore(db: StoreDb): UserStore {
           .select()
           .from(appUser)
           .where(eq(appUser.discordId, discordId));
-        return row && toRow(row);
+        return row && toRecord(row);
       };
       const existing = await find();
       if (existing) return existing;

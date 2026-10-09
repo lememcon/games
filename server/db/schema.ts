@@ -102,9 +102,18 @@ export const appUser = pgTable(
     discordId: text("discord_id").primaryKey(),
     role: text("role").notNull().default("member"),
     status: text("status").notNull().default("pending"),
+    /** Name the member chose; replaces their Discord name in the app. */
+    displayName: text("display_name"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("app_user_display_name_lower_idx").on(
+      sql`lower(${table.displayName})`,
+    ),
+    check(
+      "app_user_display_name_check",
+      sql`${table.displayName} is null or char_length(btrim(${table.displayName})) between 1 and 32`,
+    ),
     check("app_user_role_check", sql`${table.role} in ('member', 'admin')`),
     check(
       "app_user_status_check",
@@ -164,7 +173,10 @@ export const player = pgTable(
   },
   (table) => [
     uniqueIndex("player_name_lower_idx").on(sql`lower(${table.name})`),
-    index("player_discord_id_idx").on(table.discordId),
+    // A member is at most one player; many players may be unlinked.
+    uniqueIndex("player_discord_id_idx")
+      .on(table.discordId)
+      .where(sql`${table.discordId} is not null`),
   ],
 );
 

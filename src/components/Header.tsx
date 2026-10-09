@@ -73,6 +73,9 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>{user.name}</Menu.Label>
+              <Menu.Item component={Link} href="/profile">
+                My profile
+              </Menu.Item>
               {user.role === "admin" && (
                 <Menu.Item component={Link} href="/admin">
                   Admin

@@ -4,7 +4,7 @@ import type { NormalizedImport } from "../import";
 import { chunk, newPlayers, planGames, summarize, toMetadata } from "../shape";
 import type { ImportContext, ImportSummary, MutationResult } from "../types";
 import { upsertMetadata } from "./bggRepo";
-import { game, player, score, year } from "./schema";
+import { appUser, game, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const CHUNK = 500;
@@ -18,6 +18,16 @@ export function pgCode(error: unknown): string | undefined {
 }
 
 /**
+ * Serializes every transaction that writes display or player names, so the
+ * cross-table name checks cannot interleave with a concurrent writer.
+ */
+export const lockDisplayNames = (tx: Pick<StoreDb, "execute">) =>
+  tx.execute(sql`select pg_advisory_xact_lock(hashtext('display_name_ns'))`);
+
+/** A new data-file player has the same name as a member's display name. */
+class NameClash extends Error {}
+
+/**
  * Writes an upload in one transaction. A year upload inserts the year first, so
  * a duplicate is a unique violation (409) with no select-then-insert race.
  * A refusal rolls everything back.
@@ -29,6 +39,7 @@ export async function importData(
 ): Promise<MutationResult<ImportSummary>> {
   try {
     return await db.transaction(async (tx) => {
+      await lockDisplayNames(tx);
       if (input.year !== null)
         await tx.insert(year).values({
           year: input.year,
@@ -47,16 +58,34 @@ export async function importData(
 
       const lowers = input.players.map((p) => p.toLowerCase());
       const lowerName = sql<string>`lower(${player.name})`;
+      // Lowercase in SQL on both sides so matching agrees with the indexes.
+      const lowered = (names: string[]) =>
+        sql.join(
+          names.map((n) => sql`lower(${n})`),
+          sql`, `,
+        );
+      const inLowered = (names: string[]) =>
+        sql`${lowerName} in (${lowered(names)})`;
       const existingPlayers = lowers.length
         ? await tx
             .select({ name: player.name })
             .from(player)
-            .where(inArray(lowerName, lowers))
+            .where(inLowered(input.players))
         : [];
       const fresh = newPlayers(
         existingPlayers.map((p) => p.name),
         input.players,
       );
+      // A new player named like a member's display name could impersonate them.
+      const clash = fresh.length
+        ? await tx
+            .select({ id: appUser.discordId })
+            .from(appUser)
+            .where(sql`lower(${appUser.displayName}) in (${lowered(fresh)})`)
+            .limit(1)
+        : [];
+      if (clash.length) throw new NameClash();
+
       // Players are only ever inserted, never updated: an upload must never
       // touch player.discord_id, or it would silently unlink members. Do not
       // turn this into an upsert whose `set` clause covers that column.
@@ -69,7 +98,7 @@ export async function importData(
         ? await tx
             .select({ id: player.id, name: player.name })
             .from(player)
-            .where(inArray(lowerName, lowers))
+            .where(inLowered(input.players))
         : [];
       const playerIds = new Map(
         playerRows.map((p) => [p.name.toLowerCase(), p.id]),
@@ -105,6 +134,8 @@ export async function importData(
       };
     });
   } catch (error) {
+    if (error instanceof NameClash)
+      return { ok: false, status: 409, error: "name_taken" };
     if (input.year !== null && pgCode(error) === UNIQUE_VIOLATION)
       return { ok: false, status: 409, error: "year_exists" };
     throw error;

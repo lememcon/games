@@ -12,8 +12,9 @@ import {
   toGamesMap,
   toLegacyRow,
   toMetadata,
+  toProfileStats,
 } from "./shape";
-import type { GameRow, ScoreRow } from "./types";
+import type { GameRow, ProfileScore, ScoreRow } from "./types";
 
 const root = path.resolve(import.meta.dirname, "..");
 const readJson = (file: string) =>
@@ -216,5 +217,95 @@ describe("round trip", () => {
     expect(Object.keys(map)).toHaveLength(191);
     // games with no scores are present, with only metadata.
     expect(map).toEqual(realGames);
+  });
+});
+
+describe("toLegacyRow discord_id", () => {
+  const base: ScoreRow = {
+    bggId: 1,
+    gameName: "Root",
+    playerName: "Kel",
+    score: 5,
+    rank: 1,
+  };
+
+  it("includes discord_id only when the row has one", () => {
+    expect(toLegacyRow({ ...base, discordId: "42" })).toEqual({
+      bgg_id: 1,
+      game: "Root",
+      player: "Kel",
+      score: 5,
+      rank: 1,
+      discord_id: "42",
+    });
+    expect(toLegacyRow({ ...base, discordId: null })).not.toHaveProperty(
+      "discord_id",
+    );
+    expect(toLegacyRow(base)).not.toHaveProperty("discord_id");
+  });
+});
+
+describe("toProfileStats", () => {
+  const s = (
+    bggId: number,
+    game: string,
+    rank: number,
+    score = 10,
+  ): ProfileScore => ({ bggId, game, rank, score });
+
+  it("is null when no player is linked", () => {
+    expect(toProfileStats(null)).toBeNull();
+  });
+
+  it("is all zeros for a player with no scores", () => {
+    expect(toProfileStats([])).toEqual({
+      games: 0,
+      wins: 0,
+      winRate: 0,
+      avgRank: 0,
+      podiums: 0,
+      mostPlayed: [],
+    });
+  });
+
+  it("computes tiles and most played games", () => {
+    const stats = toProfileStats([
+      s(1, "Wingspan", 1, 87),
+      s(1, "Wingspan", 3, 60),
+      s(1, "Wingspan", 1, 90),
+      s(2, "Azul", 2, 74),
+      s(2, "Azul", 4, 50),
+      s(3, "Root", 5),
+    ]);
+    expect(stats).toEqual({
+      games: 6,
+      wins: 2,
+      winRate: 2 / 6,
+      avgRank: 16 / 6,
+      podiums: 4,
+      mostPlayed: [
+        { bggId: 1, game: "Wingspan", plays: 3, bestRank: 1, bestScore: 90 },
+        { bggId: 2, game: "Azul", plays: 2, bestRank: 2, bestScore: 74 },
+        { bggId: 3, game: "Root", plays: 1, bestRank: 5, bestScore: 10 },
+      ],
+    });
+  });
+
+  it("breaks ties by best rank, then name, and keeps the top five", () => {
+    const stats = toProfileStats([
+      s(1, "Zulu", 2),
+      s(2, "Alpha", 2),
+      s(3, "Mike", 1),
+      s(4, "Bravo", 3),
+      s(5, "Echo", 3),
+      s(6, "Delta", 4),
+    ])!;
+    expect(stats.mostPlayed.map((g) => g.game)).toEqual([
+      "Mike",
+      "Alpha",
+      "Zulu",
+      "Bravo",
+      "Echo",
+    ]);
   });
 });

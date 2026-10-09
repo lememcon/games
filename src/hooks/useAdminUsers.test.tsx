@@ -7,6 +7,7 @@ import type { AdminUser } from "@/types";
 const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
   discordId,
   name: discordId,
+  displayName: null,
   image: null,
   username: discordId,
   role: "member",

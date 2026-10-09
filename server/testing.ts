@@ -11,6 +11,8 @@ import type {
   LinkStore,
   LinkableUser,
   PlayerLink,
+  Profile,
+  ProfileStore,
   SettingRow,
   StoredUser,
   UserRow,
@@ -30,6 +32,7 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     name: null,
     image: null,
     username: null,
+    displayName: null,
     createdAt: new Date(0),
     ...u,
   });
@@ -40,7 +43,7 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     getOrCreate: async (discordId) => {
       if (!users.has(discordId))
         users.set(discordId, { role: "member", status: "pending" });
-      return users.get(discordId)!;
+      return { displayName: null, ...users.get(discordId)! };
     },
     repairProtected: async (discordId) => {
       repaired.push(discordId);
@@ -117,10 +120,20 @@ export function fakeData(
   );
   const games: GamesMap = { ...initial.games };
   const imports: { input: NormalizedImport; context: ImportContext }[] = [];
+  const scoreCalls: { year: number; resolveNames: boolean }[] = [];
 
   const data: DataStore = {
     listYears: async () => [...years.keys()].sort((a, b) => b - a),
-    getScores: async (year) => years.get(year) ?? null,
+    getScores: async (year, resolveNames = false) => {
+      scoreCalls.push({ year, resolveNames });
+      const rows = years.get(year);
+      // Like the SQL store, only approved callers get `discord_id`.
+      return rows
+        ? rows.map(({ discord_id, ...rest }) =>
+            resolveNames && discord_id ? { ...rest, discord_id } : rest,
+          )
+        : null;
+    },
     getGames: async () => games,
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
@@ -149,17 +162,23 @@ export function fakeData(
       };
     },
   };
-  return { data, years, games, imports };
+  return { data, years, games, imports, scoreCalls };
 }
 
 /** In-memory LinkStore for tests; refuses unknown players and members like the SQL store. */
 export function fakeLinks(
-  initial: { players?: PlayerLink[]; users?: LinkableUser[] } = {},
+  initial: {
+    players?: PlayerLink[];
+    users?: LinkableUser[];
+    /** Display names by Discord id, enforced like the SQL store. */
+    names?: Record<string, string>;
+  } = {},
 ) {
   const players = new Map<number, PlayerLink>(
     (initial.players ?? []).map((p) => [p.id, p]),
   );
   const users = initial.users ?? [];
+  const names = initial.names ?? {};
   const calls: { playerId: number; discordId: string | null }[] = [];
   const links: LinkStore = {
     list: async () => ({ players: [...players.values()], users }),
@@ -169,9 +188,43 @@ export function fakeLinks(
       if (!found) return { ok: false, status: 404, error: "unknown_player" };
       if (discordId !== null && !users.some((u) => u.discordId === discordId))
         return { ok: false, status: 404, error: "unknown_user" };
+      const checked = discordId === null ? found.discordId : discordId;
+      const clash = Object.entries(names).some(
+        ([id, n]) =>
+          n.toLowerCase() === found.name.toLowerCase() &&
+          (discordId === null ? id === checked : id !== checked),
+      );
+      if (clash) return { ok: false, status: 409, error: "name_taken" };
       players.set(playerId, { ...found, discordId });
       return { ok: true, value: null };
     },
   };
   return { links, players, calls };
+}
+
+/** In-memory ProfileStore for tests; enforces unique names like the SQL store. */
+export function fakeProfiles(
+  initial: { profiles?: Profile[]; names?: Record<string, string> } = {},
+) {
+  const profiles = new Map<string, Profile>(
+    (initial.profiles ?? []).map((p) => [p.discordId, p]),
+  );
+  /** Display names in use by other members or players, by Discord id. */
+  const names = new Map<string, string>(Object.entries(initial.names ?? {}));
+  const calls: { discordId: string; displayName: string | null }[] = [];
+  const store: ProfileStore = {
+    setDisplayName: async (discordId, displayName) => {
+      calls.push({ discordId, displayName });
+      const taken = [...names].some(
+        ([id, n]) =>
+          id !== discordId && n.toLowerCase() === displayName?.toLowerCase(),
+      );
+      if (taken) return { ok: false, status: 409, error: "name_taken" };
+      if (displayName === null) names.delete(discordId);
+      else names.set(discordId, displayName);
+      return { ok: true, value: { displayName } };
+    },
+    getProfile: async (discordId) => profiles.get(discordId) ?? null,
+  };
+  return { profiles: store, calls, names };
 }

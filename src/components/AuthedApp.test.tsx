@@ -11,6 +11,14 @@ vi.mock("@/components/Scoreboard", () => ({
 vi.mock("@/components/AdminPage", () => ({
   default: () => <div>admin page</div>,
 }));
+vi.mock("@/components/ProfilePage", () => ({
+  default: () => <div>profile page</div>,
+}));
+vi.mock("@/components/PublicProfile", () => ({
+  default: ({ discordId }: { discordId: string }) => (
+    <div>public profile {discordId}</div>
+  ),
+}));
 vi.mock("@/components/admin/AdminImport", () => ({
   default: () => <div>admin import</div>,
 }));
@@ -18,6 +26,8 @@ vi.mock("@/components/admin/AdminImport", () => ({
 const member: ApprovedUser = {
   discordId: "1",
   name: "Sam",
+  displayName: null,
+  discordName: "Sam",
   image: null,
   role: "member",
 };
@@ -77,4 +87,21 @@ describe("AuthedApp", () => {
       expect(screen.getByText("scoreboard")).toBeInTheDocument();
     },
   );
+
+  it("renders the profile page outside the scoreboard for any member", () => {
+    at("/profile", member);
+    expect(screen.getByText("profile page")).toBeInTheDocument();
+    expect(screen.queryByText("scoreboard")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Back to scores" }),
+    ).toHaveAttribute("href", "/");
+  });
+
+  it("renders a public profile for the id in the URL", () => {
+    at("/players/123456789012345", member);
+    expect(
+      screen.getByText("public profile 123456789012345"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("scoreboard")).toBeNull();
+  });
 });

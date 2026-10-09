@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeStore } from "../testing";
+import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
 import type { AppUser, LinkableUser, PlayerLink } from "../types";
 
 const ADMIN: AppUser = {
   discordId: "998877665544332211",
   name: "Alex",
+  displayName: null,
+  discordName: "Alex",
   image: null,
   role: "admin",
   status: "approved",
@@ -32,10 +34,11 @@ const member = (discordId: string): LinkableUser => ({
   status: "approved",
 });
 
-function makeApp() {
+function makeApp(names: Record<string, string> = {}) {
   const fake = fakeLinks({
     players: [player(1), player(2), player(3)],
     users: [member("111"), member("222")],
+    names,
   });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
@@ -44,6 +47,7 @@ function makeApp() {
     store: fakeStore().store,
     data: fakeData().data,
     links: fake.links,
+    profiles: fakeProfiles().profiles,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };
@@ -114,6 +118,15 @@ describe("PATCH /api/admin/players/:id", () => {
     expect((await patch(app, 1, { discordId: null })).status).toBe(204);
     expect((await patch(app, 1, { discordId: null })).status).toBe(204);
     expect(players.get(1)!.discordId).toBeNull();
+  });
+
+  it("answers 409 name_taken when unlinking would match a display name", async () => {
+    const { app, players } = makeApp({ "111": "P1" });
+    await patch(app, 1, { discordId: "111" });
+    const res = await patch(app, 1, { discordId: null });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "name_taken" });
+    expect(players.get(1)!.discordId).toBe("111");
   });
 
   it("allows two players to link to one member", async () => {

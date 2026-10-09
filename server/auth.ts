@@ -105,7 +105,9 @@ export function createSessionResolver(auth: Auth, store: UserStore) {
     return {
       user: {
         discordId,
-        name: result.user.name,
+        name: row.displayName ?? result.user.name,
+        displayName: row.displayName,
+        discordName: result.user.name,
         image: result.user.image ?? null,
         ...effective,
       },
