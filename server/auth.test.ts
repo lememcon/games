@@ -24,6 +24,22 @@ describe("createAuth", () => {
   });
 });
 
+describe("discord mapProfileToUser", () => {
+  it("synthesizes an unverified placeholder email from the Discord id", async () => {
+    const mapProfile = createAuth(env, {} as Db).options.socialProviders.discord
+      .mapProfileToUser!;
+
+    const user = await mapProfile({ id: "123" } as Parameters<
+      typeof mapProfile
+    >[0]);
+
+    expect(user).toEqual({
+      email: "123@discord.invalid",
+      emailVerified: false,
+    });
+  });
+});
+
 describe("createSessionResolver", () => {
   const sessionFor = (userId: string | null) =>
     ({

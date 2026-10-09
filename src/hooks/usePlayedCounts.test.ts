@@ -38,6 +38,15 @@ describe("usePlayedCounts", () => {
     expect(result.current[3]).toEqual({});
   });
 
+  it("ignores a decrement for a game that was never counted", () => {
+    const { result } = renderHook(() => usePlayedCounts("2025"));
+
+    dec(result, "unknown");
+
+    expect(getCount(result)("unknown")).toBe(0);
+    expect(result.current[3]).toEqual({});
+  });
+
   it("persists counts under a year-scoped key", () => {
     const { result } = renderHook(() => usePlayedCounts("2025"));
 

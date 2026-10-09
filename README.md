@@ -11,7 +11,7 @@
 [![conventional commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=%23fff)](https://www.conventionalcommits.org)
 
 [![react](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=%23fff)](https://react.dev)
-[![vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=%23fff)](https://vite.dev)
+[![vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=%23fff)](https://vite.dev)
 [![pnpm](https://img.shields.io/badge/pnpm-managed-F69220?logo=pnpm&logoColor=%23fff)](https://pnpm.io)
 
 A single-page web app for browsing board game scores from LememCon. It pulls
@@ -39,11 +39,12 @@ toggle, and play counts) is stored in `localStorage`.
 
 ## Tech stack
 
-- **[React 19](https://react.dev/)** + **[Vite 6](https://vite.dev/)** (SWC plugin)
+- **[React 19](https://react.dev/)** + **[Vite 8](https://vite.dev/)** (SWC plugin)
 - **[Mantine 8](https://mantine.dev/)** for UI components and theming
 - **[wouter](https://github.com/molefrog/wouter)** for routing
 - **[ramda](https://ramdajs.com/)** for data transforms
 - **[lucide-react](https://lucide.dev/)** for icons
+- **[Hono](https://hono.dev/)**, **[Better Auth](https://www.better-auth.com/)** and **[Drizzle ORM](https://orm.drizzle.team/)** (PostgreSQL) for the server
 - **[Vitest](https://vitest.dev/)** + **[Testing Library](https://testing-library.com/)** for tests
 - **[pnpm](https://pnpm.io/)** as the package manager
 
@@ -68,7 +69,14 @@ pnpm dev
 | `pnpm test:coverage` | Run tests with a V8 coverage report (90% threshold) |
 | `pnpm lint`          | ESLint                                              |
 | `pnpm pretty`        | Check formatting with Prettier                      |
+| `pnpm typecheck`     | Type-check the app and node configs                 |
 | `pnpm fix`           | Auto-fix formatting then lint                       |
+| `pnpm check`         | Lint, format, typecheck, tests, build, server build |
+| `pnpm server:dev`    | Run the server in watch mode (see Backend)          |
+| `pnpm server:build`  | Bundle the server to `dist-server/`                 |
+| `pnpm server:start`  | Run the compiled server                             |
+| `pnpm db:generate`   | Generate a Drizzle migration from the schema        |
+| `pnpm db:migrate`    | Apply migrations (needs `pnpm server:build` first)  |
 | `pnpm update`        | Refresh game metadata and images (see below)        |
 
 ## How it works
@@ -84,7 +92,7 @@ Score data is **not** bundled — it's fetched at runtime:
   id to static metadata — player-count bounds and the cover image extension.
   Cover images live in `src/assets/games/<bgg_id>.<ext>` and are imported via
   Vite's `import.meta.glob`.
-- `src/lib/games.js` holds the pure logic — `buildSelectedGames` aggregates and
+- `src/lib/games.ts` holds the pure logic — `buildSelectedGames` aggregates and
   sorts the games list, and `computeMaxScores` derives the normalization maxima.
   It takes injected dependencies (images, metadata, play counts) so it can be
   unit-tested without a rendered tree.
@@ -93,13 +101,14 @@ Score data is **not** bundled — it's fetched at runtime:
 
 ```
 src/
-  App.jsx            Routes, theme, and top-level state wiring
-  main.jsx           React entry point
+  App.tsx            Routes, theme, and top-level state wiring
+  main.tsx           React entry point
   components/        UI components (table, rows, filters, detail views, ...)
   hooks/             useData, useLocalState, usePlayedCounts
-  lib/games.js       Pure games-list aggregation and score math
+  lib/games.ts       Pure games-list aggregation and score math
   assets/            games.json, cover images, styles, logo
   test/              Vitest setup and shared render helpers
+server/              Hono API + static server, Better Auth, Drizzle schema (see Backend)
 ```
 
 ### Refreshing game metadata (`pnpm update`)
@@ -151,18 +160,26 @@ docker run --env-file .env -p 8080:8080 lememcon-games
 
 ## Testing & quality
 
-Every source file has a colocated `*.test.{js,jsx}` suite. Coverage is enforced
-at 90% for statements, branches, functions, and lines (see `vite.config.js`).
+Every source file has a colocated `*.test.{ts,tsx}` suite. Vitest runs two
+projects: `web` (jsdom, `src/`) and `server` (node, `server/`). Coverage is
+enforced at 90% for statements, branches, functions, and lines across both (see
+`vite.config.ts`, which also lists the few excluded files such as the server
+entry points and DB wiring). Run one project with
+`pnpm vitest run --project web` or `--project server`.
+
+Server tests inject their dependencies (a fake session resolver, a fake `Db`, a
+temporary static directory), so they need neither PostgreSQL nor the network.
+There are no integration or end-to-end tests yet.
 
 [Lefthook](https://github.com/evilmartians/lefthook) runs pre-commit hooks —
-Prettier, ESLint, and the related Vitest tests — plus commit-message linting.
+Prettier, ESLint, typecheck, and the related Vitest tests — plus commit-message linting.
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 (enforced by commitlint).
 
 ## CI & deployment
 
-- **CI** (`.github/workflows/ci.yml`) runs lint, format check, tests with
-  coverage, and a build on every push to `main` and every pull request. Pull
+- **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck,
+  tests with coverage, and a build on every push to `main` and every pull request. Pull
   requests also get their commit messages linted.
 - **Deployment** is handled by Netlify, which builds and publishes the `main`
   branch to [games.lememcon.com](https://games.lememcon.com).

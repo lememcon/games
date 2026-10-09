@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import GameCard from "@/components/GameCard";
+import { PALETTE } from "@/lib/colors";
 import { renderWithMantine } from "@/test/utils";
 import type { SelectedGame } from "@/types";
 
@@ -65,6 +66,20 @@ describe("GameCard", () => {
 
     expect(await screen.findByText("alice")).toBeInTheDocument();
     expect(screen.getByText("bob")).toBeInTheDocument();
+  });
+
+  it("uses the palette for ranks past the medals", () => {
+    const { getByText } = renderCard({ rank: 4 });
+
+    expect(getByText("Rank 4")).toBeInTheDocument();
+    expect(getByText("4")).toHaveStyle({ background: PALETTE[3] });
+  });
+
+  it("wraps the chip color palette past its length", () => {
+    const rank = PALETTE.length + 1;
+    const { getByText } = renderCard({ rank });
+
+    expect(getByText(String(rank))).toHaveStyle({ background: PALETTE[0] });
   });
 
   it("forwards the play-count increment", async () => {

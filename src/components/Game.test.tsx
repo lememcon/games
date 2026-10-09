@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import Game from "@/components/Game";
 import { renderWithMantine } from "@/test/utils";
 import type { Data } from "@/types";
+
+// Mocked entries: "11" maps to the real src/assets/games/11.jpg; "50" has no image.
+vi.mock("@/assets/games.json", () => ({
+  default: {
+    11: { players: { min: 2, max: 7 }, image: "11", ext: ".jpg" },
+    50: { players: { min: 1, max: 4 } },
+  },
+}));
 
 const data: Data = {
   loading: false,
@@ -11,12 +19,13 @@ const data: Data = {
   by_player: {},
   max: 100,
   by_id: {
-    // "11" exists in games.json (players 2-7), exercising the bounds branch.
+    // "11" is in the mocked games.json (players 2-7), exercising the bounds and image branches.
     11: [
       { bgg_id: 11, player: "alice", game: "Belfort", rank: 1, score: 80 },
       { bgg_id: 11, player: "bob", game: "Belfort", rank: 2, score: 40 },
     ],
-    // An id absent from games.json leaves bounds/image null.
+    50: [{ bgg_id: 50, player: "alice", game: "Imageless", rank: 1, score: 5 }],
+    // An id absent from the mocked games.json leaves bounds/image null.
     999999: [
       {
         bgg_id: 999999,
@@ -52,6 +61,22 @@ describe("Game", () => {
   it("handles a game with no metadata", () => {
     const { getByRole } = renderWithMantine(<Game data={data} id="999999" />);
     expect(getByRole("heading", { name: "Unknown Game" })).toBeInTheDocument();
+  });
+
+  it("renders the cover image when the metadata has one", () => {
+    const { getByRole } = renderWithMantine(<Game data={data} id="11" />);
+    expect(getByRole("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("11.jpg"),
+    );
+  });
+
+  it("renders a game whose metadata has no image", () => {
+    const { getByRole, queryByRole } = renderWithMantine(
+      <Game data={data} id="50" />,
+    );
+    expect(getByRole("heading", { name: "Imageless" })).toBeInTheDocument();
+    expect(queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("renders nothing when the id has no scores", () => {

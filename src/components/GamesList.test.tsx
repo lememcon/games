@@ -57,6 +57,16 @@ describe("GamesList", () => {
     expect(onInc).toHaveBeenCalledWith("100");
   });
 
+  it("passes the game id to the decrement handler", async () => {
+    const user = userEvent.setup();
+    const onDec = vi.fn();
+    const { getAllByRole } = renderList({ onDec, getPlayedCount: () => 1 });
+
+    await user.click(getAllByRole("button", { name: "-" })[0]);
+
+    expect(onDec).toHaveBeenCalledWith("100");
+  });
+
   it("wires the play-count handlers on chase rows too", async () => {
     const user = userEvent.setup();
     const onInc = vi.fn();
