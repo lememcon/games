@@ -1,12 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
 import { PROTECTED_ADMIN_IDS } from "./roles";
-import { cacheControl } from "./static";
 import { fakeData, fakeLinks, fakeStore } from "./testing";
 import type { AdminUser, AppUser } from "./types";
 
@@ -34,20 +29,6 @@ const users: Record<string, AppUser> = {
   pending: { ...person(SAM, "Sam"), role: "member", status: "pending" },
 };
 
-let staticDir: string;
-
-beforeAll(() => {
-  staticDir = mkdtempSync(path.join(tmpdir(), "spa-"));
-  mkdirSync(path.join(staticDir, "assets"));
-  writeFileSync(path.join(staticDir, "index.html"), "<html>spa</html>");
-  writeFileSync(path.join(staticDir, "manifest.json"), "{}");
-  writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), "1");
-  writeFileSync(path.join(staticDir, "assets", "cover-abc123.png"), "1");
-  writeFileSync(path.join(staticDir, "assets", "cover-abc123.jpg"), "1");
-});
-
-afterAll(() => rmSync(staticDir, { recursive: true, force: true }));
-
 // Cookie header stands in for a real session: "as=admin" / "as=member" / "as=pending".
 function makeApp(webOrigin: string | undefined = WEB) {
   const authHandler = vi.fn(async () => new Response("auth"));
@@ -58,7 +39,6 @@ function makeApp(webOrigin: string | undefined = WEB) {
   const app = createApp({
     baseUrl: BASE,
     webOrigin,
-    staticDir,
     authHandler,
     store: fake.store,
     data: fakeData().data,
@@ -309,50 +289,9 @@ describe("cors", () => {
   });
 });
 
-describe("static files and SPA fallback", () => {
-  it("serves index.html at / with no-cache", async () => {
-    const res = await makeApp().app.request("/");
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("<html>spa</html>");
-    expect(res.headers.get("cache-control")).toBe("no-cache");
-  });
-
-  it("falls back to index.html for client routes", async () => {
-    const res = await makeApp().app.request("/game/123");
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("<html>spa</html>");
-    expect(res.headers.get("cache-control")).toBe("no-cache");
-  });
-
-  it("returns 404 for a missing file with an extension", async () => {
-    const res = await makeApp().app.request("/assets/gone-abc123.js");
+describe("SPA", () => {
+  it.each(["/", "/game/123"])("is not served: %s is 404", async (p) => {
+    const res = await makeApp().app.request(p);
     expect(res.status).toBe(404);
-  });
-
-  it("serves hashed assets as immutable", async () => {
-    const res = await makeApp().app.request("/assets/app-abc123.js");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe(
-      "public, max-age=31536000, immutable",
-    );
-  });
-
-  it.each(["png", "jpg"])("serves %s images for 7 days", async (ext) => {
-    const res = await makeApp().app.request(`/assets/cover-abc123.${ext}`);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe("public, max-age=604800");
-  });
-
-  it("revalidates other root files", async () => {
-    const res = await makeApp().app.request("/manifest.json");
-    expect(res.headers.get("cache-control")).toBe(
-      "public, max-age=0, must-revalidate",
-    );
-  });
-});
-
-describe("cacheControl", () => {
-  it("treats /index.html as no-cache", () => {
-    expect(cacheControl("/index.html")).toBe("no-cache");
   });
 });

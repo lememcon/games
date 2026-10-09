@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { serve } from "@hono/node-server";
 
 import { createApp } from "./app";
@@ -31,7 +29,6 @@ const links = createLinkStore(db);
 const app = createApp({
   baseUrl: env.BETTER_AUTH_URL,
   webOrigin: env.WEB_ORIGIN,
-  staticDir: path.resolve(import.meta.dirname, "../dist"),
   resolveSession: createSessionResolver(auth, store),
   authHandler: auth.handler,
   store,

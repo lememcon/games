@@ -147,7 +147,6 @@ base URL and `credentials: "include"` on its calls.
 | `server/auth.ts`                | `trustedOrigins` lacks the web origin; cookie domain `.lememcon.com` only if needed.                                                                                                            |
 | `server/env.ts`, `.env.example` | Add and validate `WEB_ORIGIN`.                                                                                                                                                                  |
 | `vite.config.ts`                | Add `server.proxy` for `/api` to :8080 so local dev is same-origin.                                                                                                                             |
-| Static serving, `Dockerfile`    | `server/static.ts`, the `pnpm build` SPA build and the `dist/` copy become unnecessary.                                                                                                         |
 | SPA                             | No `/api` calls exist yet; add API base URL and `credentials: "include"`.                                                                                                                       |
 
 ### Data migration / seed

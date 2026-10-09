@@ -7,7 +7,6 @@ import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { dataRoutes } from "./routes/data";
 import { importRoutes } from "./routes/import";
 import { linkRoutes } from "./routes/links";
-import { mountStatic } from "./static";
 import type { AppDeps, AppEnv } from "./types";
 import { adminRoutes } from "./users";
 
@@ -60,8 +59,6 @@ export function createApp(deps: AppDeps) {
   api.route("/", dataRoutes(deps.data));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);
-
-  mountStatic(app, deps.staticDir);
 
   return app;
 }

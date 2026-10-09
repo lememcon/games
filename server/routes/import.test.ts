@@ -23,7 +23,6 @@ function makeApp() {
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
     webOrigin: "https://games.lememcon.com",
-    staticDir: ".",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data: fake.data,

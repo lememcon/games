@@ -14,7 +14,7 @@ COPY pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && pnpm server:build
+RUN pnpm server:build
 
 FROM base AS prod-deps
 COPY pnpm-lock.yaml ./
@@ -25,7 +25,6 @@ FROM base AS runtime
 ENV NODE_ENV=production \
     PORT=8080
 COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
 COPY --from=build /app/drizzle ./drizzle
 USER node
