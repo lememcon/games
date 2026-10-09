@@ -48,7 +48,6 @@ export async function getScores(
   const rows = await db
     .select({
       id: score.id,
-      playerId: player.id,
       bggId: score.bggId,
       gameName: game.name,
       dataName: player.name,

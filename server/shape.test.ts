@@ -53,19 +53,18 @@ describe("createNameResolver", () => {
     discordId,
   });
   const parts = (
-    playerId: number,
     dataName: string,
     displayName: string | null,
     discordName: string | null,
     discordId: string | null = null,
-  ) => ({ playerId, dataName, displayName, discordName, discordId });
+  ) => ({ dataName, displayName, discordName, discordId });
 
   it("prefers the display name, even when it matches another name", () => {
     const resolve = createNameResolver(
       [pl(1, "amy", "1"), pl(2, "bob")],
       [member("1", "bob", "Amy")],
     );
-    expect(resolve(parts(1, "amy", "bob", "Amy", "1"))).toBe("bob");
+    expect(resolve(parts("amy", "bob", "Amy", "1"))).toBe("bob");
   });
 
   it("uses the Discord name when nothing clashes", () => {
@@ -73,7 +72,7 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1")],
       [member("1", null, "Ames")],
     );
-    expect(resolve(parts(1, "amy", null, "Ames", "1"))).toBe("Ames");
+    expect(resolve(parts("amy", null, "Ames", "1"))).toBe("Ames");
   });
 
   it("falls back to the data-file name on a clash with another player, any case", () => {
@@ -81,7 +80,7 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "bob")],
       [member("1", null, "BOB")],
     );
-    expect(resolve(parts(1, "amy", null, "BOB", "1"))).toBe("amy");
+    expect(resolve(parts("amy", null, "BOB", "1"))).toBe("amy");
   });
 
   it("falls back on a clash with a data name of a different member", () => {
@@ -89,7 +88,7 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "bob", "2")],
       [member("1", null, "Bob"), member("2", null, "Rob")],
     );
-    expect(resolve(parts(1, "amy", null, "Bob", "1"))).toBe("amy");
+    expect(resolve(parts("amy", null, "Bob", "1"))).toBe("amy");
   });
 
   it("does not count the member's own data-file names as a clash", () => {
@@ -97,7 +96,7 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "AMY2", "1")],
       [member("1", null, "amy2")],
     );
-    expect(resolve(parts(1, "amy", null, "amy2", "1"))).toBe("amy2");
+    expect(resolve(parts("amy", null, "amy2", "1"))).toBe("amy2");
   });
 
   it("shows one fixed data name for all of a member's names on a clash", () => {
@@ -105,8 +104,8 @@ describe("createNameResolver", () => {
       [pl(5, "kc", "1"), pl(3, "kelsin", "1"), pl(9, "pat", "2")],
       [member("1", null, "Pat"), member("2", null, "Rob")],
     );
-    expect(resolve(parts(5, "kc", null, "Pat", "1"))).toBe("kelsin");
-    expect(resolve(parts(3, "kelsin", null, "Pat", "1"))).toBe("kelsin");
+    expect(resolve(parts("kc", null, "Pat", "1"))).toBe("kelsin");
+    expect(resolve(parts("kelsin", null, "Pat", "1"))).toBe("kelsin");
   });
 
   it("counts a player linked to a pending member as unlinked", () => {
@@ -114,7 +113,7 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "bob", "9")],
       [member("1", null, "bob")],
     );
-    expect(resolve(parts(1, "amy", null, "bob", "1"))).toBe("amy");
+    expect(resolve(parts("amy", null, "bob", "1"))).toBe("amy");
   });
 
   it("sends members sharing a Discord name back to their data-file names", () => {
@@ -122,8 +121,8 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "bob", "2")],
       [member("1", null, "Pat"), member("2", null, "pat")],
     );
-    expect(resolve(parts(1, "amy", null, "Pat", "1"))).toBe("amy");
-    expect(resolve(parts(2, "bob", null, "pat", "2"))).toBe("bob");
+    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
+    expect(resolve(parts("bob", null, "pat", "2"))).toBe("bob");
   });
 
   it("clashes with another member's display name", () => {
@@ -131,12 +130,21 @@ describe("createNameResolver", () => {
       [pl(1, "amy", "1"), pl(2, "bob", "2")],
       [member("1", null, "Pat"), member("2", "PAT", "other")],
     );
-    expect(resolve(parts(1, "amy", null, "Pat", "1"))).toBe("amy");
+    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
+  });
+
+  it("shows one data name per member when there is no Discord name", () => {
+    const resolve = createNameResolver(
+      [pl(5, "kc", "1"), pl(3, "kelsin", "1")],
+      [member("1", null, null)],
+    );
+    expect(resolve(parts("kc", null, null, "1"))).toBe("kelsin");
+    expect(resolve(parts("kelsin", null, null, "1"))).toBe("kelsin");
   });
 
   it("keeps the data-file name when there is no Discord name", () => {
     const resolve = createNameResolver([pl(1, "amy")], []);
-    expect(resolve(parts(1, "amy", null, null))).toBe("amy");
+    expect(resolve(parts("amy", null, null))).toBe("amy");
   });
 });
 

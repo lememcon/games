@@ -120,15 +120,8 @@ export function createProfileStore(
                     linked.map((p) => p.id),
                   ),
                 )
-                .orderBy(score.id)
             ).map((r) => ({ ...r, owner: discordId })),
-          ).map(({ year, bggId, game, score, rank }) => ({
-            year,
-            bggId,
-            game,
-            score,
-            rank,
-          }))
+          )
         : null;
 
       return {

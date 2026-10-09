@@ -30,8 +30,6 @@ export const toLegacyRow = (r: ScoreRow): LegacyScoreRow => ({
 });
 
 export interface NameParts {
-  /** Id of the player row. */
-  playerId: number;
   /** Chosen name of the linked approved member. */
   displayName: string | null;
   /** Discord name of the linked approved member's login. */
@@ -82,13 +80,14 @@ export function createNameResolver(
   }
   return (r: NameParts & { discordId?: string | null }): string => {
     if (r.displayName) return r.displayName;
-    if (!r.discordName) return r.dataName;
     const id = r.discordId ?? null;
+    const fallback = (id !== null && first.get(id)?.name) || r.dataName;
+    if (!r.discordName) return fallback;
     const key = lower(r.discordName);
     const clashesData = [...(data.get(key) ?? [])].some((o) => o !== id);
     const clashesMember = [...(shown.get(key) ?? [])].some((m) => m !== id);
     if (!clashesData && !clashesMember) return r.discordName;
-    return (id !== null && first.get(id)?.name) || r.dataName;
+    return fallback;
   };
 }
 

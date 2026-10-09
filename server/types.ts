@@ -294,7 +294,7 @@ export interface Profile {
   discordId: string;
   name: string;
   image: string | null;
-  /** Data-file name of the linked player, if an admin linked one. */
+  /** Data-file names of the linked players, sorted; empty when none. */
   linkedPlayers: string[];
   /** Null when no player is linked. */
   stats: ProfileStats | null;
