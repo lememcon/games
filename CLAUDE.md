@@ -40,7 +40,7 @@ A separate `commitlint` job runs on pull requests only.
 - `src/assets/` — `games.json`, cover images (refreshed by `pnpm update`), styles.
 - `src/test/setup.ts` — Vitest setup; jsdom shims for Mantine (see below).
 - `server/` — Node server. `app.ts` (`createApp`, routes), `auth.ts` (Better Auth, session
-  resolver), `middleware.ts` (csrf, session, admin guard), `static.ts` (SPA + cache headers; no longer needed by the API host),
+  resolver), `middleware.ts` (csrf, session, admin guard),
   `env.ts` (env parsing), `types.ts`, `db/` (Drizzle client + schema), `index.ts` (boot),
   `migrate.ts` (separate migration command).
   - Game data: `import.ts` (pure upload validation, `parseImport`, year and games-only
@@ -67,7 +67,7 @@ A separate `commitlint` job runs on pull requests only.
   proxies `/api` to `:8080` in dev, so the SPA needs no CORS or cross-site cookie.
   `BETTER_AUTH_URL` and the Discord redirect therefore use the games.lememcon.com origin
   (`http://localhost:3000` locally). The server still supports direct cross-origin calls
-  (`WEB_ORIGIN`, CORS, CSRF origin check); do not mix the two. See README Backend.
+  (`WEB_ORIGIN`, CORS, CSRF origin check); do not mix the two. The API does not serve the SPA. See README Backend.
 - **Keep logic out of components.** Non-trivial computation belongs in `src/lib/games.ts`
   so it can be tested without rendering. Follow the existing pure-function pattern.
 - **Imports are auto-sorted** by `@ianvs/prettier-plugin-sort-imports` (order defined in
@@ -91,9 +91,7 @@ A separate `commitlint` job runs on pull requests only.
   and the test files themselves.
 - **Server test patterns**: dependencies are injected, never real. `createApp` takes a fake
   `resolveSession` and `authHandler`; `createSessionResolver` takes a fake `auth` and a fake
-  `Db` that stubs the one select chain; `app.test.ts` serves a per-suite temp directory, while
-  `static.test.ts` mounts `process.cwd()` to cover the `staticDir === cwd` (root `"."`)
-  branch; `createAuth` is given `{} as Db` and only exercises paths that never query. The
+  `Db` that stubs the one select chain; `createAuth` is given `{} as Db` and only exercises paths that never query. The
   `server-db` project (`server/db/**`) runs the real migrations and SQL on in-process
   PGlite. No test needs an external Postgres or the network; running the app locally
   (`pnpm dev` proxies `/api` to `pnpm server:dev`) needs the server, Postgres and Discord keys.

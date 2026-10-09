@@ -34,12 +34,10 @@ export interface ResolvedSession {
 }
 
 export interface AppDeps {
-  /** Public origin of the API, e.g. https://api.lememcon.com. */
+  /** Public origin of this API, e.g. https://api.lememcon.com. */
   baseUrl: string;
   /** Origin of the SPA allowed to call the API with credentials (CORS/CSRF). */
   webOrigin?: string;
-  /** Directory holding the built SPA (Vite's dist/). */
-  staticDir: string;
   /**
    * Resolves the signed-in user from the request headers (null if anonymous).
    * `headers` carries any refreshed session Set-Cookie to forward.

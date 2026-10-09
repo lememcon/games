@@ -23,7 +23,6 @@ function makeApp() {
   });
   return createApp({
     baseUrl: "https://api.lememcon.com",
-    staticDir: ".",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data,

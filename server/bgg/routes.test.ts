@@ -57,7 +57,6 @@ function setup(over: { fetchThings?: BggClient["fetchThings"] } = {}) {
   const app = createApp({
     baseUrl: BASE,
     webOrigin: WEB,
-    staticDir: ".",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data: fakeData().data,
@@ -139,7 +138,6 @@ describe("admin guard", () => {
   it("does not mount the routes without a bgg dependency", async () => {
     const app = createApp({
       baseUrl: BASE,
-      staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
       data: fakeData().data,
@@ -234,7 +232,6 @@ describe("POST /key/test", () => {
     });
     const app = createApp({
       baseUrl: BASE,
-      staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
       data: fakeData().data,
@@ -272,7 +269,6 @@ describe("status, download and job", () => {
     const { ScoresUnavailableError } = await import("./needed");
     const app = createApp({
       baseUrl: BASE,
-      staticDir: ".",
       authHandler: async () => new Response(""),
       store: fakeStore().store,
       data: fakeData().data,
