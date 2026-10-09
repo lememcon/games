@@ -34,8 +34,19 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
       style={{ background: "#ffffff", borderBottom: "1px solid #ece4d5" }}
     >
       <Group h="100%" px="md">
-        <img src={logo} height="40px" alt="LememCon logo" />
-        <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
+        <Link
+          href="/"
+          aria-label="LememCon home"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--mantine-spacing-xs)",
+            textDecoration: "none",
+          }}
+        >
+          <img src={logo} height="40px" alt="" />
+          <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
+        </Link>
         {years && (
           <Select
             id="year"

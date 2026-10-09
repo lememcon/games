@@ -55,6 +55,21 @@ describe("AuthedApp", () => {
   });
 
   it.each(["/admin", "/admin/import"])(
+    "links back to the scores from %s",
+    (path) => {
+      at(path, admin);
+      expect(
+        screen.getByRole("link", { name: "Back to scores" }),
+      ).toHaveAttribute("href", "/");
+    },
+  );
+
+  it("has no back-to-scores link on the scoreboard", () => {
+    at("/", admin);
+    expect(screen.queryByRole("link", { name: "Back to scores" })).toBeNull();
+  });
+
+  it.each(["/admin", "/admin/import"])(
     "redirects members away from %s",
     (path) => {
       at(path, member);

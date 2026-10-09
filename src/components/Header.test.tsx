@@ -52,6 +52,13 @@ describe("Header", () => {
     expect(onYearChange).toHaveBeenCalledWith("2026", expect.anything());
   });
 
+  it("links the logo and title home", () => {
+    const { getByRole } = renderHeader();
+    const link = getByRole("link", { name: "LememCon home" });
+    expect(link).toHaveAttribute("href", "/");
+    expect(link).toHaveTextContent("LememCon");
+  });
+
   it("has no account menu without a user", () => {
     const { queryByLabelText } = renderHeader();
     expect(queryByLabelText("Account menu")).toBeNull();
