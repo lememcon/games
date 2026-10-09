@@ -92,7 +92,7 @@ describe("PlayerLinksPanel", () => {
     const button = screen.getByRole("button", { name: "Link player1" });
     expect(button).toBeDisabled();
 
-    const input = screen.getByRole("textbox", { name: "Member for player1" });
+    const input = screen.getByRole("combobox", { name: "Member for player1" });
     await userEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
     expect(within(list).getByText("Bo (pending)")).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe("PlayerLinksPanel", () => {
 
   it("clears the selection after linking and unlinking", async () => {
     const view = renderWithMantine(<PlayerLinksPanel />);
-    const input = screen.getByRole("textbox", { name: "Member for player1" });
+    const input = screen.getByRole("combobox", { name: "Member for player1" });
     await userEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
     await userEvent.click(within(list).getByText("Amy"));
@@ -126,14 +126,14 @@ describe("PlayerLinksPanel", () => {
     rerender();
 
     expect(
-      screen.getByRole("textbox", { name: "Member for player1" }),
+      screen.getByRole("combobox", { name: "Member for player1" }),
     ).toHaveValue("");
     expect(screen.getByRole("button", { name: "Link player1" })).toBeDisabled();
   });
 
   it("disables Link when the chosen member is no longer listed", async () => {
     const view = renderWithMantine(<PlayerLinksPanel />);
-    const input = screen.getByRole("textbox", { name: "Member for player1" });
+    const input = screen.getByRole("combobox", { name: "Member for player1" });
     await userEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
     await userEvent.click(within(list).getByText("Bo (pending)"));
@@ -152,7 +152,7 @@ describe("PlayerLinksPanel", () => {
 
   it("filters members by search", async () => {
     renderWithMantine(<PlayerLinksPanel />);
-    const input = screen.getByRole("textbox", { name: "Member for player2" });
+    const input = screen.getByRole("combobox", { name: "Member for player2" });
     await userEvent.type(input, "Bo");
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
     expect(within(list).queryByText("Amy")).toBeNull();
@@ -162,11 +162,11 @@ describe("PlayerLinksPanel", () => {
   it("shows the linked member and unlinks", async () => {
     renderWithMantine(<PlayerLinksPanel />);
     expect(
-      screen.getByRole("textbox", { name: "Member for player3" }),
+      screen.getByRole("combobox", { name: "Member for player3" }),
     ).toHaveValue("Amy");
     // Linked member without a login row falls back to the Discord id.
     expect(
-      screen.getByRole("textbox", { name: "Member for player4" }),
+      screen.getByRole("combobox", { name: "Member for player4" }),
     ).toHaveValue("99");
     await userEvent.click(
       screen.getByRole("button", { name: "Unlink player3" }),

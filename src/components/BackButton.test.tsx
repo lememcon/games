@@ -25,6 +25,6 @@ describe("BackButton", () => {
     const { getByRole } = renderWithMantine(
       <BackButton style={{ marginTop: "2em" }} />,
     );
-    expect(getByRole("link")).toHaveStyle({ marginTop: "2em" });
+    expect(getByRole("link").style.marginTop).toBe("2em");
   });
 });

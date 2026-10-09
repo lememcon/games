@@ -55,7 +55,7 @@ describe("AuthedApp", () => {
     at("/admin", admin);
     expect(screen.getByText("admin page")).toBeInTheDocument();
     expect(screen.queryByText("scoreboard")).toBeNull();
-    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("renders the import page for admins", () => {

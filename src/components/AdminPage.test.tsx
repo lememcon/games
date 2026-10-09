@@ -52,7 +52,7 @@ const setHook = (over: Record<string, unknown> = {}) => {
 };
 
 const pickRole = async (label: string, option: string) => {
-  const input = screen.getByRole("textbox", { name: label });
+  const input = screen.getByRole("combobox", { name: label });
   await userEvent.click(input);
   const list = document.getElementById(input.getAttribute("aria-controls")!)!;
   await userEvent.click(within(list).getByText(option));
@@ -159,7 +159,7 @@ describe("AdminPage", () => {
       screen.getByRole("button", { name: "Remove Kelsin" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("textbox", { name: "Role for Kelsin" }),
+      screen.getByRole("combobox", { name: "Role for Kelsin" }),
     ).toBeDisabled();
 
     await userEvent.hover(

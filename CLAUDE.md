@@ -5,7 +5,7 @@ Project guidance for Claude Code. See `README.md` for the human-facing overview.
 ## What this is
 
 Single-page app that ranks and filters LememCon board-game scores. Built with React 19,
-Vite, and Mantine 8, routed with wouter, data munged with ramda. Written in TypeScript.
+Vite, and Mantine 9, routed with wouter, data munged with ramda. Written in TypeScript.
 Netlify serves the static SPA at games.lememcon.com (auto-builds `main`). The backend
 (`server/`, Hono + Better Auth + Drizzle/PostgreSQL) is deployed separately from the
 `Dockerfile` to the API subdomain, api.lememcon.com.
