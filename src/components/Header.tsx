@@ -44,7 +44,7 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
             textDecoration: "none",
           }}
         >
-          <img src={logo} width={35} height={40} alt="" />
+          <img src={logo} width={35} height={40} alt="" className="tray-logo" />
           <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
         </Link>
         {years && (
