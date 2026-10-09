@@ -35,6 +35,13 @@ const base: Profile = {
       { bggId: 266192, game: "Wingspan", plays: 9, bestRank: 1, bestScore: 87 },
       { bggId: 230802, game: "Azul", plays: 7, bestRank: 2, bestScore: 74 },
     ],
+    topByYear: [
+      {
+        year: 2025,
+        total: 1,
+        games: [{ bggId: 9, game: "Root", rank: 1, score: 87 }],
+      },
+    ],
   },
 };
 
@@ -83,10 +90,27 @@ describe("PublicProfile", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows top games by year when there are any", () => {
+    set({ status: "ready", profile: base });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.getByText("Top games by year")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "2025" })).toBeInTheDocument();
+  });
+
+  it("omits top games by year when empty", () => {
+    set({
+      status: "ready",
+      profile: { ...base, stats: { ...base.stats!, topByYear: [] } },
+    });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.queryByText("Top games by year")).toBeNull();
+  });
+
   it("says so when no scores are linked", () => {
     set({ status: "ready", profile: { ...base, stats: null } });
     renderWithMantine(<PublicProfile discordId="5" />);
     expect(screen.getByText(/No scores are linked/)).toBeInTheDocument();
     expect(screen.queryByText("Most played")).toBeNull();
+    expect(screen.queryByText("Top games by year")).toBeNull();
   });
 });

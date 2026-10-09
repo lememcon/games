@@ -245,6 +245,7 @@ export interface LinkStore {
 
 /** One score of a member's linked player, for profile stats. */
 export interface ProfileScore {
+  year: number;
   bggId: number;
   game: string;
   score: number;
@@ -260,6 +261,21 @@ export interface MostPlayedGame {
   bestScore: number;
 }
 
+/** One of a member's best finishes in a year. */
+export interface TopGame {
+  bggId: number;
+  game: string;
+  rank: number;
+  score: number;
+}
+
+export interface YearTopGames {
+  year: number;
+  /** All of the player's scores that year; `games` holds at most the best few. */
+  total: number;
+  games: TopGame[];
+}
+
 export interface ProfileStats {
   games: number;
   wins: number;
@@ -269,6 +285,8 @@ export interface ProfileStats {
   /** Finishes in the top three. */
   podiums: number;
   mostPlayed: MostPlayedGame[];
+  /** Best finishes per year, newest year first; years without scores are absent. */
+  topByYear: YearTopGames[];
 }
 
 /** A member's public profile; never includes role, status or Discord username. */

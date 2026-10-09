@@ -33,7 +33,23 @@ const profile: Profile = {
   name: "Pat",
   image: "pat.png",
   linkedPlayer: "pat",
-  stats: null,
+  stats: {
+    games: 1,
+    wins: 1,
+    winRate: 1,
+    avgRank: 1,
+    podiums: 1,
+    mostPlayed: [
+      { bggId: 7, game: "Root", plays: 1, bestRank: 1, bestScore: 90 },
+    ],
+    topByYear: [
+      {
+        year: 2026,
+        total: 1,
+        games: [{ bggId: 7, game: "Root", rank: 1, score: 90 }],
+      },
+    ],
+  },
 };
 
 function makeApp() {

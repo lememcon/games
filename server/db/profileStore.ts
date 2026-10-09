@@ -103,6 +103,7 @@ export function createProfileStore(
       const scores = linked
         ? await db
             .select({
+              year: score.year,
               bggId: score.bggId,
               game: sql<string>`coalesce(${game.name}, '')`,
               score: score.score,
