@@ -39,7 +39,7 @@ toggle, and play counts) is stored in `localStorage`.
 ## Tech stack
 
 - **[React 19](https://react.dev/)** + **[Vite 8](https://vite.dev/)** (SWC plugin)
-- **[Mantine 8](https://mantine.dev/)** for UI components and theming
+- **[Mantine 9](https://mantine.dev/)** for UI components and theming
 - **[wouter](https://github.com/molefrog/wouter)** for routing
 - **[ramda](https://ramdajs.com/)** for data transforms
 - **[lucide-react](https://lucide.dev/)** for icons
