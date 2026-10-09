@@ -78,6 +78,12 @@ describe("AdminPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a fallback when the Discord username is unknown", () => {
+    setHook({ users: [user("2", { username: null })] });
+    renderWithMantine(<AdminPage meId="3" />);
+    expect(screen.getByText("Discord username unknown")).toBeInTheDocument();
+  });
+
   it("shows an action error", () => {
     setHook({ actionError: "Built-in admins can't be changed." });
     renderWithMantine(<AdminPage meId="3" />);

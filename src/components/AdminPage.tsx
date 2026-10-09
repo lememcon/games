@@ -38,7 +38,9 @@ const Account = ({ user }: { user: AdminUser }) => (
         )}
       </Text>
       <Text size="xs" c="dimmed">
-        Discord username: {user.username}
+        {user.username
+          ? `Discord username: ${user.username}`
+          : "Discord username unknown"}
       </Text>
     </div>
   </Group>
@@ -48,7 +50,7 @@ const DiscordId = ({ id }: { id: string }) => <Code fw={700}>{id}</Code>;
 
 const AdminPage = ({ meId }: { meId: string }) => {
   const { users, loading, error, actionError, approve, setRole, remove } =
-    useAdminUsers();
+    useAdminUsers(undefined, meId);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   if (loading) return <Text mt="md">Loading members...</Text>;

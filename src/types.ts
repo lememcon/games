@@ -81,7 +81,7 @@ export interface AdminUser {
   discordId: string;
   name: string;
   image: string | null;
-  username: string;
+  username: string | null;
   role: Role;
   status: Status;
   // True for built-in admins, which the server refuses to change.

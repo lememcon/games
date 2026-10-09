@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import useAdminUsers from "@/hooks/useAdminUsers";
 import type { AdminUser } from "@/types";
@@ -18,13 +18,15 @@ const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
-const setup = async (...next: Response[]) => {
+const setup = async (...next: Response[]) => setupAs(undefined, ...next);
+
+const setupAs = async (meId: string | undefined, ...next: Response[]) => {
   const fetchImpl = vi.fn();
   fetchImpl.mockResolvedValueOnce(
     res([user("a"), user("b", { status: "approved" })]),
   );
   next.forEach((r) => fetchImpl.mockResolvedValueOnce(r));
-  const hook = renderHook(() => useAdminUsers(fetchImpl));
+  const hook = renderHook(() => useAdminUsers(fetchImpl, meId));
   await waitFor(() => expect(hook.result.current.loading).toBe(false));
   return { hook, fetchImpl };
 };
@@ -90,6 +92,8 @@ describe("useAdminUsers", () => {
   it.each([
     [409, "locked", /Built-in/],
     [400, "bad", /rejected: bad/],
+    [401, "x", /no longer have admin access/],
+    [403, "x", /no longer have admin access/],
     [500, "boom", /Something went wrong/],
   ])(
     "surfaces a %i failure and leaves the list unchanged",
@@ -113,5 +117,40 @@ describe("useAdminUsers", () => {
 
     await act(() => hook.result.current.remove("a"));
     expect(hook.result.current.actionError).toBeNull();
+  });
+
+  describe("changing your own access", () => {
+    const assign = vi.fn();
+    beforeEach(() => {
+      assign.mockClear();
+      vi.stubGlobal("location", { assign });
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("reloads after you demote yourself", async () => {
+      const { hook } = await setupAs(
+        "b",
+        res(user("b", { status: "approved", role: "member" })),
+      );
+      await act(() => hook.result.current.setRole("b", "member"));
+      expect(assign).toHaveBeenCalledWith("/");
+    });
+
+    it("reloads after you remove yourself", async () => {
+      const { hook } = await setupAs("a", new Response(null, { status: 204 }));
+      await act(() => hook.result.current.remove("a"));
+      expect(assign).toHaveBeenCalledWith("/");
+    });
+
+    it("does not reload for other users or failed changes", async () => {
+      const { hook } = await setupAs(
+        "a",
+        res(user("b", { role: "admin" })),
+        res({ error: "x" }, 500),
+      );
+      await act(() => hook.result.current.setRole("b", "admin"));
+      await act(() => hook.result.current.setRole("a", "member"));
+      expect(assign).not.toHaveBeenCalled();
+    });
   });
 });
