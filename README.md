@@ -138,8 +138,9 @@ sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `ad
 `GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`.
 
 The SPA and the API are different origins (same site). Not done yet: the CSRF check in
-`server/middleware.ts` only accepts `same-origin`/`none` or an `Origin` equal to
-`BETTER_AUTH_URL`, so a browser POST from `games.lememcon.com` to `api.lememcon.com`
+`server/middleware.ts` accepts `Sec-Fetch-Site` `same-origin`/`none` or, when that header
+is absent, an `Origin` equal to `BETTER_AUTH_URL`. Browsers always send `Sec-Fetch-Site`,
+so a browser POST from `games.lememcon.com` to `api.lememcon.com`
 (`Sec-Fetch-Site: same-site`) gets a 403. There is also no CORS yet (it needs `cors()`
 with the web origin, credentials and preflight on `/api/*`), `trustedOrigins` in
 `server/auth.ts` lacks the web origin, the SPA makes no `/api` calls yet (future ones

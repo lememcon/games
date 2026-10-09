@@ -53,7 +53,9 @@ A separate `commitlint` job runs on pull requests only.
 - **Colocated tests.** Every source file has a sibling `Name.test.tsx`/`Name.test.ts`.
   Adding or changing behavior means updating the sibling test — the 90% coverage gate
   (`vite.config.ts`) blocks CI otherwise.
-- **SPA and API are cross-origin siblings.** Do not assume same-origin cookies, CSRF or
+- **SPA and API are cross-origin siblings (current assumption: direct cross-origin
+  calls; a Netlify `/api/*` rewrite is a documented alternative in README Backend, topology
+  decision pending).** Do not assume same-origin cookies, CSRF or
   static serving. This includes local dev (Vite :3000 vs API :8080, same-site); the
   planned local option is a Vite `server.proxy` for `/api`. The CSRF/CORS/`WEB_ORIGIN`
   changes needed for this are not done yet (see README Backend).

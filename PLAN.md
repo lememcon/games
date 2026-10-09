@@ -36,7 +36,7 @@ auth via **Better Auth with Discord** (originally Netlify Identity).
 ## Cost research (history, superseded)
 
 _Written for Netlify DB + Functions, which are no longer the plan. Kept for reference; the
-backend host and database are now unspecified._
+backend host is now unspecified; the database is PostgreSQL._
 
 **For a VERY low-use site this is effectively $0/month, and at worst a couple of dollars.**
 
@@ -94,7 +94,8 @@ PostgreSQL
 ```
 
 - The SPA and `src/lib/games.ts` stay as they are. Netlify keeps building and serving the
-  static SPA from `main`; `netlify.toml` and `public/_redirects` are SPA-only and unchanged.
+  static SPA from `main`; for the primary topology `netlify.toml` and `public/_redirects` are
+  SPA-only and unchanged.
 - The backend is the Hono server already in `server/`, run from the `Dockerfile` on any
   container host behind TLS and served at `api.lememcon.com`. It is API-only; the SPA does
   not need to be served from it.
@@ -107,7 +108,9 @@ PostgreSQL
   domain is only needed if that proves insufficient.
 - Alternative: a Netlify rewrite of `/api/*` to the API host makes the browser see one
   origin and avoids the CSRF/CORS/cookie work. With it `BETTER_AUTH_URL` and the Discord
-  redirect URI stay `https://games.lememcon.com`. Do not mix the two topologies.
+  redirect URI stay `https://games.lememcon.com`. It needs a
+  `/api/*  https://api.lememcon.com/api/:splat  200` rule placed before the SPA fallback in
+  `public/_redirects`. Do not mix the two topologies.
 
 ### Data model
 
@@ -137,15 +140,15 @@ base URL and `credentials: "include"` on its calls.
 
 ### Follow-up code gaps (not done yet)
 
-| Area                            | Gap                                                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `server/middleware.ts` CSRF     | Accepts only `same-origin`/`none` or `Origin` equal to `BETTER_AUTH_URL`; games to api POSTs get a 403. |
-| CORS                            | None yet; needs `cors()` with the web origin, credentials and preflight on `/api/*`.                    |
-| `server/auth.ts`                | `trustedOrigins` lacks the web origin; cookie domain `.lememcon.com` only if needed.                    |
-| `server/env.ts`, `.env.example` | Add and validate `WEB_ORIGIN`.                                                                          |
-| `vite.config.ts`                | Add `server.proxy` for `/api` to :8080 so local dev is same-origin.                                     |
-| Static serving, `Dockerfile`    | `server/static.ts`, the `pnpm build` SPA build and the `dist/` copy become unnecessary.                 |
-| SPA                             | No `/api` calls exist yet; add API base URL and `credentials: "include"`.                               |
+| Area                            | Gap                                                                                                                                                                                             |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/middleware.ts` CSRF     | Accepts `Sec-Fetch-Site` `same-origin`/`none`, or (header absent) `Origin` equal to `BETTER_AUTH_URL`; browsers always send it, so POSTs from games.lememcon.com to api.lememcon.com get a 403. |
+| CORS                            | None yet; needs `cors()` with the web origin, credentials and preflight on `/api/*`.                                                                                                            |
+| `server/auth.ts`                | `trustedOrigins` lacks the web origin; cookie domain `.lememcon.com` only if needed.                                                                                                            |
+| `server/env.ts`, `.env.example` | Add and validate `WEB_ORIGIN`.                                                                                                                                                                  |
+| `vite.config.ts`                | Add `server.proxy` for `/api` to :8080 so local dev is same-origin.                                                                                                                             |
+| Static serving, `Dockerfile`    | `server/static.ts`, the `pnpm build` SPA build and the `dist/` copy become unnecessary.                                                                                                         |
+| SPA                             | No `/api` calls exist yet; add API base URL and `credentials: "include"`.                                                                                                                       |
 
 ### Data migration / seed
 
