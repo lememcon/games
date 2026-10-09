@@ -169,11 +169,11 @@ With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com
 
 ```sh
 pnpm server:dev                          # watch mode
-pnpm server:build && pnpm db:migrate     # compile, then apply migrations (separate from boot)
+pnpm server:build && pnpm db:migrate     # compile, then apply migrations (also runs automatically at container start)
 pnpm server:start                        # run the compiled server
 pnpm db:generate                         # new migration after editing server/db/schema.ts
 docker build -t lememcon-games .
-docker run --env-file .env lememcon-games node dist-server/migrate.js   # apply migrations before first start
+docker run --env-file .env lememcon-games node dist-server/migrate.js   # optional: migrations already run at container start
 docker run --env-file .env -p 8080:8080 lememcon-games
 ```
 
@@ -215,7 +215,7 @@ DELETE FROM year WHERE year = 2026;
 ```
 
 **Deploy order**: the app no longer carries its data, so deploy the backend and run the
-migration (`node dist-server/migrate.js`), then import `games.json` (games-only) and each
+migration (applied automatically when the container starts), then import `games.json` (games-only) and each
 year through the admin page, and only then deploy the SPA (merge after the import).
 Deploying the SPA first shows an empty app.
 
@@ -242,9 +242,12 @@ member clears their links but keeps the player and its scores.
 ### Deploying the backend
 
 Host-agnostic: build the `Dockerfile` and run the image on any container host behind
-TLS. Run `node dist-server/migrate.js` (with the production env) before starting any
-release that adds migrations; migrations are separate from boot. Point the `api` DNS
-record at the host and use `GET /healthz` as the health check.
+TLS. Migrations run automatically at container start (`node dist-server/migrate.js`, then
+the server); a failed migration fails the start. A Postgres advisory lock makes concurrent
+starts safe. `DATABASE_URL` must be in the Dokploy runtime env, and no Dokploy command
+override may be set (it would skip the migration step). Migrations must stay backward
+compatible with the still-running old release. Running the migration manually is optional.
+Point the `api` DNS record at the host and use `GET /healthz` as the health check.
 
 ## Testing & quality
 

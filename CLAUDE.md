@@ -42,7 +42,7 @@ A separate `commitlint` job runs on pull requests only.
 - `server/` — Node server. `app.ts` (`createApp`, routes), `auth.ts` (Better Auth, session
   resolver), `middleware.ts` (csrf, session, admin guard),
   `env.ts` (env parsing), `types.ts`, `db/` (Drizzle client + schema), `index.ts` (boot),
-  `migrate.ts` (separate migration command).
+  `migrate.ts` (runs before the server in the Docker `CMD`; also a standalone CLI).
   - Game data: `import.ts` (pure upload validation, `parseImport`, year and games-only
     shapes), `shape.ts` (pure shaping: legacy row shape, games map, chunking, rename
     detection, counts), `routes/data.ts` (public `GET /api/years`,
@@ -86,7 +86,7 @@ A separate `commitlint` job runs on pull requests only.
   statements, branches, functions and lines.
 - **Excluded from coverage** (`vite.config.ts`): `src/main.tsx` (entry point), `src/vite-env.d.ts`
   and `src/types.ts` (types only), `src/test/**` (test helpers), `server/index.ts` (boot and
-  signal handling, needs a real Postgres), `server/migrate.ts` (standalone CLI),
+  signal handling, needs a real Postgres), `server/migrate.ts` (runs before the server in the Docker CMD; standalone CLI),
   `server/db/**` (Drizzle client and schema, thin wiring), `server/types.ts` (types only),
   and the test files themselves.
 - **Server test patterns**: dependencies are injected, never real. `createApp` takes a fake

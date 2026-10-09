@@ -101,8 +101,8 @@ PostgreSQL
   not need to be served from it.
 - Auth is Better Auth with Discord login; roles are `anonymous`, `user` and `admin`
   (`ADMIN_DISCORD_IDS`). Sessions and data live in PostgreSQL via Drizzle (schema in
-  `server/db/schema.ts`, migrations in `drizzle/`, applied with `node dist-server/migrate.js`,
-  separate from boot).
+  `server/db/schema.ts`, migrations in `drizzle/`, applied automatically at container start by
+  `node dist-server/migrate.js`, which runs before the server).
 - The SPA and API are different origins on the same site. A host-only session cookie on
   `api.lememcon.com` with `credentials: "include"` should work; a `.lememcon.com` cookie
   domain is only needed if that proves insufficient.
@@ -196,8 +196,9 @@ Risk points:
 3. **Played-count write auth** - public (frictionless) vs. require login (prevents abuse of a
    durable global write). Product call; reads stay public either way.
 4. **Complete historical backfill** - seed every year's feed, not just the current one.
-5. **Migrations on deploy** - run `node dist-server/migrate.js` before starting any release
-   that adds them.
+5. **Migrations on deploy** - run automatically at container start (`migrate.js` before the
+   server, under a Postgres advisory lock). A failed migration fails the start, and the old
+   release keeps running, so migrations must stay backward compatible with it.
 
 ---
 
