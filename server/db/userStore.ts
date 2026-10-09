@@ -53,6 +53,19 @@ function selectUsers(db: StoreDb | Tx, discordId?: string) {
 const toStored = (r: Awaited<ReturnType<typeof selectUsers>>[number]) =>
   ({ ...r, ...toRow(r) }) satisfies StoredUser;
 
+/** The row-lock query: actor and target, locked in discord_id order. */
+export const lockQuery = (
+  db: StoreDb | Tx,
+  actorId: string,
+  targetId: string,
+) =>
+  db
+    .select()
+    .from(appUser)
+    .where(inArray(appUser.discordId, [actorId, targetId]))
+    .orderBy(appUser.discordId)
+    .for("update");
+
 /**
  * Runs `apply` in a transaction holding row locks on actor and target, taken
  * in discord_id order so concurrent mutations cannot deadlock. The actor is
@@ -69,12 +82,7 @@ async function mutate<T>(
   ) => Promise<MutationResult<T>>,
 ): Promise<MutationResult<T>> {
   return db.transaction(async (tx) => {
-    const locked = await tx
-      .select()
-      .from(appUser)
-      .where(inArray(appUser.discordId, [actorId, targetId]))
-      .orderBy(appUser.discordId)
-      .for("update");
+    const locked = await lockQuery(tx, actorId, targetId);
     const rowOf = (id: string) => {
       const found = locked.find((r) => r.discordId === id);
       return found ? toRow(found) : null;

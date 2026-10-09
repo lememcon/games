@@ -7,7 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PROTECTED_ADMIN_IDS } from "../roles";
 import * as schema from "./schema";
 import { addLogin, applyMigrations, createTestDb } from "./testDb";
-import { createUserStore } from "./userStore";
+import { createUserStore, lockQuery } from "./userStore";
 
 const [KELSIN, WAYMOST] = PROTECTED_ADMIN_IDS;
 const ALEX = "998877665544332211";
@@ -220,7 +220,9 @@ describe("user store", () => {
       ).toMatchObject({ status: 403 });
     });
 
-    it("serializes concurrent mutations and rejects a demoted actor", async () => {
+    // PGlite runs one transaction at a time, so this checks the actor is
+    // re-validated against current state, not that row locks work.
+    it("rejects an actor who was demoted by an earlier mutation", async () => {
       await setRow(ALEX, "admin", "approved");
       await setRow(JO, "admin", "approved");
       const results = await Promise.all([
@@ -231,6 +233,14 @@ describe("user store", () => {
       expect(results.find((r) => !r.ok)).toMatchObject({ status: 403 });
       const roles = [(await rowOf(ALEX)).role, (await rowOf(JO)).role].sort();
       expect(roles).toEqual(["admin", "member"]);
+    });
+  });
+
+  describe("lockQuery", () => {
+    it("locks actor and target rows FOR UPDATE in discord_id order", () => {
+      const { sql, params } = lockQuery(db, JO, ALEX).toSQL();
+      expect(sql).toMatch(/order by "app_user"\."discord_id" for update$/);
+      expect(params).toEqual([JO, ALEX]);
     });
   });
 
