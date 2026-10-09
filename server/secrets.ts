@@ -40,14 +40,15 @@ export function decryptSecret(
   const [version, iv, tag, ct, ...rest] = stored.split(":");
   if (version !== VERSION || !iv || !tag || ct === undefined || rest.length)
     return null;
+  const ivBuf = Buffer.from(iv, "base64");
+  const tagBuf = Buffer.from(tag, "base64");
+  if (ivBuf.length !== 12 || tagBuf.length !== 16) return null;
   try {
-    const decipher = createDecipheriv(
-      "aes-256-gcm",
-      deriveKey(secret),
-      Buffer.from(iv, "base64"),
-    );
+    const decipher = createDecipheriv("aes-256-gcm", deriveKey(secret), ivBuf, {
+      authTagLength: 16,
+    });
     decipher.setAAD(Buffer.from(aad));
-    decipher.setAuthTag(Buffer.from(tag, "base64"));
+    decipher.setAuthTag(tagBuf);
     return Buffer.concat([
       decipher.update(Buffer.from(ct, "base64")),
       decipher.final(),

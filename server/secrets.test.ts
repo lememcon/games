@@ -41,6 +41,8 @@ describe("encryptSecret / decryptSecret", () => {
       decryptSecret(`${v}:${iv}:${tag}:${ct}:extra`, SECRET, "a"),
     ).toBeNull();
     expect(decryptSecret(`v1:${iv}:short:${ct}`, SECRET, "a")).toBeNull();
+    const short = Buffer.from(tag, "base64").subarray(0, 4).toString("base64");
+    expect(decryptSecret(`${v}:${iv}:${short}:${ct}`, SECRET, "a")).toBeNull();
   });
 });
 
