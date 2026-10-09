@@ -34,8 +34,10 @@ A separate `commitlint` job runs on pull requests only.
 - `src/lib/games.ts` — pure score/ranking logic (`gameBounds`, `computeMaxScores`,
   `buildSelectedGames`). No React, no I/O; this is where game math lives and is unit-tested
   directly.
+- `src/lib/authError.ts` — pure helpers for the OAuth `?error=` redirect (`readAuthError`,
+  `describeAuthError`, `stripAuthError`); allowlisted codes, fixed copy, never echoes input.
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
-  state), `usePlayedCounts`.
+  state), `usePlayedCounts`, `useAuthError` (reads then strips `?error=` from the URL).
 - `src/components/` — presentational + container components (`.tsx`).
 - `src/assets/` — `games.json`, cover images (refreshed by `pnpm update`), styles.
 - `src/test/setup.ts` — Vitest setup; jsdom shims for Mantine (see below).

@@ -1,16 +1,28 @@
 import { useState } from "react";
 
-import { Button, Stack, Text, Title } from "@mantine/core";
+import { Alert, Button, Stack, Text, Title } from "@mantine/core";
 
 import { signInWithDiscord } from "@/lib/auth";
+import { describeAuthError } from "@/lib/authError";
 
-const SignIn = () => {
+interface SignInProps {
+  /** Code from a failed OAuth redirect (`?error=`), shown above the button. */
+  errorCode?: string | null;
+  onDismissError?: () => void;
+}
+
+const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const showAuthError = errorCode !== null && !dismissed && !failed;
+  const authError = showAuthError ? describeAuthError(errorCode) : null;
 
   const handleSignIn = async () => {
     setBusy(true);
     setFailed(false);
+    setDismissed(true);
     try {
       window.location.href = await signInWithDiscord();
     } catch {
@@ -25,6 +37,21 @@ const SignIn = () => {
       <Text c="dimmed" ta="center">
         Sign in with Discord to see the scores.
       </Text>
+      {authError && (
+        <Alert
+          color="red"
+          role="alert"
+          title={authError.title}
+          withCloseButton
+          closeButtonLabel="Dismiss"
+          onClose={() => {
+            setDismissed(true);
+            onDismissError?.();
+          }}
+        >
+          {authError.message}
+        </Alert>
+      )}
       <Button onClick={handleSignIn} loading={busy}>
         Sign in with Discord
       </Button>

@@ -11,6 +11,7 @@ import {
 import AuthedApp from "@/components/AuthedApp";
 import PendingApproval from "@/components/PendingApproval";
 import SignIn from "@/components/SignIn";
+import useAuthError from "@/hooks/useAuthError";
 import useMe from "@/hooks/useMe";
 
 import "@mantine/core/styles.css";
@@ -49,6 +50,8 @@ const theme = createTheme({
 
 function Gate() {
   const { me, error, loading, retry } = useMe();
+  // Read before the first paint so the URL is cleaned even for signed-in users.
+  const authError = useAuthError();
 
   if (error) {
     return (
@@ -70,7 +73,10 @@ function Gate() {
       </Stack>
     );
   }
-  if (me.status === "anonymous") return <SignIn />;
+  if (me.status === "anonymous")
+    return (
+      <SignIn errorCode={authError.code} onDismissError={authError.dismiss} />
+    );
   if (me.status === "pending") {
     return (
       <PendingApproval
