@@ -4,6 +4,7 @@ import { Redirect, Route, Switch } from "wouter";
 import { AppShell } from "@mantine/core";
 
 import AdminPage from "@/components/AdminPage";
+import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
 import Scoreboard from "@/components/Scoreboard";
 import AdminImport from "@/components/admin/AdminImport";
@@ -21,7 +22,10 @@ const AdminShell = ({
 }: AuthedAppProps & { children: ReactNode }) => (
   <AppShell header={{ height: 60 }} padding="md">
     <Header user={user} />
-    <AppShell.Main>{children}</AppShell.Main>
+    <AppShell.Main>
+      <BackButton label="Back to scores" />
+      {children}
+    </AppShell.Main>
   </AppShell>
 );
 

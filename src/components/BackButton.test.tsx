@@ -14,6 +14,13 @@ describe("BackButton", () => {
     expect(getByRole("link")).toHaveTextContent("Back to games");
   });
 
+  it("accepts a custom label", () => {
+    const { getByRole } = renderWithMantine(
+      <BackButton label="Back to scores" />,
+    );
+    expect(getByRole("link")).toHaveTextContent("Back to scores");
+  });
+
   it("applies a passed style to the link", () => {
     const { getByRole } = renderWithMantine(
       <BackButton style={{ marginTop: "2em" }} />,

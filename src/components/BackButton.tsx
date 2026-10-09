@@ -5,10 +5,16 @@ import { Link } from "wouter";
 // A tray-style pill that reads as a paper control on the light surface, matching
 // the podium's play steppers. Names its destination rather than leaning on a
 // bare icon.
-const BackButton = ({ style }: { style?: CSSProperties }) => (
+const BackButton = ({
+  style,
+  label = "Back to games",
+}: {
+  style?: CSSProperties;
+  label?: string;
+}) => (
   <Link href="/" className="tray-back" style={style}>
     <ArrowLeft size={16} aria-hidden />
-    Back to games
+    {label}
   </Link>
 );
 
