@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -109,3 +110,22 @@ export const appUser = pgTable(
     ),
   ],
 );
+
+/** Server-side settings. Secret values are stored encrypted (server/secrets.ts). */
+export const appSetting = pgTable("app_setting", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  /** Discord id of the admin who last changed it. */
+  updatedBy: text("updated_by"),
+});
+
+/** Board Game Geek metadata, keyed by BGG id. `image_url` may be the sentinel "custom". */
+export const gameMetadata = pgTable("game_metadata", {
+  bggId: integer("bgg_id").primaryKey(),
+  minPlayers: integer("min_players"),
+  maxPlayers: integer("max_players"),
+  imageUrl: text("image_url"),
+  ext: text("ext"),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+});
