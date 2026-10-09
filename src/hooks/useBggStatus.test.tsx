@@ -161,12 +161,15 @@ describe("useBggStatus", () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(res(status({ job: running() })))
-      .mockResolvedValueOnce(res(job({ state: "cancelled" })));
+      .mockResolvedValueOnce(res(job({ state: "cancelled" })))
+      .mockResolvedValueOnce(res(status({ job: job({ state: "cancelled" }) })));
     const { result } = renderHook(() => useBggStatus(fetchImpl));
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(() => result.current.cancel());
     expect(result.current.status?.job.state).toBe("cancelled");
-    expect(fetchImpl).toHaveBeenLastCalledWith(
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
       "/api/admin/bgg/job/cancel",
       expect.objectContaining({ method: "POST" }),
     );

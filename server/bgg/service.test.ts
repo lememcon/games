@@ -246,7 +246,7 @@ describe("status", () => {
     const res = await s.service.status();
     expect(res.ok && res.value).toMatchObject({
       keyConfigured: true,
-      totals: { needed: 3, loaded: 2, missing: 1, partial: 1 },
+      totals: { needed: 3, loaded: 1, missing: 2, partial: 1 },
       job: { state: "idle" },
     });
     expect(res.ok && res.value.games).toEqual([
@@ -292,7 +292,7 @@ describe("status", () => {
       error: "scores_unavailable",
       extra: {
         keyConfigured: false,
-        totals: { needed: 3, loaded: 3, missing: 0, partial: 2 },
+        totals: { needed: 3, loaded: 1, missing: 2, partial: 2 },
       },
     });
   });

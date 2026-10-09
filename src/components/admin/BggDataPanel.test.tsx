@@ -44,7 +44,7 @@ const idle: BggJob = {
 };
 const status = (over: Partial<BggStatus> = {}): BggStatus => ({
   keyConfigured: true,
-  totals: { needed: 3, loaded: 1, missing: 1, partial: 1 },
+  totals: { needed: 3, loaded: 1, missing: 2, partial: 1 },
   games: [
     game(1),
     game(2, { state: "missing" }),
@@ -105,15 +105,22 @@ describe("BggDataPanel", () => {
     expect(screen.getByText(/Couldn.t load game data/)).toBeInTheDocument();
     second.unmount();
 
-    set({ error: true });
+    set({ error: true, status: null });
     renderWithMantine(<BggDataPanel />);
     expect(screen.getByText(/Couldn.t load game data/)).toBeInTheDocument();
+  });
+
+  it("keeps the view with an inline alert when a refresh fails", () => {
+    set({ error: true });
+    renderWithMantine(<BggDataPanel />);
+    expect(screen.getByText(/Couldn.t refresh game data/)).toBeInTheDocument();
+    expect(screen.getByText("Game data")).toBeInTheDocument();
   });
 
   it("shows totals and counts missing plus partial games for download", () => {
     renderWithMantine(<BggDataPanel />);
     expect(
-      screen.getByText("Needed 3 · Loaded 1 · Missing 1 (1 partial)"),
+      screen.getByText("Needed 3 · Loaded 1 · Missing 2 (1 partial)"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Download missing (2)" }),

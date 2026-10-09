@@ -26,7 +26,7 @@ const BggDataPanel = () => {
 
   if (key.loading || data.loading)
     return <Text mt="md">Loading game data...</Text>;
-  if (key.error || data.error || !key.info || !data.status) {
+  if (key.error || !key.info || !data.status) {
     return (
       <Alert color="red" mt="md" title="Couldn't load game data">
         Refresh the page to try again.
@@ -72,6 +72,11 @@ const BggDataPanel = () => {
         <Alert color="red" title="Scores unavailable">
           The score data couldn&apos;t be loaded, so only games already stored
           are listed.
+        </Alert>
+      )}
+      {data.error && (
+        <Alert color="red" role="alert">
+          Couldn&apos;t refresh game data. Showing the last loaded view.
         </Alert>
       )}
       {data.actionError && (

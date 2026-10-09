@@ -80,10 +80,11 @@ const useBggStatus = (fetchImpl: typeof fetch = fetch) => {
     try {
       const job = await api.cancelJob();
       setStatus((s) => (s ? { ...s, job } : s));
+      await refresh();
     } catch (e) {
       setActionError(describeBggError(e));
     }
-  }, [api]);
+  }, [api, refresh]);
 
   return { status, loading, error, actionError, refresh, download, cancel };
 };

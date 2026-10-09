@@ -255,12 +255,11 @@ export function createBggService(deps: BggServiceDeps) {
 
   function totals(games: GameStatus[]): BggStatus["totals"] {
     const count = (s: GameState) => games.filter((g) => g.state === s).length;
-    const missing = count("missing");
     const partial = count("partial");
     return {
       needed: games.length,
-      loaded: games.length - missing,
-      missing,
+      loaded: count("loaded"),
+      missing: count("missing") + partial,
       partial,
     };
   }
