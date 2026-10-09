@@ -6,6 +6,7 @@ import { AppShell } from "@mantine/core";
 import AdminPage from "@/components/AdminPage";
 import Header from "@/components/Header";
 import Scoreboard from "@/components/Scoreboard";
+import AdminImport from "@/components/admin/AdminImport";
 import type { ApprovedUser } from "@/types";
 
 interface AuthedAppProps {
@@ -33,6 +34,15 @@ function AuthedApp({ user }: AuthedAppProps) {
         {isAdmin ? (
           <AdminShell user={user}>
             <AdminPage meId={user.discordId} />
+          </AdminShell>
+        ) : (
+          <Redirect to="/" />
+        )}
+      </Route>
+      <Route path="/admin/import">
+        {isAdmin ? (
+          <AdminShell user={user}>
+            <AdminImport />
           </AdminShell>
         ) : (
           <Redirect to="/" />

@@ -2,7 +2,7 @@
 
 export class ApiError extends Error {
   status: number;
-  // The parsed JSON error body, when there was one.
+  // The parsed JSON error body, when there was one (e.g. 422 validation lists).
   body: unknown;
 
   constructor(status: number, message: string, body: unknown = null) {

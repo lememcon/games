@@ -11,6 +11,9 @@ vi.mock("@/components/Scoreboard", () => ({
 vi.mock("@/components/AdminPage", () => ({
   default: () => <div>admin page</div>,
 }));
+vi.mock("@/components/admin/AdminImport", () => ({
+  default: () => <div>admin import</div>,
+}));
 
 const member: ApprovedUser = {
   discordId: "1",
@@ -45,9 +48,18 @@ describe("AuthedApp", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
-  it.each(["/admin"])("redirects members away from %s", (path) => {
-    at(path, member);
-    expect(window.location.pathname).toBe("/");
-    expect(screen.getByText("scoreboard")).toBeInTheDocument();
+  it("renders the import page for admins", () => {
+    at("/admin/import", admin);
+    expect(screen.getByText("admin import")).toBeInTheDocument();
+    expect(screen.queryByText("scoreboard")).toBeNull();
   });
+
+  it.each(["/admin", "/admin/import"])(
+    "redirects members away from %s",
+    (path) => {
+      at(path, member);
+      expect(window.location.pathname).toBe("/");
+      expect(screen.getByText("scoreboard")).toBeInTheDocument();
+    },
+  );
 });

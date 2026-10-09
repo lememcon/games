@@ -69,6 +69,14 @@ describe("AdminPage", () => {
     expect(screen.getByText(/Couldn.t load members/)).toBeInTheDocument();
   });
 
+  it("links to the import page", () => {
+    renderWithMantine(<AdminPage meId="3" />);
+    expect(screen.getByRole("link", { name: "Import scores" })).toHaveAttribute(
+      "href",
+      "/admin/import",
+    );
+  });
+
   it("splits pending and members, showing username and Discord ID", () => {
     renderWithMantine(<AdminPage meId="3" />);
 

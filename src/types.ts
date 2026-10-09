@@ -153,3 +153,18 @@ export interface BggStatus {
 
 export type BggDownloadRequest =
   { mode: "missing" } | { mode: "ids"; ids: number[] };
+
+// 201 body of POST /api/admin/import. `year` is null for a games-only upload.
+export interface ImportResult {
+  year: number | null;
+  scores: number;
+  games: { new: number; updated: number };
+  players: number;
+  warnings: string[];
+}
+
+// One entry of the 422 body of POST /api/admin/import.
+export interface ImportProblem {
+  path: string;
+  message: string;
+}
