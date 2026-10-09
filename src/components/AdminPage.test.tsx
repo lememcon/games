@@ -211,4 +211,20 @@ describe("AdminPage", () => {
     expect(screen.getByText("Newbie")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Newbie" })).toBeNull();
   });
+
+  it("names a member by display name in labels and the remove confirmation", async () => {
+    setHook({
+      users: [user("2", { name: "Amy", displayName: "Ames" })],
+    });
+    renderWithMantine(<AdminPage meId="3" />);
+
+    expect(
+      screen.getByRole("combobox", { name: "Role for Ames" }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Remove Ames" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/^Ames will lose access/),
+    ).toBeInTheDocument();
+  });
 });

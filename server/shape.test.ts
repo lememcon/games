@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { parseImport, type NormalizedGame } from "./import";
 import {
   chunk,
+  createNameResolver,
   newPlayers,
   planGames,
   summarize,
@@ -35,6 +36,68 @@ describe("chunk", () => {
     expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
     expect(chunk([], 3)).toEqual([]);
     expect(chunk([1, 2], 5)).toEqual([[1, 2]]);
+  });
+});
+
+describe("createNameResolver", () => {
+  const member = (
+    discordId: string,
+    displayName: string | null,
+    discordName: string | null,
+  ) => ({ discordId, displayName, discordName });
+  const parts = (
+    dataName: string,
+    displayName: string | null,
+    discordName: string | null,
+    discordId: string | null = null,
+  ) => ({ dataName, displayName, discordName, discordId });
+
+  it("prefers the display name, even when it matches another name", () => {
+    const resolve = createNameResolver(
+      ["amy", "bob"],
+      [member("1", "bob", "Amy")],
+    );
+    expect(resolve(parts("amy", "bob", "Amy", "1"))).toBe("bob");
+  });
+
+  it("uses the Discord name when nothing clashes", () => {
+    const resolve = createNameResolver(["amy"], [member("1", null, "Ames")]);
+    expect(resolve(parts("amy", null, "Ames", "1"))).toBe("Ames");
+  });
+
+  it("falls back to the data-file name on a clash with another player, any case", () => {
+    const resolve = createNameResolver(
+      ["amy", "bob"],
+      [member("1", null, "BOB")],
+    );
+    expect(resolve(parts("amy", null, "BOB", "1"))).toBe("amy");
+  });
+
+  it("does not count the player's own data-file name as a clash", () => {
+    const resolve = createNameResolver(["amy"], [member("1", null, "AMY")]);
+    expect(resolve(parts("amy", null, "AMY", "1"))).toBe("AMY");
+  });
+
+  it("sends members sharing a Discord name back to their data-file names", () => {
+    const resolve = createNameResolver(
+      ["amy", "bob"],
+      [member("1", null, "Pat"), member("2", null, "pat")],
+    );
+    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
+    expect(resolve(parts("bob", null, "pat", "2"))).toBe("bob");
+  });
+
+  it("clashes with another member's display name", () => {
+    const resolve = createNameResolver(
+      ["amy", "bob"],
+      [member("1", null, "Pat"), member("2", "PAT", "other")],
+    );
+    expect(resolve(parts("amy", null, "Pat", "1"))).toBe("amy");
+  });
+
+  it("keeps the data-file name when there is no Discord name", () => {
+    const resolve = createNameResolver(["amy"], []);
+    expect(resolve(parts("amy", null, null))).toBe("amy");
   });
 });
 

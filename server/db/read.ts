@@ -1,8 +1,17 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { toGamesMap, toLegacyRow } from "../shape";
+import { createNameResolver, toGamesMap, toLegacyRow } from "../shape";
 import type { GamesMap, LegacyScoreRow } from "../types";
-import { appUser, game, gameMetadata, player, score, year } from "./schema";
+import {
+  account,
+  appUser,
+  game,
+  gameMetadata,
+  player,
+  score,
+  user,
+  year,
+} from "./schema";
 import type { StoreDb } from "./userStore";
 
 /** Newest first. */
@@ -17,7 +26,9 @@ export async function listYears(db: StoreDb): Promise<number[]> {
 /**
  * Null when the year is unknown. Rows come back in insertion order. With
  * `resolveNames`, players linked to an approved member show that member's
- * display name (when set) and carry their `discord_id`.
+ * display name, else their Discord name (unless it clashes with another name;
+ * see `createNameResolver`), else the data-file name, and carry their
+ * `discord_id`.
  */
 export async function getScores(
   db: StoreDb,
@@ -26,13 +37,15 @@ export async function getScores(
 ): Promise<LegacyScoreRow[] | null> {
   const [found] = await db.select().from(year).where(eq(year.year, value));
   if (!found) return null;
+  const on = (condition: ReturnType<typeof eq>) =>
+    resolveNames ? condition : sql`false`;
   const rows = await db
     .select({
       bggId: score.bggId,
       gameName: game.name,
-      playerName: resolveNames
-        ? sql<string>`coalesce(${appUser.displayName}, ${player.name})`
-        : player.name,
+      dataName: player.name,
+      displayName: appUser.displayName,
+      discordName: user.name,
       discordId: resolveNames ? appUser.discordId : sql<null>`null`,
       score: score.score,
       rank: score.rank,
@@ -43,13 +56,46 @@ export async function getScores(
     .leftJoin(
       appUser,
       and(
-        resolveNames ? eq(appUser.discordId, player.discordId) : sql`false`,
+        on(eq(appUser.discordId, player.discordId)),
         eq(appUser.status, "approved"),
       ),
     )
+    .leftJoin(
+      account,
+      and(
+        on(eq(account.accountId, appUser.discordId)),
+        eq(account.providerId, "discord"),
+      ),
+    )
+    .leftJoin(user, on(eq(user.id, account.userId)))
     .where(eq(score.year, value))
     .orderBy(asc(score.id));
-  return rows.map(toLegacyRow);
+  if (!resolveNames)
+    return rows.map((r) => toLegacyRow({ ...r, playerName: r.dataName }));
+  const [players, members] = await Promise.all([
+    db.select({ name: player.name }).from(player),
+    db
+      .select({
+        discordId: appUser.discordId,
+        displayName: appUser.displayName,
+        discordName: user.name,
+      })
+      .from(appUser)
+      .leftJoin(
+        account,
+        and(
+          eq(account.accountId, appUser.discordId),
+          eq(account.providerId, "discord"),
+        ),
+      )
+      .leftJoin(user, eq(user.id, account.userId))
+      .where(eq(appUser.status, "approved")),
+  ]);
+  const resolve = createNameResolver(
+    players.map((p) => p.name),
+    members,
+  );
+  return rows.map((r) => toLegacyRow({ ...r, playerName: resolve(r) }));
 }
 
 /** Every game with metadata or a name, including those with no scores. */

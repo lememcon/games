@@ -28,6 +28,50 @@ export const toLegacyRow = (r: ScoreRow): LegacyScoreRow => ({
   ...(r.discordId ? { discord_id: r.discordId } : {}),
 });
 
+export interface NameParts {
+  /** Chosen name of the linked approved member. */
+  displayName: string | null;
+  /** Discord name of the linked approved member's login. */
+  discordName: string | null;
+  /** Name in the data file. */
+  dataName: string;
+}
+
+/**
+ * Builds the resolver for shown player names: the display name if set, else
+ * the Discord name unless it clashes (any case) with another player's
+ * data-file name or another approved member's shown name, else the data-file
+ * name. A Discord name equal to the player's own data-file name is no clash.
+ */
+export function createNameResolver(
+  playerNames: readonly string[],
+  members: readonly {
+    discordId: string;
+    displayName: string | null;
+    discordName: string | null;
+  }[],
+) {
+  const lower = (n: string) => n.toLowerCase();
+  const data = new Set(playerNames.map(lower));
+  const shown = new Map<string, Set<string>>();
+  for (const m of members) {
+    const name = m.displayName ?? m.discordName;
+    if (name === null) continue;
+    const key = lower(name);
+    shown.set(key, (shown.get(key) ?? new Set()).add(m.discordId));
+  }
+  return (r: NameParts & { discordId?: string | null }): string => {
+    if (r.displayName) return r.displayName;
+    if (!r.discordName) return r.dataName;
+    const key = lower(r.discordName);
+    const clashesData = data.has(key) && key !== lower(r.dataName);
+    const clashesMember = [...(shown.get(key) ?? [])].some(
+      (id) => id !== r.discordId,
+    );
+    return clashesData || clashesMember ? r.dataName : r.discordName;
+  };
+}
+
 const MOST_PLAYED = 5;
 const PODIUM = 3;
 
