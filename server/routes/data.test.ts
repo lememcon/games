@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeLinks, fakeProfiles, fakeStore } from "../testing";
+import {
+  fakeData,
+  fakeLinks,
+  fakePlayed,
+  fakeProfiles,
+  fakeStore,
+} from "../testing";
 import type { AppUser, LegacyScoreRow } from "../types";
 
 const rows: LegacyScoreRow[] = [
@@ -42,6 +48,7 @@ function makeApp(user: AppUser | null = null) {
     data,
     links: fakeLinks().links,
     profiles: fakeProfiles().profiles,
+    played: fakePlayed().played,
     resolveSession: async () => ({ user }),
   });
   return Object.assign(app, { scoreCalls });

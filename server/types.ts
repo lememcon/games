@@ -56,6 +56,8 @@ export interface AppDeps {
   store: UserStore;
   /** Display names and public profiles. */
   profiles: ProfileStore;
+  /** Each member's played counts. */
+  played: PlayedStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
   /** Years, games and scores: public reads and the admin import. */
@@ -292,4 +294,29 @@ export interface ProfileStore {
   ): Promise<MutationResult<{ displayName: string | null }>>;
   /** Null unless the id is an approved member. */
   getProfile(discordId: string): Promise<Profile | null>;
+}
+
+/** A member's play counts for one year, by bgg id; absent means zero. */
+export type PlayedCounts = Record<string, number>;
+
+/** All SQL for played counts lives behind this interface (server/db/playedStore.ts). */
+export interface PlayedStore {
+  /** Null when the year is unknown. */
+  get(discordId: string, year: number): Promise<PlayedCounts | null>;
+  /** Sets the count; 0 deletes the row. Refuses with 404 `unknown_year`. */
+  set(
+    discordId: string,
+    year: number,
+    bggId: number,
+    count: number,
+  ): Promise<MutationResult<null>>;
+  /**
+   * Adds only the games the member has no count for (the stored count wins) and
+   * returns all their counts for the year. Refuses with 404 `unknown_year`.
+   */
+  importCounts(
+    discordId: string,
+    year: number,
+    counts: Map<number, number>,
+  ): Promise<MutationResult<PlayedCounts>>;
 }

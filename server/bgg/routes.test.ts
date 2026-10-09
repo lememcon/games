@@ -5,6 +5,7 @@ import {
   fakeBggRepo,
   fakeData,
   fakeLinks,
+  fakePlayed,
   fakeProfiles,
   fakeStore,
 } from "../testing";
@@ -70,6 +71,7 @@ function setup(over: { fetchThings?: BggClient["fetchThings"] } = {}) {
     data: fakeData().data,
     links: fakeLinks().links,
     profiles: fakeProfiles().profiles,
+    played: fakePlayed().played,
     bgg,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
@@ -152,6 +154,7 @@ describe("admin guard", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
       resolveSession: async () => ({ user: users.admin }),
     });
     const res = await app.request("/api/admin/bgg/key");
@@ -247,6 +250,7 @@ describe("POST /key/test", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
       resolveSession: async () => ({ user: users.admin }),
       bgg: frozen,
     });
@@ -285,6 +289,7 @@ describe("status, download and job", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
       resolveSession: async () => ({ user: users.admin }),
       bgg: createBggService({
         repo: s.repo,
