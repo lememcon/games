@@ -1,37 +1,21 @@
-import { Route, Switch, useLocation } from "wouter";
-
 import {
-  AppShell,
   Button,
+  Loader,
   MantineProvider,
-  Skeleton,
   Stack,
   Text,
   Title,
   createTheme,
 } from "@mantine/core";
 
-import { keys } from "ramda";
-
-import game_data from "@/assets/games.json";
-import Filters from "@/components/Filters";
-import Game from "@/components/Game";
-import GamesList from "@/components/GamesList";
-import Header from "@/components/Header";
-import { PlayerColorProvider } from "@/components/PlayerName";
-import useData from "@/hooks/useData";
-import useLocalState from "@/hooks/useLocalState";
-import usePlayedCounts from "@/hooks/usePlayedCounts";
-import { buildPlayerColors } from "@/lib/colors";
-import { buildSelectedGames, computeMaxScores } from "@/lib/games";
+import AuthedApp from "@/components/AuthedApp";
+import PendingApproval from "@/components/PendingApproval";
+import SignIn from "@/components/SignIn";
+import useMe from "@/hooks/useMe";
 
 import "@mantine/core/styles.css";
 import "@/assets/styles.css";
 
-const images = import.meta.glob("@/assets/games/*", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
 // Component-tray identity: a rounded, friendly display face, an amber
 // victory-point accent, and a monospace face for the scores so digits line up
 // like a scorepad. The light paper surfaces live in src/assets/styles.css.
@@ -62,111 +46,47 @@ const theme = createTheme({
       "'Trebuchet MS', 'Segoe UI', system-ui, Helvetica, Arial, sans-serif",
   },
 });
-const startYear = 2025;
-const currentYear = new Date().getFullYear();
 
-// Generate list of all years
-const allYears: string[] = [];
-for (let i = startYear; i <= currentYear; i++) {
-  allYears.push(`${i}`);
+function Gate() {
+  const { me, error, loading, retry } = useMe();
+
+  if (error) {
+    return (
+      <Stack align="center" gap="xs" mt="xl" px="md">
+        <Title order={3}>Couldn&apos;t reach the server</Title>
+        <Text c="dimmed" ta="center">
+          Check your connection and try again.
+        </Text>
+        <Button onClick={retry} disabled={loading}>
+          Retry
+        </Button>
+      </Stack>
+    );
+  }
+  if (!me) {
+    return (
+      <Stack align="center" mt="xl">
+        <Loader />
+      </Stack>
+    );
+  }
+  if (me.status === "anonymous") return <SignIn />;
+  if (me.status === "pending") {
+    return (
+      <PendingApproval
+        name={me.user.name}
+        onCheckAgain={retry}
+        checking={loading}
+      />
+    );
+  }
+  return <AuthedApp user={me.user} />;
 }
 
 function App() {
-  const [year, setYear] = useLocalState("year", `${currentYear}`);
-  const data = useData(year);
-  const [players, setPlayers] = useLocalState<string[]>("players", []);
-  const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
-  const [getPlayedCount, incPlayedCount, decPlayedCount] =
-    usePlayedCounts(year);
-  const [_, setLocation] = useLocation();
-
-  const { individualMax, selectedMax } = computeMaxScores(data, players);
-  const playerColors = buildPlayerColors(keys(data.by_player));
-  const games = buildSelectedGames({
-    byPlayer: data.by_player,
-    players,
-    gameData: game_data,
-    images,
-    hidePlayed,
-    getPlayedCount,
-  });
-
-  const handleYear = (year: string | null) => {
-    if (year === null) return;
-    setPlayers([]);
-    setYear(year);
-    setLocation("/");
-  };
-
   return (
     <MantineProvider theme={theme}>
-      <PlayerColorProvider value={playerColors}>
-        <AppShell header={{ height: 60 }} padding="md">
-          <Header year={year} years={allYears} onYearChange={handleYear} />
-          <AppShell.Main>
-            {data.loading ? (
-              <Stack gap="sm" mt="md">
-                <Skeleton height={44} radius="md" />
-                <Skeleton height={44} radius="md" />
-                <Skeleton height={44} radius="md" />
-                <Skeleton height={44} radius="md" />
-              </Stack>
-            ) : data.error ? (
-              <Stack align="center" gap="xs" mt="xl">
-                <Title order={3}>Couldn&apos;t load the scores</Title>
-                <Text c="dimmed" ta="center">
-                  The {year} scores didn&apos;t load. Check your connection and
-                  refresh the page.
-                </Text>
-              </Stack>
-            ) : (
-              <Switch>
-                <Route path="/games/:id">
-                  {(params) => <Game data={data} id={params.id} />}
-                </Route>
-                <Route>
-                  <Filters
-                    players={players}
-                    playerOptions={keys(data.by_player)}
-                    onPlayersChange={setPlayers}
-                    hidePlayed={hidePlayed}
-                    onHidePlayedChange={setHidePlayed}
-                    shown={games.length}
-                    total={keys(data.by_game).length}
-                  />
-                  {games.length === 0 ? (
-                    <Stack align="center" gap="xs" mt="xl">
-                      <Title order={3}>No games to rank</Title>
-                      <Text c="dimmed" ta="center">
-                        {players.length > 0
-                          ? "None of the ranked games include everyone you picked."
-                          : hidePlayed
-                            ? "You've played every ranked game. Nice work."
-                            : "Scores haven't been posted for this year yet."}
-                      </Text>
-                      {players.length > 0 && (
-                        <Button variant="light" onClick={() => setPlayers([])}>
-                          Clear players
-                        </Button>
-                      )}
-                    </Stack>
-                  ) : (
-                    <GamesList
-                      games={games}
-                      selectedMax={selectedMax}
-                      individualMax={individualMax}
-                      gameData={game_data}
-                      getPlayedCount={getPlayedCount}
-                      onInc={incPlayedCount}
-                      onDec={decPlayedCount}
-                    />
-                  )}
-                </Route>
-              </Switch>
-            )}
-          </AppShell.Main>
-        </AppShell>
-      </PlayerColorProvider>
+      <Gate />
     </MantineProvider>
   );
 }
