@@ -36,9 +36,15 @@ A separate `commitlint` job runs on pull requests only.
   directly.
 - `src/lib/authError.ts` — pure helpers for the OAuth `?error=` redirect (`readAuthError`,
   `describeAuthError`, `stripAuthError`); allowlisted codes, fixed copy, never echoes input.
+- `src/lib/profile.ts` — pure display-name validation and profile stat formatters;
+  `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
+  react-refresh).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
-  state), `usePlayedCounts`, `useAuthError` (reads then strips `?error=` from the URL).
-- `src/components/` — presentational + container components (`.tsx`).
+  state), `usePlayedCounts`, `useAuthError` (reads then strips `?error=` from the URL),
+  `useProfile` (public profile), `useDisplayName` (PUT own display name).
+- `src/components/` — presentational + container components (`.tsx`). `ProfilePage`
+  (`/profile`) and `PublicProfile` (`/players/:discordId`) render in `AdminShell` outside
+  `Scoreboard`; `PlayerName` links to a profile when a score row has `discord_id`.
 - `src/assets/` — `games.json`, cover images (refreshed by `pnpm update`), styles.
 - `src/test/setup.ts` — Vitest setup; jsdom shims for Mantine (see below).
 - `server/` — Node server. `app.ts` (`createApp`, routes), `auth.ts` (Better Auth, session

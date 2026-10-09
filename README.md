@@ -138,7 +138,10 @@ sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `ad
 (a user whose Discord id is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`,
 `GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`. Game data:
 public `GET /api/years`, `GET /api/years/:year/scores` and `GET /api/games`, and the
-admin-only `POST /api/admin/import` (see Importing game data).
+admin-only `POST /api/admin/import` (see Importing game data). Display names (approved
+members only): `PUT /api/me/display-name` (`{displayName: string | null}`) and
+`GET /api/profiles/:discordId`; `/api/me` also returns `displayName` and `discordName`, and
+approved callers get `discord_id` on score rows of linked players.
 
 The browser only talks to `games.lememcon.com`: `public/_redirects` has a Netlify
 rewrite of `/api/*` to `https://api.lememcon.com/api/:splat` (before the SPA fallback), so
