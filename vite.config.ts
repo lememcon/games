@@ -67,6 +67,7 @@ export default defineConfig({
         "server/migrate.ts",
         "server/db/**",
         "server/types.ts",
+        "server/testing.ts",
         "**/*.test.{ts,tsx}",
       ],
       thresholds: {

@@ -14,7 +14,8 @@ const PENDING_MEMBER: UserRow = { role: "member", status: "pending" };
 /** The role and status that apply, ignoring a missing or tampered row for built-ins. */
 export function effectiveUser(discordId: string, row: UserRow | null): UserRow {
   if (isProtected(discordId)) return { role: "admin", status: "approved" };
-  return row ?? PENDING_MEMBER;
+  const { role, status } = row ?? PENDING_MEMBER;
+  return { role, status };
 }
 
 export interface Change {
