@@ -17,6 +17,13 @@ export function pgCode(error: unknown): string | undefined {
   return typeof code === "string" ? code : undefined;
 }
 
+/**
+ * Serializes every transaction that writes display or player names, so the
+ * cross-table name checks cannot interleave with a concurrent writer.
+ */
+export const lockDisplayNames = (tx: Pick<StoreDb, "execute">) =>
+  tx.execute(sql`select pg_advisory_xact_lock(hashtext('display_name_ns'))`);
+
 /** A new data-file player has the same name as a member's display name. */
 class NameClash extends Error {}
 
@@ -32,6 +39,7 @@ export async function importData(
 ): Promise<MutationResult<ImportSummary>> {
   try {
     return await db.transaction(async (tx) => {
+      await lockDisplayNames(tx);
       if (input.year !== null)
         await tx.insert(year).values({
           year: input.year,
@@ -50,23 +58,30 @@ export async function importData(
 
       const lowers = input.players.map((p) => p.toLowerCase());
       const lowerName = sql<string>`lower(${player.name})`;
+      // Lowercase in SQL on both sides so matching agrees with the indexes.
+      const lowered = (names: string[]) =>
+        sql.join(
+          names.map((n) => sql`lower(${n})`),
+          sql`, `,
+        );
+      const inLowered = (names: string[]) =>
+        sql`${lowerName} in (${lowered(names)})`;
       const existingPlayers = lowers.length
         ? await tx
             .select({ name: player.name })
             .from(player)
-            .where(inArray(lowerName, lowers))
+            .where(inLowered(input.players))
         : [];
       const fresh = newPlayers(
         existingPlayers.map((p) => p.name),
         input.players,
       );
       // A new player named like a member's display name could impersonate them.
-      const lowerFresh = fresh.map((n) => n.toLowerCase());
-      const clash = lowerFresh.length
+      const clash = fresh.length
         ? await tx
             .select({ id: appUser.discordId })
             .from(appUser)
-            .where(inArray(sql`lower(${appUser.displayName})`, lowerFresh))
+            .where(sql`lower(${appUser.displayName}) in (${lowered(fresh)})`)
             .limit(1)
         : [];
       if (clash.length) throw new NameClash();
@@ -83,7 +98,7 @@ export async function importData(
         ? await tx
             .select({ id: player.id, name: player.name })
             .from(player)
-            .where(inArray(lowerName, lowers))
+            .where(inLowered(input.players))
         : [];
       const playerIds = new Map(
         playerRows.map((p) => [p.name.toLowerCase(), p.id]),

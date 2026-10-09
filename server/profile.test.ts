@@ -45,17 +45,28 @@ describe("parseDisplayName", () => {
     ["a line separator", "Kel Z"],
     ["a paragraph separator", "Kel Z"],
     ["a soft hyphen", "Ke­l"],
+    ["a combining grapheme joiner", "Ke\u034Fl"],
+    ["a variation selector", "Kel\uFE0F"],
+    ["a Hangul filler", "Kel\u3164"],
+    ["a Braille blank", "\u2800"],
+    ["a leading combining mark", "\u0300Kel"],
+    ["no letter or digit", "!!!"],
+    ["a private-use character", "Kel\uE000"],
     ["33 characters", "a".repeat(33)],
   ])("rejects %s as invalid_name", (_label, value) => {
     expect(name(value)).toEqual({ ok: false, error: "invalid_name" });
   });
 
   it("counts code points, not UTF-16 units", () => {
-    expect(name("\u{1f600}".repeat(32))).toEqual(ok("\u{1f600}".repeat(32)));
-    expect(name("\u{1f600}".repeat(33))).toEqual({
+    expect(name("\u{20000}".repeat(32))).toEqual(ok("\u{20000}".repeat(32)));
+    expect(name("\u{20000}".repeat(33))).toEqual({
       ok: false,
       error: "invalid_name",
     });
+  });
+
+  it("rejects a name made only of emoji", () => {
+    expect(name("\u{1f600}")).toEqual({ ok: false, error: "invalid_name" });
   });
 
   it("measures the length after normalizing and trimming", () => {

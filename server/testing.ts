@@ -167,12 +167,18 @@ export function fakeData(
 
 /** In-memory LinkStore for tests; refuses unknown players and members like the SQL store. */
 export function fakeLinks(
-  initial: { players?: PlayerLink[]; users?: LinkableUser[] } = {},
+  initial: {
+    players?: PlayerLink[];
+    users?: LinkableUser[];
+    /** Display names by Discord id, enforced like the SQL store. */
+    names?: Record<string, string>;
+  } = {},
 ) {
   const players = new Map<number, PlayerLink>(
     (initial.players ?? []).map((p) => [p.id, p]),
   );
   const users = initial.users ?? [];
+  const names = initial.names ?? {};
   const calls: { playerId: number; discordId: string | null }[] = [];
   const links: LinkStore = {
     list: async () => ({ players: [...players.values()], users }),
@@ -182,6 +188,13 @@ export function fakeLinks(
       if (!found) return { ok: false, status: 404, error: "unknown_player" };
       if (discordId !== null && !users.some((u) => u.discordId === discordId))
         return { ok: false, status: 404, error: "unknown_user" };
+      const checked = discordId === null ? found.discordId : discordId;
+      const clash = Object.entries(names).some(
+        ([id, n]) =>
+          n.toLowerCase() === found.name.toLowerCase() &&
+          (discordId === null ? id === checked : id !== checked),
+      );
+      if (clash) return { ok: false, status: 409, error: "name_taken" };
       players.set(playerId, { ...found, discordId });
       return { ok: true, value: null };
     },

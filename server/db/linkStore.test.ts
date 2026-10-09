@@ -150,6 +150,32 @@ describe("setLink", () => {
     expect((await store.setLink(await idOf("amy"), ALEX)).ok).toBe(true);
   });
 
+  it("refuses unlinking when the member's display name would then match the player", async () => {
+    const id = await idOf("amy");
+    await store.setLink(id, ALEX);
+    await client.query(
+      `UPDATE app_user SET display_name = 'Amy' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect(await store.setLink(id, null)).toEqual({
+      ok: false,
+      status: 409,
+      error: "name_taken",
+    });
+    expect((await playerRows())[0].discord_id).toBe(ALEX);
+  });
+
+  it("allows unlinking when the display name differs", async () => {
+    const id = await idOf("amy");
+    await store.setLink(id, ALEX);
+    await client.query(
+      `UPDATE app_user SET display_name = 'Alex' WHERE discord_id = $1`,
+      [ALEX],
+    );
+    expect((await store.setLink(id, null)).ok).toBe(true);
+    expect((await playerRows())[0].discord_id).toBeNull();
+  });
+
   it("refuses an unknown player or member", async () => {
     expect(await store.setLink(9999, ALEX)).toEqual({
       ok: false,

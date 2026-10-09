@@ -1,8 +1,11 @@
 /** Pure validation for display names. */
 
 const MAX_LENGTH = 32;
-// Control, format (zero-width, bidi), line and paragraph separator characters.
-const FORBIDDEN = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+// Control, format (zero-width, bidi), surrogate, private-use, unassigned, line
+// and paragraph separators, and other invisible default-ignorable characters
+// (variation selectors, combining grapheme joiner, Hangul fillers, ...).
+const FORBIDDEN =
+  /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/u;
 
 export type ParsedName =
   | { ok: true; value: string | null }
@@ -31,6 +34,9 @@ export function parseDisplayName(body: unknown): ParsedName {
   const name = normalized.replace(/\p{Zs}+/gu, " ").trim();
   if (name === "") return { ok: true, value: null };
   if ([...name].length > MAX_LENGTH)
+    return { ok: false, error: "invalid_name" };
+  // Must be visibly a name: some letter or digit, and no leading combining mark.
+  if (!/[\p{L}\p{N}]/u.test(name) || /^\p{M}/u.test(name))
     return { ok: false, error: "invalid_name" };
   return { ok: true, value: name };
 }

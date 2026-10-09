@@ -309,6 +309,18 @@ describe("display names", () => {
     ).toEqual([]);
   });
 
+  it("matches display names to new players with SQL lower-casing", async () => {
+    await client.query(
+      `UPDATE app_user SET display_name = 'Éclair' WHERE discord_id = $1`,
+      [MEMBER],
+    );
+    const result = await store.importData(
+      upload(2095, [row({ player: "éCLAIR" })]),
+      context,
+    );
+    expect(result).toEqual({ ok: false, status: 409, error: "name_taken" });
+  });
+
   it("still accepts an upload reusing the linked player's own name", async () => {
     await client.query(
       `UPDATE app_user SET display_name = 'deedee' WHERE discord_id = $1`,

@@ -1,7 +1,7 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 
 import type { LinkStore, PlayerLinks } from "../types";
-import { pgCode } from "./import";
+import { lockDisplayNames, pgCode } from "./import";
 import { account, appUser, player, score, user } from "./schema";
 import type { StoreDb } from "./userStore";
 
@@ -61,22 +61,28 @@ export function createLinkStore(db: StoreDb): LinkStore {
     async setLink(playerId, discordId) {
       try {
         return await db.transaction(async (tx) => {
+          await lockDisplayNames(tx);
           const [found] = await tx
-            .select({ name: player.name })
+            .select({ name: player.name, discordId: player.discordId })
             .from(player)
             .where(eq(player.id, playerId));
           if (!found)
             return { ok: false as const, status: 404, error: "unknown_player" };
 
-          if (discordId !== null) {
-            // The shown name must not impersonate another member.
+          // The shown name must not impersonate another member. Linking
+          // exempts the new member; unlinking checks the member being
+          // unlinked, whose display name would now match an unlinked player.
+          const unlinking = discordId === null;
+          if (!unlinking || found.discordId !== null) {
             const [clash] = await tx
               .select({ id: appUser.discordId })
               .from(appUser)
               .where(
                 and(
                   sql`lower(${appUser.displayName}) = lower(${found.name})`,
-                  ne(appUser.discordId, discordId),
+                  unlinking
+                    ? eq(appUser.discordId, found.discordId!)
+                    : ne(appUser.discordId, discordId),
                 ),
               )
               .limit(1);

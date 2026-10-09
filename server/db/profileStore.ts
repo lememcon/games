@@ -2,7 +2,7 @@ import { and, eq, ne, or, sql } from "drizzle-orm";
 
 import { toProfileStats } from "../shape";
 import type { ProfileStore } from "../types";
-import { pgCode } from "./import";
+import { lockDisplayNames, pgCode } from "./import";
 import { account, appUser, game, player, score, user } from "./schema";
 import type { StoreDb } from "./userStore";
 
@@ -22,6 +22,7 @@ export function createProfileStore(
     async setDisplayName(discordId, displayName) {
       try {
         return await db.transaction(async (tx) => {
+          await lockDisplayNames(tx);
           const [current] = await tx
             .select({ displayName: appUser.displayName })
             .from(appUser)
