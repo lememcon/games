@@ -119,6 +119,36 @@ score feed:
 It reads a `BGG_API_KEY` from the environment for the authenticated feed/API
 requests. Commit the regenerated `games.json` and new images.
 
+## Backend
+
+A Hono server in `server/` serves `/api/*` and the built SPA (`dist/`) from one
+origin. Login is Discord OAuth via Better Auth; sessions live in PostgreSQL
+(Drizzle ORM). Roles are `anonymous`, `user` and `admin` (a user whose Discord id
+is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`, `GET /api/me`,
+`GET /api/admin/ping`, and Better Auth under `/api/auth/*`.
+
+Environment variables (see `.env.example`; a local `.env` is loaded automatically):
+
+| Variable                | Purpose                                                  |
+| ----------------------- | -------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string                             |
+| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                     |
+| `BETTER_AUTH_URL`       | Public origin, e.g. `https://games.lememcon.com`         |
+| `DISCORD_CLIENT_ID`     | Discord application client id                            |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret                        |
+| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role |
+| `PORT`                  | Listen port (default `8080`)                             |
+
+```sh
+pnpm server:dev                          # watch mode (run `pnpm build` once for the SPA)
+pnpm server:build && pnpm db:migrate     # compile, then apply migrations (separate from boot)
+pnpm server:start                        # run the compiled server
+pnpm db:generate                         # new migration after editing server/db/schema.ts
+docker build -t lememcon-games .
+docker run --env-file .env lememcon-games node dist-server/migrate.js   # apply migrations before first start
+docker run --env-file .env -p 8080:8080 lememcon-games
+```
+
 ## Testing & quality
 
 Every source file has a colocated `*.test.{js,jsx}` suite. Coverage is enforced

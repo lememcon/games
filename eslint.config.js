@@ -5,7 +5,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".claude", "coverage"] },
+  { ignores: ["dist", "dist-server", ".claude", "coverage"] },
   {
     files: ["**/*.{js,ts,tsx}"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -32,5 +32,9 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
     },
+  },
+  {
+    files: ["server/**/*.ts", "*.config.ts"],
+    languageOptions: { globals: globals.node },
   },
 );
