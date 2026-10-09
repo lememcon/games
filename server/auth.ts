@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "./db";
 import * as schema from "./db/schema";
 import type { Env } from "./env";
-import type { AppUser } from "./types";
+import type { ResolvedSession } from "./types";
 
 export function createAuth(env: Env, db: Db) {
   return betterAuth({
@@ -43,9 +43,10 @@ export function createSessionResolver(
   db: Db,
   adminDiscordIds: string[],
 ) {
-  return async (headers: Headers): Promise<AppUser | null> => {
-    const result = await auth.api.getSession({ headers });
-    if (!result) return null;
+  return async (headers: Headers): Promise<ResolvedSession> => {
+    const { headers: responseHeaders, response: result } =
+      await auth.api.getSession({ headers, returnHeaders: true });
+    if (!result) return { user: null, headers: responseHeaders };
 
     const [discord] = await db
       .select({ accountId: schema.account.accountId })
@@ -59,12 +60,15 @@ export function createSessionResolver(
       .limit(1);
 
     return {
-      id: result.user.id,
-      name: result.user.name,
-      role:
-        discord && adminDiscordIds.includes(discord.accountId)
-          ? "admin"
-          : "user",
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        role:
+          discord && adminDiscordIds.includes(discord.accountId)
+            ? "admin"
+            : "user",
+      },
+      headers: responseHeaders,
     };
   };
 }

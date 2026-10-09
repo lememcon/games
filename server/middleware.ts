@@ -23,8 +23,13 @@ export const csrf = (baseUrl: string) => {
 
 export const session = (resolveSession: AppDeps["resolveSession"]) =>
   createMiddleware<AppEnv>(async (c, next) => {
-    c.set("user", await resolveSession(c.req.raw.headers));
-    return next();
+    const { user, headers } = await resolveSession(c.req.raw.headers);
+    c.set("user", user);
+    await next();
+    // Forward refreshed session cookies (Better Auth extends sessions on use).
+    for (const cookie of headers?.getSetCookie() ?? []) {
+      c.res.headers.append("set-cookie", cookie);
+    }
   });
 
 export const requireUser = createMiddleware<AppEnv>(async (c, next) => {

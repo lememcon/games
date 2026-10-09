@@ -28,8 +28,10 @@ describe("createSessionResolver", () => {
   const sessionFor = (userId: string | null) =>
     ({
       api: {
-        getSession: async () =>
-          userId ? { user: { id: userId, name: "Pat" } } : null,
+        getSession: async () => ({
+          headers: new Headers({ "set-cookie": "session=refreshed" }),
+          response: userId ? { user: { id: userId, name: "Pat" } } : null,
+        }),
       },
     }) as unknown as Parameters<typeof createSessionResolver>[0];
 
@@ -49,23 +51,23 @@ describe("createSessionResolver", () => {
     )(new Headers());
 
   it("returns null without a session", async () => {
-    expect(await resolve(null, [])).toBeNull();
+    expect((await resolve(null, [])).user).toBeNull();
   });
 
   it("grants admin to an allowlisted Discord id", async () => {
-    expect(await resolve("u1", [{ accountId: "111111111111111111" }])).toEqual({
-      id: "u1",
-      name: "Pat",
-      role: "admin",
-    });
+    const { user, headers } = await resolve("u1", [
+      { accountId: "111111111111111111" },
+    ]);
+    expect(user).toEqual({ id: "u1", name: "Pat", role: "admin" });
+    expect(headers?.getSetCookie()).toEqual(["session=refreshed"]);
   });
 
   it("gives other Discord ids the user role", async () => {
     const result = await resolve("u1", [{ accountId: "222222222222222222" }]);
-    expect(result?.role).toBe("user");
+    expect(result.user?.role).toBe("user");
   });
 
   it("gives the user role when no Discord account is linked", async () => {
-    expect((await resolve("u1", []))?.role).toBe("user");
+    expect((await resolve("u1", [])).user?.role).toBe("user");
   });
 });

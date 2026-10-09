@@ -35,9 +35,14 @@ function makeApp() {
     authHandler,
     resolveSession: async (headers) => {
       const cookie = headers.get("cookie");
-      if (cookie === "as=admin") return admin;
-      if (cookie === "as=user") return user;
-      return null;
+      if (cookie === "as=admin") return { user: admin };
+      if (cookie === "as=user") return { user };
+      if (cookie === "refresh")
+        return {
+          user: null,
+          headers: new Headers({ "set-cookie": "session=new; Path=/" }),
+        };
+      return { user: null };
     },
   });
   return { app, authHandler };
@@ -50,6 +55,15 @@ describe("GET /healthz", () => {
     const res = await makeApp().app.request("/healthz");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "ok" });
+  });
+});
+
+describe("session middleware", () => {
+  it("forwards a refreshed session cookie onto the response", async () => {
+    const res = await makeApp().app.request("/api/me", {
+      headers: { cookie: "refresh" },
+    });
+    expect(res.headers.getSetCookie()).toEqual(["session=new; Path=/"]);
   });
 });
 

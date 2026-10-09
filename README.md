@@ -144,7 +144,9 @@ pnpm server:dev                          # watch mode (run `pnpm build` once for
 pnpm server:build && pnpm db:migrate     # compile, then apply migrations (separate from boot)
 pnpm server:start                        # run the compiled server
 pnpm db:generate                         # new migration after editing server/db/schema.ts
-docker build -t lememcon-games . && docker run --env-file .env -p 8080:8080 lememcon-games
+docker build -t lememcon-games .
+docker run --env-file .env lememcon-games node dist-server/migrate.js   # apply migrations before first start
+docker run --env-file .env -p 8080:8080 lememcon-games
 ```
 
 ## Testing & quality

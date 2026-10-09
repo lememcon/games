@@ -46,4 +46,13 @@ describe("loadEnv", () => {
     expect(run).toThrow(/numeric Discord ids/);
     expect(run).toThrow(/PORT must be/);
   });
+
+  it("rejects the .env.example secret placeholder", () => {
+    expect(() =>
+      loadEnv({
+        ...valid,
+        BETTER_AUTH_SECRET: "replace-with-output-of-openssl-rand-base64-32",
+      }),
+    ).toThrow(/placeholder/);
+  });
 });

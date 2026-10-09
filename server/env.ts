@@ -17,6 +17,8 @@ const required = [
   "DISCORD_CLIENT_SECRET",
 ] as const;
 
+const SECRET_PLACEHOLDER = "replace-with-output-of-openssl-rand-base64-32";
+
 /** Validate raw environment variables, reporting every problem at once. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const errors: string[] = [];
@@ -28,6 +30,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
 
   if (get("BETTER_AUTH_SECRET") && get("BETTER_AUTH_SECRET").length < 32) {
     errors.push("BETTER_AUTH_SECRET must be at least 32 characters");
+  }
+
+  if (get("BETTER_AUTH_SECRET") === SECRET_PLACEHOLDER) {
+    errors.push("BETTER_AUTH_SECRET must not be the .env.example placeholder");
   }
 
   if (get("BETTER_AUTH_URL")) {

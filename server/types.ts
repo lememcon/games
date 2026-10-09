@@ -6,13 +6,21 @@ export interface AppUser {
   role: Exclude<Role, "anonymous">;
 }
 
+export interface ResolvedSession {
+  user: AppUser | null;
+  headers?: Headers;
+}
+
 export interface AppDeps {
   /** Public origin of the site, e.g. https://games.lememcon.com. */
   baseUrl: string;
   /** Directory holding the built SPA (Vite's dist/). */
   staticDir: string;
-  /** Resolves the signed-in user from the request headers, or null. */
-  resolveSession: (headers: Headers) => Promise<AppUser | null>;
+  /**
+   * Resolves the signed-in user from the request headers (null if anonymous).
+   * `headers` carries any refreshed session Set-Cookie to forward.
+   */
+  resolveSession: (headers: Headers) => Promise<ResolvedSession>;
   /** Better Auth's request handler, mounted at /api/auth/*. */
   authHandler: (request: Request) => Promise<Response>;
 }
