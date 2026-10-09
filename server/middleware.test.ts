@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
-import { requireAdmin, requireApproved, requireUser } from "./middleware";
+import { requireAdmin, requireApproved } from "./middleware";
 import type { AppEnv, AppUser } from "./types";
 
 const base = { discordId: "222222222222222222", name: "Pat", image: null };
@@ -16,7 +16,6 @@ function appWith(user: AppUser | null) {
     c.set("user", user);
     await next();
   });
-  app.get("/private", requireUser, (c) => c.text("ok"));
   app.get("/approved", requireApproved, (c) => c.text("ok"));
   app.get("/admin", requireAdmin, (c) => c.text("ok"));
   return app;
@@ -24,16 +23,6 @@ function appWith(user: AppUser | null) {
 
 const status = async (user: AppUser | null, path: string) =>
   (await appWith(user).request(path)).status;
-
-describe("requireUser", () => {
-  it("rejects anonymous with 401", async () => {
-    expect(await status(null, "/private")).toBe(401);
-  });
-
-  it("allows any signed-in user", async () => {
-    expect(await status(pending, "/private")).toBe(200);
-  });
-});
 
 describe("requireApproved", () => {
   it("answers 401 anonymous, 403 pending, 200 approved", async () => {

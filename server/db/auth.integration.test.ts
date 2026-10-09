@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 
 import type { PGlite } from "@electric-sql/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createAuth, createSessionResolver } from "../auth";
 import type { Env } from "../env";
@@ -84,5 +84,89 @@ describe("session resolver against Better Auth and Postgres", () => {
     expect(
       (await resolve(new Headers({ cookie: cookieFor("tnd") }))).user,
     ).toBeNull();
+  });
+});
+
+describe("Discord sign-in against Better Auth and Postgres", () => {
+  let client: PGlite;
+  let auth: ReturnType<typeof createAuth>;
+
+  beforeAll(async () => {
+    const test = await createTestDb();
+    client = test.client;
+    auth = createAuth(
+      env,
+      test.db as unknown as Parameters<typeof createAuth>[1],
+    );
+  });
+  afterAll(() => client.close());
+
+  /** Runs the real OAuth callback with Discord's HTTP endpoints stubbed. */
+  async function signIn(profile: { id: string; username: string }) {
+    const start = await auth.handler(
+      new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/social`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: env.BETTER_AUTH_URL,
+        },
+        body: JSON.stringify({ provider: "discord", callbackURL: "/" }),
+      }),
+    );
+    const { url } = (await start.json()) as { url: string };
+    const state = new URL(url).searchParams.get("state")!;
+    const cookie = start.headers
+      .getSetCookie()
+      .map((c) => c.split(";")[0])
+      .join("; ");
+
+    const realFetch = globalThis.fetch;
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const href = input instanceof Request ? input.url : String(input);
+        if (href.includes("discord.com/api/oauth2/token"))
+          return Response.json({
+            access_token: "at",
+            token_type: "Bearer",
+            expires_in: 3600,
+            scope: "identify",
+          });
+        if (href.includes("discord.com/api/users/"))
+          return Response.json({
+            ...profile,
+            global_name: profile.username,
+            avatar: null,
+            discriminator: "0",
+          });
+        return realFetch(input, init);
+      });
+    try {
+      return await auth.handler(
+        new Request(
+          `${env.BETTER_AUTH_URL}/api/auth/callback/discord?code=c&state=${state}`,
+          { headers: { cookie } },
+        ),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  const usernameOf = async (discordId: string) =>
+    (
+      await client.query<{ username: string | null }>(
+        `SELECT u.username FROM "user" u JOIN account a ON a.user_id = u.id
+         WHERE a.account_id = $1`,
+        [discordId],
+      )
+    ).rows[0]?.username;
+
+  it("persists the Discord username on first sign-in and refreshes it later", async () => {
+    await signIn({ id: ALEX, username: "alex_old" });
+    expect(await usernameOf(ALEX)).toBe("alex_old");
+
+    await signIn({ id: ALEX, username: "alex_new" });
+    expect(await usernameOf(ALEX)).toBe("alex_new");
   });
 });

@@ -22,7 +22,9 @@ export function createAuth(env: Env, db: Db) {
     account: { accountLinking: { enabled: false } },
     user: {
       additionalFields: {
-        username: { type: "string", required: false, input: false },
+        // Not user-settable: /update-user is disabled and the value only comes
+        // from the Discord profile. `input: false` would make Better Auth drop it.
+        username: { type: "string", required: false },
       },
     },
     session: {
@@ -39,7 +41,7 @@ export function createAuth(env: Env, db: Db) {
         disableDefaultScope: true,
         scope: ["identify"],
         // Refresh name, avatar and username on every sign-in.
-        overrideUserInfo: true,
+        overrideUserInfoOnSignIn: true,
         mapProfileToUser: (profile) => ({
           email: `${profile.id}@discord.invalid`,
           emailVerified: false,

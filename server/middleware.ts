@@ -38,11 +38,6 @@ export const session = (resolveSession: AppDeps["resolveSession"]) =>
     }
   });
 
-export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
-  if (!c.get("user")) return c.json({ error: "unauthenticated" }, 401);
-  return next();
-});
-
 export const requireApproved = createMiddleware<AppEnv>(async (c, next) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthenticated" }, 401);
