@@ -11,6 +11,8 @@ export interface PlayerGameScore {
   rank: number;
   // Only sent to approved users, and only for players linked to a member.
   discord_id?: string;
+  // Discord avatar URL; sent with discord_id.
+  discord_image?: string;
 }
 
 // The value shape served by GET /api/games, keyed by BoardGameGeek id
@@ -49,6 +51,8 @@ export interface SelectedGamePlayer {
   rank: number;
   score: number;
   discordId?: string;
+  // https avatar URL of the linked member.
+  discordImage?: string;
 }
 
 // An aggregated game row produced by buildSelectedGames.

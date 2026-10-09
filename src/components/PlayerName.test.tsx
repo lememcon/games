@@ -38,6 +38,31 @@ describe("PlayerName", () => {
     expect(link).toHaveStyle({ textDecoration: "underline dotted" });
   });
 
+  it("shows the avatar before the name of a linked player", () => {
+    const { container, getByRole } = renderWithMantine(
+      <PlayerName name="alice" discordId="42" image="https://x/a.png" />,
+    );
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("src", "https://x/a.png");
+    expect(img).toHaveAttribute("alt", "");
+    expect(getByRole("link", { name: "alice" })).toBeInTheDocument();
+  });
+
+  it("falls back to initials for a linked player without an image", () => {
+    const { container } = renderWithMantine(
+      <PlayerName name="alice" discordId="42" />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(container).toHaveTextContent("A");
+  });
+
+  it("shows no avatar for an unlinked player", () => {
+    const { container } = renderWithMantine(
+      <PlayerName name="alice" image="https://x/a.png" />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   it("is plain text without a discord id", () => {
     const { queryByRole, getByText } = renderWithMantine(
       <PlayerName name="alice" />,

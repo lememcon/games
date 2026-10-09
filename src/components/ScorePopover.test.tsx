@@ -41,6 +41,33 @@ describe("ScorePopover", () => {
     expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
+  it("shows https avatars only", async () => {
+    const user = userEvent.setup();
+    const linked = (name: string, discordImage: string) => ({
+      name,
+      rank: 1,
+      score: 1,
+      discordId: "7",
+      discordImage,
+    });
+    renderWithMantine(
+      <ScorePopover
+        score={40}
+        players={{
+          alice: linked("alice", "https://x/a.png"),
+          bob: { name: "bob", rank: 2, score: 1, discordId: "8" },
+        }}
+        selectedMax={100}
+        individualMax={50}
+      />,
+    );
+    await user.click(screen.getByText("40"));
+    await screen.findByText("alice");
+    const imgs = document.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute("src", "https://x/a.png");
+  });
+
   it("links linked players without bubbling clicks to the parent", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();

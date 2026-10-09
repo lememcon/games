@@ -147,6 +147,8 @@ export interface LegacyScoreRow {
   rank: number;
   /** Linked approved member; only present in responses to approved sessions. */
   discord_id?: string;
+  /** Linked member's Discord avatar; approved sessions only, with `discord_id`. */
+  discord_image?: string;
 }
 
 /** A score joined with its game and player names, as read from the database. */
@@ -157,6 +159,7 @@ export interface ScoreRow {
   score: number;
   rank: number;
   discordId?: string | null;
+  discordImage?: string | null;
 }
 
 export interface GameRow {
@@ -195,7 +198,7 @@ export interface DataStore {
   /** Null when the year is unknown. */
   getScores(
     year: number,
-    /** Approved callers get display names and `discord_id`; others the data-file name. */
+    /** Approved callers get display names, `discord_id` and `discord_image`; others the data-file name. */
     resolveNames?: boolean,
   ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;

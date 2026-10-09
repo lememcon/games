@@ -33,11 +33,12 @@ export async function addLogin(
   client: PGlite,
   discordId: string,
   name = `user${discordId}`,
+  image: string | null = null,
 ) {
   const id = `u${++n}`;
   await client.query(
-    `INSERT INTO "user" (id, name, email, username) VALUES ($1, $2, $3, $4)`,
-    [id, name, `${discordId}@discord.invalid`, `${name}_handle`],
+    `INSERT INTO "user" (id, name, email, username, image) VALUES ($1, $2, $3, $4, $5)`,
+    [id, name, `${discordId}@discord.invalid`, `${name}_handle`, image],
   );
   await client.query(
     `INSERT INTO account (id, account_id, provider_id, user_id, updated_at)
