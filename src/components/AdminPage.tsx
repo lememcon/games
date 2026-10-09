@@ -175,7 +175,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
                   <Tooltip label={BUILT_IN} disabled={!u.locked}>
                     <span>
                       <Select
-                        aria-label={`Role for ${u.name}`}
+                        aria-label={`Role for ${u.displayName ?? u.name}`}
                         size="xs"
                         w={110}
                         allowDeselect={false}
@@ -196,7 +196,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
                       <Button
                         size="xs"
                         variant="default"
-                        aria-label={`Remove ${u.name}`}
+                        aria-label={`Remove ${u.displayName ?? u.name}`}
                         disabled={u.locked}
                         onClick={() => setConfirm({ kind: "remove", user: u })}
                       >
@@ -225,7 +225,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
         <Text size="sm">
           {confirm?.kind === "demote"
             ? "You will lose access to this page."
-            : `${confirm?.user.name} will lose access. They can sign in again and request approval.`}
+            : `${confirm?.user.displayName ?? confirm?.user.name} will lose access. They can sign in again and request approval.`}
         </Text>
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={() => setConfirm(null)}>

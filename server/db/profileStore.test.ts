@@ -312,6 +312,9 @@ describe("interaction with links and scores", () => {
       ["Kel", ALEX],
       ["bob", undefined],
     ]);
+    await store.setDisplayName(ALEX, null);
+    expect((await data.getScores(2026, true))![0].player).toBe("Alex");
+    await store.setDisplayName(ALEX, "Kel");
     expect(await data.getScores(2026)).toEqual(
       await data.getScores(2026, false),
     );

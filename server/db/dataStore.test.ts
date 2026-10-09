@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseImport } from "../import";
 import type { ImportContext } from "../types";
 import { createDataStore } from "./dataStore";
-import { createTestDb } from "./testDb";
+import { addLogin, createTestDb } from "./testDb";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const readJson = (file: string) =>
@@ -271,14 +271,18 @@ describe("display names", () => {
       ["other", undefined],
     ]);
 
+    await addLogin(client, MEMBER, "DeeDiscord");
     await client.query(
       `UPDATE app_user SET display_name = NULL WHERE discord_id = $1`,
       [MEMBER],
     );
-    expect((await store.getScores(2098, true))![0]).toMatchObject({
-      player: "deedee",
+    const cleared = (await store.getScores(2098, true))!;
+    expect(cleared).toHaveLength(2);
+    expect(cleared[0]).toMatchObject({
+      player: "DeeDiscord",
       discord_id: MEMBER,
     });
+    expect((await store.getScores(2098))![0].player).toBe("deedee");
 
     await client.query(
       `UPDATE app_user SET status = 'pending', display_name = 'Dee' WHERE discord_id = $1`,
@@ -288,6 +292,64 @@ describe("display names", () => {
       "discord_id",
     );
     expect((await store.getScores(2098, true))![0].player).toBe("deedee");
+  });
+
+  it("falls back to the data-file name for an approved member with no login", async () => {
+    const other = "999888777666555444";
+    await client.query(
+      `INSERT INTO app_user (discord_id, status) VALUES ($1, 'approved')`,
+      [other],
+    );
+    await store.importData(upload(2094, [row({ player: "nologin" })]), context);
+    await client.query(
+      `UPDATE player SET discord_id = $1 WHERE name = 'nologin'`,
+      [other],
+    );
+    expect((await store.getScores(2094, true))![0]).toMatchObject({
+      player: "nologin",
+      discord_id: other,
+    });
+  });
+
+  it("keeps the data-file name for a pending member with a login", async () => {
+    const pending = "111222333444555666";
+    await client.query(
+      `INSERT INTO app_user (discord_id, status) VALUES ($1, 'pending')`,
+      [pending],
+    );
+    await addLogin(client, pending, "PendingDiscord");
+    await store.importData(upload(2093, [row({ player: "pend" })]), context);
+    await client.query(
+      `UPDATE player SET discord_id = $1 WHERE name = 'pend'`,
+      [pending],
+    );
+    const [only] = (await store.getScores(2093, true))!;
+    expect(only.player).toBe("pend");
+    expect(only).not.toHaveProperty("discord_id");
+  });
+
+  it("keeps the data-file name when the Discord name clashes with another player", async () => {
+    const clasher = "222333444555666777";
+    await client.query(
+      `INSERT INTO app_user (discord_id, status) VALUES ($1, 'approved')`,
+      [clasher],
+    );
+    await addLogin(client, clasher, "RIVAL");
+    await store.importData(
+      upload(2092, [
+        row({ player: "clasher" }),
+        row({ player: "rival", rank: 2 }),
+      ]),
+      context,
+    );
+    await client.query(
+      `UPDATE player SET discord_id = $1 WHERE name = 'clasher'`,
+      [clasher],
+    );
+    expect((await store.getScores(2092, true))!.map((r) => r.player)).toEqual([
+      "clasher",
+      "rival",
+    ]);
   });
 
   it("refuses an upload that adds a player named like a display name, rolling back", async () => {
