@@ -90,6 +90,19 @@ describe("buildSelectedGames", () => {
     });
   });
 
+  it("skips a selected player with no scores", () => {
+    const games = buildSelectedGames({
+      byPlayer,
+      players: ["carol"],
+      gameData,
+      images: {},
+      hidePlayed: false,
+      getPlayedCount: noPlayed,
+    });
+
+    expect(games).toEqual([]);
+  });
+
   it("restricts to selected players", () => {
     const games = buildSelectedGames({
       byPlayer,

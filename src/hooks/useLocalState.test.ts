@@ -27,6 +27,19 @@ describe("useLocalState", () => {
     expect(localStorage.getItem("hide")).toBe("true");
   });
 
+  it("still updates state when localStorage.setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { result } = renderHook(() => useLocalState("hide", false));
+
+    act(() => result.current[1](true));
+
+    expect(result.current[0]).toBe(true);
+    expect(log).toHaveBeenCalledOnce();
+  });
+
   it("falls back to the initial value when stored JSON is invalid", () => {
     localStorage.setItem("year", "{not json");
     vi.spyOn(console, "error").mockImplementation(() => {});
