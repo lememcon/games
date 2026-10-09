@@ -2,6 +2,8 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MantineProvider } from "@mantine/core";
+
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import { renderWithMantine } from "@/test/utils";
 import type { PlayerLink } from "@/types";
@@ -99,6 +101,53 @@ describe("PlayerLinksPanel", () => {
     expect(button).toBeEnabled();
     await userEvent.click(button);
     expect(hook.link).toHaveBeenCalledWith(1, "10");
+  });
+
+  it("clears the selection after linking and unlinking", async () => {
+    const view = renderWithMantine(<PlayerLinksPanel />);
+    const input = screen.getByRole("textbox", { name: "Member for player1" });
+    await userEvent.click(input);
+    const list = document.getElementById(input.getAttribute("aria-controls")!)!;
+    await userEvent.click(within(list).getByText("Amy"));
+    await userEvent.click(screen.getByRole("button", { name: "Link player1" }));
+    expect(hook.link).toHaveBeenCalledWith(1, "10");
+
+    const rerender = () =>
+      view.rerender(
+        <MantineProvider>
+          <PlayerLinksPanel />
+        </MantineProvider>,
+      );
+    setHook({
+      players: [player(1, { discordId: "10", userName: "Amy" })],
+    });
+    rerender();
+    setHook({ players: [player(1)] });
+    rerender();
+
+    expect(
+      screen.getByRole("textbox", { name: "Member for player1" }),
+    ).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Link player1" })).toBeDisabled();
+  });
+
+  it("disables Link when the chosen member is no longer listed", async () => {
+    const view = renderWithMantine(<PlayerLinksPanel />);
+    const input = screen.getByRole("textbox", { name: "Member for player1" });
+    await userEvent.click(input);
+    const list = document.getElementById(input.getAttribute("aria-controls")!)!;
+    await userEvent.click(within(list).getByText("Bo (pending)"));
+    expect(screen.getByRole("button", { name: "Link player1" })).toBeEnabled();
+
+    setHook({
+      users: [{ discordId: "10", name: "Amy", status: "approved" }],
+    });
+    view.rerender(
+      <MantineProvider>
+        <PlayerLinksPanel />
+      </MantineProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Link player1" })).toBeDisabled();
   });
 
   it("filters members by search", async () => {

@@ -80,8 +80,12 @@ const PlayerRow = ({ player, users, onLink, onUnlink }: RowProps) => {
           <Button
             size="xs"
             aria-label={`Link ${player.name}`}
-            disabled={chosen === null}
-            onClick={() => onLink(player.id, chosen!)}
+            disabled={!users.some((u) => u.discordId === chosen)}
+            onClick={() => {
+              const id = chosen!;
+              setChosen(null);
+              onLink(player.id, id);
+            }}
           >
             Link
           </Button>
