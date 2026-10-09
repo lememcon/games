@@ -9,8 +9,8 @@ import type { ResolvedSession, UserStore } from "./types";
 
 /**
  * Where Better Auth sends the browser when an OAuth callback fails before it
- * can recover the per-request `errorCallbackURL` (e.g. a missing state cookie,
- * which is `state_mismatch`). Without this it lands on the API host's own
+ * can recover the per-request `errorCallbackURL` (e.g. an expired or
+ * already-used state, or a missing state param). Without this it lands on the API host's own
  * `/api/auth/error`. The SPA origin is WEB_ORIGIN, else the origin of
  * BETTER_AUTH_URL (the same-origin proxy topology).
  *

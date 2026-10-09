@@ -29,9 +29,7 @@ describe("describeAuthError", () => {
   it.each([
     ["state_mismatch", /took too long/],
     ["state_invalid", /took too long/],
-    ["invalid_state", /took too long/],
     ["state_not_found", /took too long/],
-    ["please_restart_the_process", /took too long/],
     ["access_denied", /cancelled/],
     ["unable_to_get_user_info", /details from Discord/],
     ["no_code", /details from Discord/],
@@ -71,13 +69,20 @@ describe("stripAuthError", () => {
   it.each([
     ["//x", "?error=a"],
     ["/\\x", "?error=a"],
-    ["//x", ""],
     ["%2F%2F", "?error=a"],
     ["evil", "?error=a"],
   ])("never returns an absolute or protocol-relative path for %s%s", (p, s) => {
     const out = strip(p, s);
     expect(out).toBe("/");
     expect(out.startsWith("//")).toBe(false);
+  });
+
+  it.each([
+    ["//x", "", ""],
+    ["/games/11", "?a=1", "#top"],
+    ["evil", "", ""],
+  ])("returns a URL with no auth error unchanged: %s%s%s", (p, s, h) => {
+    expect(strip(p, s, h)).toBe(`${p}${s}${h}`);
   });
 
   it("keeps an encoded slash pair inert", () => {

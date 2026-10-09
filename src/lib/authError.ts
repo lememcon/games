@@ -13,9 +13,7 @@ const GENERIC = "Something went wrong signing you in. Please try again.";
 const MESSAGES: Record<string, string> = {
   state_mismatch: EXPIRED,
   state_invalid: EXPIRED,
-  invalid_state: EXPIRED,
   state_not_found: EXPIRED,
-  please_restart_the_process: EXPIRED,
   access_denied: CANCELLED,
   unable_to_get_user_info: DISCORD_FAILED,
   no_code: DISCORD_FAILED,
@@ -42,14 +40,16 @@ export const describeAuthError = (
   message: Object.hasOwn(MESSAGES, code) ? MESSAGES[code] : GENERIC,
 });
 
-/** The same-origin path, query and hash without the auth error parameters. */
+/**
+ * The path, query and hash without the auth error parameters. A URL carrying
+ * neither is returned unchanged so callers can tell nothing needs rewriting.
+ */
 export const stripAuthError = (
   loc: Pick<Location, "pathname" | "search" | "hash">,
 ): string => {
   const params = new URLSearchParams(loc.search);
   const original = `${loc.pathname}${loc.search}${loc.hash}`;
-  if (!params.has("error") && !params.has("error_description"))
-    return safeCallbackPath(original);
+  if (!params.has("error") && !params.has("error_description")) return original;
   params.delete("error");
   params.delete("error_description");
   const query = params.toString();

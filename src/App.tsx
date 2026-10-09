@@ -50,7 +50,8 @@ const theme = createTheme({
 
 function Gate() {
   const { me, error, loading, retry } = useMe();
-  // Read before the first paint so the URL is cleaned even for signed-in users.
+  // Read during render so the code is captured even for signed-in users; the
+  // hook strips it from the URL in an effect.
   const authError = useAuthError();
 
   if (error) {

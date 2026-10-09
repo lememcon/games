@@ -6,7 +6,10 @@ import SignIn from "@/components/SignIn";
 import { renderWithMantine } from "@/test/utils";
 
 const signInWithDiscord = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/auth", () => ({ signInWithDiscord }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  signInWithDiscord,
+}));
 
 describe("SignIn", () => {
   afterEach(() => vi.clearAllMocks());

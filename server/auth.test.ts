@@ -228,7 +228,7 @@ const emptyDb = (): Db => {
 };
 
 describe("OAuth callback failures", () => {
-  it("redirects a callback with no state cookie to the SPA origin with error=state_mismatch", async () => {
+  it("redirects a callback whose state matches no verification row (unknown or expired) to the SPA origin via the error URL", async () => {
     const auth = createAuth(
       {
         ...env,
