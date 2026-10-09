@@ -2,11 +2,14 @@
 
 export class ApiError extends Error {
   status: number;
+  // The parsed JSON error body, when there was one.
+  body: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body: unknown = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -35,7 +38,7 @@ export async function apiFetch<T>(
     const body = (await res.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`);
+    throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

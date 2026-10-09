@@ -1,3 +1,6 @@
+import type { BggGame } from "./bgg/client";
+import type { BggService } from "./bgg/service";
+
 export type Role = "member" | "admin";
 export type Status = "pending" | "approved";
 
@@ -45,6 +48,8 @@ export interface AppDeps {
   authHandler: (request: Request) => Promise<Response>;
   /** Persistence for the admin routes. */
   store: UserStore;
+  /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
+  bgg?: BggService;
 }
 
 export type AppEnv = { Variables: { user: AppUser | null } };
@@ -89,4 +94,27 @@ export interface StoredUser extends UserRow {
   image: string | null;
   username: string | null;
   createdAt: Date;
+}
+
+/** A stored app setting; secret values are ciphertext. */
+export interface SettingRow {
+  value: string;
+  updatedAt: Date;
+}
+
+export interface GameMetadataRow extends BggGame {
+  fetchedAt: Date;
+}
+
+/** All SQL for BGG data lives behind this interface (server/db/bggRepo.ts). */
+export interface BggRepo {
+  getSetting(key: string): Promise<SettingRow | null>;
+  setSetting(key: string, value: string, updatedBy: string): Promise<void>;
+  deleteSetting(key: string): Promise<void>;
+  listMetadata(): Promise<GameMetadataRow[]>;
+  /**
+   * Inserts or refreshes rows. A row whose image is the "custom" sentinel keeps
+   * its image and extension; fields BGG omitted keep their stored value.
+   */
+  upsertMetadata(games: BggGame[], fetchedAt: Date): Promise<void>;
 }

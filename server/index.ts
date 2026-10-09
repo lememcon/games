@@ -4,7 +4,11 @@ import { serve } from "@hono/node-server";
 
 import { createApp } from "./app";
 import { createAuth, createSessionResolver } from "./auth";
+import { createBggClient } from "./bgg/client";
+import { createNeededIds } from "./bgg/needed";
+import { createBggService } from "./bgg/service";
 import { createDb } from "./db";
+import { createBggRepo } from "./db/bggRepo";
 import { createUserStore } from "./db/userStore";
 import { loadEnv } from "./env";
 
@@ -12,6 +16,13 @@ const env = loadEnv();
 const { db, pool } = createDb(env.DATABASE_URL);
 const auth = createAuth(env, db);
 const store = createUserStore(db);
+// In-memory job state: assumes a single server instance.
+const bgg = createBggService({
+  repo: createBggRepo(db),
+  client: createBggClient(),
+  fetchNeededIds: createNeededIds(),
+  secret: env.BETTER_AUTH_SECRET,
+});
 
 const app = createApp({
   baseUrl: env.BETTER_AUTH_URL,
@@ -20,6 +31,7 @@ const app = createApp({
   resolveSession: createSessionResolver(auth, store),
   authHandler: auth.handler,
   store,
+  bgg,
 });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
@@ -31,6 +43,7 @@ function shutdown(signal: string) {
   if (stopping) return;
   stopping = true;
   console.log(`${signal} received, shutting down`);
+  bgg.shutdown();
   // Hard stop if keep-alive connections never drain.
   setTimeout(() => process.exit(1), 10_000).unref();
   server.close(() => {

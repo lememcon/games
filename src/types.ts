@@ -88,3 +88,67 @@ export interface AdminUser {
   locked: boolean;
   createdAt: string;
 }
+
+// BoardGameGeek data admin (GET/PUT /api/admin/bgg/*). The key itself is never
+// returned: only whether it is set and a masked tail.
+export interface BggKeyInfo {
+  configured: boolean;
+  masked: string | null;
+  updatedAt: string | null;
+  // The stored key no longer decrypts and must be entered again.
+  unreadable?: boolean;
+}
+
+export interface BggKeyTest {
+  ok: boolean;
+  status: "valid" | "invalid" | "rate_limited" | "error";
+  message: string;
+  rateLimited?: boolean;
+}
+
+export type BggGameState = "loaded" | "missing" | "partial";
+
+export interface BggGameRow {
+  bggId: number;
+  name: string;
+  years: number[];
+  state: BggGameState;
+  hasPlayers: boolean;
+  hasImage: boolean;
+  fetchedAt: string | null;
+}
+
+export type BggJobState = "idle" | "running" | "done" | "failed" | "cancelled";
+
+export interface BggJob {
+  state: BggJobState;
+  mode: "missing" | "ids" | null;
+  total: number;
+  done: number;
+  updated: number;
+  notFound: number;
+  batchesTotal: number;
+  batchesDone: number;
+  errors: string[];
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface BggTotals {
+  needed: number;
+  loaded: number;
+  missing: number;
+  partial: number;
+}
+
+export interface BggStatus {
+  keyConfigured: boolean;
+  totals: BggTotals;
+  games: BggGameRow[];
+  job: BggJob;
+  // Set client-side when the server could not read the score feeds (502).
+  scoresUnavailable?: boolean;
+}
+
+export type BggDownloadRequest =
+  { mode: "missing" } | { mode: "ids"; ids: number[] };

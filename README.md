@@ -184,6 +184,16 @@ same site, so the same CSRF 403 applies to POSTs. The planned local option is a 
 `server.proxy` for `/api` to `http://localhost:8080`, which makes local calls
 same-origin (not configured yet).
 
+### BoardGameGeek data (admin)
+
+Admins manage game metadata from the admin page (`/api/admin/bgg/*`): save a BGG API
+key, test it, see which games the scores need versus what the database holds
+(`game_metadata`), and download or redownload them. The key is encrypted with
+AES-256-GCM using a key derived from `BETTER_AUTH_SECRET` and stored in `app_setting`;
+rotating that secret means entering the key again. Download progress lives in memory,
+so this assumes a single server instance. `pnpm update` stays until the app reads
+metadata from the database.
+
 ### Deploying the backend
 
 Host-agnostic: build the `Dockerfile` and run the image on any container host behind
