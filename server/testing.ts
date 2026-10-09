@@ -8,6 +8,9 @@ import type {
   GamesMap,
   ImportContext,
   LegacyScoreRow,
+  LinkStore,
+  LinkableUser,
+  PlayerLink,
   SettingRow,
   StoredUser,
   UserRow,
@@ -147,4 +150,28 @@ export function fakeData(
     },
   };
   return { data, years, games, imports };
+}
+
+/** In-memory LinkStore for tests; refuses unknown players and members like the SQL store. */
+export function fakeLinks(
+  initial: { players?: PlayerLink[]; users?: LinkableUser[] } = {},
+) {
+  const players = new Map<number, PlayerLink>(
+    (initial.players ?? []).map((p) => [p.id, p]),
+  );
+  const users = initial.users ?? [];
+  const calls: { playerId: number; discordId: string | null }[] = [];
+  const links: LinkStore = {
+    list: async () => ({ players: [...players.values()], users }),
+    setLink: async (playerId, discordId) => {
+      calls.push({ playerId, discordId });
+      const found = players.get(playerId);
+      if (!found) return { ok: false, status: 404, error: "unknown_player" };
+      if (discordId !== null && !users.some((u) => u.discordId === discordId))
+        return { ok: false, status: 404, error: "unknown_user" };
+      players.set(playerId, { ...found, discordId });
+      return { ok: true, value: null };
+    },
+  };
+  return { links, players, calls };
 }

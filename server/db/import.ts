@@ -57,6 +57,9 @@ export async function importData(
         existingPlayers.map((p) => p.name),
         input.players,
       );
+      // Players are only ever inserted, never updated: an upload must never
+      // touch player.discord_id, or it would silently unlink members. Do not
+      // turn this into an upsert whose `set` clause covers that column.
       for (const names of chunk(fresh, CHUNK))
         await tx
           .insert(player)

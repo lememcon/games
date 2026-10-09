@@ -157,9 +157,14 @@ export const player = pgTable(
   {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
+    /** The app member this player is, if linked. Cleared when the member is deleted. */
+    discordId: text("discord_id").references(() => appUser.discordId, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     uniqueIndex("player_name_lower_idx").on(sql`lower(${table.name})`),
+    index("player_discord_id_idx").on(table.discordId),
   ],
 );
 

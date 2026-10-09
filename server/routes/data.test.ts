@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
-import { fakeData, fakeStore } from "../testing";
+import { fakeData, fakeLinks, fakeStore } from "../testing";
 import type { LegacyScoreRow } from "../types";
 
 const rows: LegacyScoreRow[] = [
@@ -27,6 +27,7 @@ function makeApp() {
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
     data,
+    links: fakeLinks().links,
     resolveSession: async () => ({ user: null }),
   });
 }

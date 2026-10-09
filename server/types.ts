@@ -53,6 +53,8 @@ export interface AppDeps {
   bgg?: BggService;
   /** Years, games and scores: public reads and the admin import. */
   data: DataStore;
+  /** Links between players and app members (admin only). */
+  links: LinkStore;
 }
 
 export type AppEnv = { Variables: { user: AppUser | null } };
@@ -181,4 +183,37 @@ export interface DataStore {
     input: NormalizedImport,
     context: ImportContext,
   ): Promise<MutationResult<ImportSummary>>;
+}
+
+/** A player with its score count and the app member it is linked to, if any. */
+export interface PlayerLink {
+  id: number;
+  name: string;
+  scoreCount: number;
+  discordId: string | null;
+  /** Better Auth display name of the linked member; null when unlinked. */
+  userName: string | null;
+}
+
+/** An app member a player can be linked to. */
+export interface LinkableUser {
+  discordId: string;
+  name: string;
+  status: Status;
+}
+
+export interface PlayerLinks {
+  players: PlayerLink[];
+  users: LinkableUser[];
+}
+
+/** All SQL for player-to-member links lives behind this interface (server/db/linkStore.ts). */
+export interface LinkStore {
+  /** Players unlinked first, then by lower(name); members by name. */
+  list(): Promise<PlayerLinks>;
+  /** Null unlinks. Refuses with 404 `unknown_player` or `unknown_user`. */
+  setLink(
+    playerId: number,
+    discordId: string | null,
+  ): Promise<MutationResult<null>>;
 }
