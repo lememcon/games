@@ -18,8 +18,9 @@ Netlify). It is entirely read-only:
   (48KB), refreshed by `update.cjs` (`pnpm update`) which hits the BGG XML API and commits
   back to the repo.
 - All interactive state — selected `year`, `players` filter, `hidePlayed` toggle, and
-  per-game **play counts** — lives only in each browser's `localStorage`
-  (`src/hooks/useLocalState.ts`, `src/hooks/usePlayedCounts.ts`).
+  per-game **play counts** — lived only in each browser's `localStorage`
+  (`src/hooks/useLocalState.ts`, `src/hooks/usePlayedCounts.ts`). Play counts have since moved
+  to the database, per member (`played_count`, `/api/me/played`).
 
 There is no backend, no database, no auth, and no way to write data from the SPA (a
 `server/` API now exists but the SPA does not call it yet). **Goal:** turn it into a
@@ -120,7 +121,8 @@ The domains from the original plan still apply, now as Drizzle tables in `server
 - `scores` (replaces the external feed): surrogate `id`, `UNIQUE (year, bgg_id, player)`.
 - `game_metadata` (replaces `games.json`): `bgg_id` PK, player bounds, image `ext`.
 - `played_counts`: global per `(year, bgg_id)`; inc/dec as one atomic
-  `INSERT ... ON CONFLICT DO UPDATE`.
+  `INSERT ... ON CONFLICT DO UPDATE`. **Superseded** by `played_count`, per member:
+  `(discord_id, year, bgg_id)` with the absolute count, set through `PUT /api/me/played/:year/:bggId`.
 - `user_prefs`: per user, `year`, `players`, `hide_played`.
 
 ### API surface (Hono, `server/app.ts`)
@@ -182,8 +184,9 @@ handlers thin. Hooks are tested by mocking `fetch`.
 - **Phase 0.5 - cross-origin**: the CSRF, CORS, `trustedOrigins` and `WEB_ORIGIN` gaps above.
 - **Phase A - read-path swap**: point `useData` at `/api/scores`, add `useGames`; retire the
   external feed and bundled `games.json`.
-- **Phase B - shared play counts**: `played_counts` table and endpoints; API-backed hook
-  with optimistic update and localStorage fallback.
+- **Phase B - play counts**: done differently: per-member `played_count` table and
+  `/api/me/played` endpoints; API-backed hook with optimistic update, no localStorage
+  fallback (superseding the global `played_counts` sketch).
 - **Phase C - login and per-user prefs**: Discord login UI, `user_prefs`, `/api/prefs`.
 - **Phase D - admin forms**: guarded `/admin` route, admin write endpoints; repurpose
   `update.cjs` to write metadata to the DB.
