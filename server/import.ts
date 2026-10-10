@@ -62,8 +62,6 @@ interface Row {
   rank: number;
 }
 
-type Obj = Record<string, unknown>;
-
 const isInt = (v: unknown): v is number =>
   typeof v === "number" && Number.isInteger(v) && Math.abs(v) <= INT_MAX;
 /** games.json uses 0 for a player count BoardGameGeek does not know. */

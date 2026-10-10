@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
 
 import { exactKeys, isRecord, parseId32, readJson } from "./validate";
@@ -62,12 +61,12 @@ describe("readJson", () => {
     expect(await (await post("/", "{nope")).json()).toEqual({ body: null });
   });
 
-  it("rethrows errors other than invalid JSON", async () => {
+  it("returns null on a stream or other error", async () => {
     const failing = {
       req: {
-        json: () => Promise.reject(new HTTPException(413)),
+        json: () => Promise.reject(new Error("stream failed")),
       },
     } as unknown as Parameters<typeof readJson>[0];
-    await expect(readJson(failing)).rejects.toBeInstanceOf(HTTPException);
+    expect(await readJson(failing)).toBeNull();
   });
 });

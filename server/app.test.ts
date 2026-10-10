@@ -165,6 +165,18 @@ describe("body size limit", () => {
     });
     expect(res.status).not.toBe(413);
   });
+
+  it.each(["PUT", "PATCH"])(
+    "applies the small limit to %s on the import route",
+    async (method) => {
+      const res = await makeApp().app.request("/api/admin/import", {
+        method,
+        headers: { ...same, ...as("admin").headers },
+        body: big,
+      });
+      expect(res.status).toBe(413);
+    },
+  );
 });
 
 describe("error handler", () => {

@@ -64,7 +64,9 @@ export function createApp(deps: AppDeps) {
     }),
   );
   app.use("/api/*", (c, next) =>
-    c.req.path === IMPORT_PATH ? next() : smallBodies(c, next),
+    c.req.method === "POST" && c.req.path === IMPORT_PATH
+      ? next()
+      : smallBodies(c, next),
   );
   app.use("/api/*", csrf(deps.baseUrl, deps.webOrigin));
   app.on(["GET", "POST"], "/api/auth/*", (c) => deps.authHandler(c.req.raw));

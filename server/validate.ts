@@ -24,15 +24,9 @@ export function parseId32(raw: unknown): number | null {
 }
 
 /**
- * The request's JSON body, or null when it is missing or not valid JSON.
- * Any other failure (such as a body limit being exceeded mid-stream) is
- * rethrown so it surfaces as its own status rather than a 400.
+ * The request's JSON body, or null when it is missing, unreadable or not
+ * valid JSON.
  */
 export async function readJson(c: Context): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch (error) {
-    if (error instanceof SyntaxError) return null;
-    throw error;
-  }
+  return c.req.json().catch(() => null);
 }
