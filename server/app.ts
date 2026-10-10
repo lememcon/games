@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 
 import { bggRoutes } from "./bgg/routes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
@@ -24,6 +25,15 @@ const isPublic = (path: string, method: string) =>
 export function createApp(deps: AppDeps) {
   const app = new Hono<AppEnv>();
 
+  app.use(
+    secureHeaders({
+      xFrameOptions: "DENY",
+      xContentTypeOptions: "nosniff",
+      referrerPolicy: "strict-origin-when-cross-origin",
+      strictTransportSecurity: "max-age=31536000; includeSubDomains",
+      permissionsPolicy: { camera: [], microphone: [], geolocation: [] },
+    }),
+  );
   app.use(compress());
   app.get("/healthz", (c) => c.json({ status: "ok" }));
 

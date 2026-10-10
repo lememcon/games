@@ -70,6 +70,40 @@ function makeApp(webOrigin: string | undefined = WEB) {
 
 const as = (who: keyof typeof users) => ({ headers: { cookie: `as=${who}` } });
 
+describe("security headers", () => {
+  const expectHeaders = (res: Response) => {
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("referrer-policy")).toBe(
+      "strict-origin-when-cross-origin",
+    );
+    expect(res.headers.get("strict-transport-security")).toBe(
+      "max-age=31536000; includeSubDomains",
+    );
+    expect(res.headers.get("permissions-policy")).toBe(
+      "camera=(), microphone=(), geolocation=()",
+    );
+  };
+
+  it("are set on /healthz", async () => {
+    expectHeaders(await makeApp().app.request("/healthz"));
+  });
+
+  it("are set on /api/auth/* responses", async () => {
+    expectHeaders(await makeApp().app.request("/api/auth/session"));
+  });
+
+  it("survive an auth handler that returns a redirect", async () => {
+    const { app, authHandler } = makeApp();
+    authHandler.mockResolvedValueOnce(
+      Response.redirect("https://games.lememcon.com/", 302),
+    );
+    const res = await app.request("/api/auth/callback/discord");
+    expect(res.status).toBe(302);
+    expectHeaders(res);
+  });
+});
+
 describe("GET /healthz", () => {
   it("returns ok without a session", async () => {
     const res = await makeApp().app.request("/healthz");
