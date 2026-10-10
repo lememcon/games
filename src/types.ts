@@ -82,7 +82,7 @@ export interface SplitGroup {
   picked: string;
 }
 
-// A suggested way to divide the selected players into smaller groups.
+// A suggested way to divide the selected players into two smaller groups.
 // perPlayer is the picked games' summed score over the player count; delta is
 // perPlayer minus the best all-together game, or null when there is none.
 export interface GameSplit {

@@ -530,13 +530,15 @@ describe("partitions", () => {
   it.each([
     [4, 3],
     [5, 10],
-    [6, 40],
-  ])("splits %i players %i ways into groups of 2+", (n, count) => {
+    [6, 25],
+    [7, 56],
+    [8, 119],
+  ])("splits %i players %i ways into two groups of 2+", (n, count) => {
     const items = Array.from({ length: n }, (_, i) => `p${i}`);
     const result = partitions(items);
     expect(result).toHaveLength(count);
     for (const parts of result) {
-      expect(parts.length).toBeGreaterThan(1);
+      expect(parts).toHaveLength(2);
       expect(parts.every((g) => g.length >= 2)).toBe(true);
       expect(parts.flat().sort()).toEqual(items);
     }
@@ -648,6 +650,26 @@ describe("suggestSplits", () => {
     const splits = run({ X: row, Y: row, Z: row }, { players: six });
 
     expect(splits).toHaveLength(3);
+    expect(splits.every((s) => s.groups.length === 2)).toBe(true);
+  });
+
+  it("only suggests two-group splits, even when three pairs would score higher", () => {
+    const six = ["a", "b", "c", "d", "e", "f"];
+    const row = (score: number) =>
+      Object.fromEntries(six.map((p) => [p, score]));
+    const splits = run(
+      {
+        AB: { a: 90, b: 90 },
+        CD: { c: 90, d: 90 },
+        EF: { e: 90, f: 90 },
+        X: row(10),
+        Y: row(9),
+      },
+      { players: six },
+    );
+
+    expect(splits.length).toBeGreaterThan(0);
+    expect(splits.every((s) => s.groups.length === 2)).toBe(true);
   });
 
   it("respects each game's player-count bounds per group", () => {
