@@ -19,6 +19,7 @@ const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
   renderWithMantine(
     <GamesList
       games={games}
+      year="2024"
       selectedMax={400}
       individualMax={100}
       gameData={gameData}
@@ -30,6 +31,13 @@ const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
   );
 
 describe("GamesList", () => {
+  it("links every game into the given year", () => {
+    const { getAllByRole } = renderList();
+    const hrefs = getAllByRole("link").map((l) => l.getAttribute("href"));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) expect(href).toMatch(/^\/2024\/games\//);
+  });
+
   it("renders a link for every game", () => {
     const { getByRole } = renderList();
 

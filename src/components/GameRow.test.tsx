@@ -24,6 +24,7 @@ const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
   renderWithMantine(
     <GameRow
       game={game}
+      year="2024"
       rank={5}
       selectedMax={100}
       individualMax={50}
@@ -42,7 +43,7 @@ describe("GameRow", () => {
     expect(getByText("5")).toBeInTheDocument();
     expect(getByRole("link", { name: "Root" })).toHaveAttribute(
       "href",
-      "/games/100",
+      "/2024/games/100",
     );
     expect(getByRole("img", { name: "Root" })).toHaveAttribute(
       "src",

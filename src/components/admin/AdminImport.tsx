@@ -20,6 +20,7 @@ import {
   prepareImport,
   problemsFrom,
 } from "@/lib/importFile";
+import { yearPath } from "@/lib/routes";
 import type { ImportProblem, ImportResult } from "@/types";
 
 const MAX_SHOWN = 10;
@@ -59,7 +60,6 @@ const AdminImport = () => {
   const [yearInput, setYearInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [, setYear] = useLocalState("year", "");
   const [, setPlayers] = useLocalState<string[]>("players", []);
 
   const prepared = useMemo(
@@ -99,10 +99,7 @@ const AdminImport = () => {
     }
   };
 
-  const viewYear = (year: number) => {
-    setPlayers([]);
-    setYear(`${year}`);
-  };
+  const viewYear = () => setPlayers([]);
 
   const problem =
     fileError ?? (prepared && !prepared.ok ? prepared.error : null);
@@ -157,7 +154,7 @@ const AdminImport = () => {
           {outcome.result.year !== null && (
             <>
               {" "}
-              <Link href="/" onClick={() => viewYear(outcome.result.year!)}>
+              <Link href={yearPath(outcome.result.year)} onClick={viewYear}>
                 View {outcome.result.year}
               </Link>
             </>

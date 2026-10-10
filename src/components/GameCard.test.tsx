@@ -25,6 +25,7 @@ const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
   renderWithMantine(
     <GameCard
       game={game}
+      year="2024"
       rank={1}
       selectedMax={100}
       individualMax={60}
@@ -42,7 +43,7 @@ describe("GameCard", () => {
 
     expect(getByRole("link", { name: "Ark Nova" })).toHaveAttribute(
       "href",
-      "/games/11",
+      "/2024/games/11",
     );
     expect(getByRole("img", { name: "Ark Nova" })).toHaveAttribute(
       "src",

@@ -33,7 +33,10 @@ describe("AdminImport", () => {
     localStorage.clear();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    window.history.pushState({}, "", "/");
+  });
 
   it("starts idle with the button disabled", () => {
     renderWithMantine(<AdminImport />);
@@ -137,7 +140,7 @@ describe("AdminImport", () => {
     });
   });
 
-  it("selects the imported year when viewing it", async () => {
+  it("links to the imported year and clears the players when viewing it", async () => {
     fetchMock.mockResolvedValue(
       res(
         {
@@ -156,13 +159,13 @@ describe("AdminImport", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Import 2027" }),
     );
-    await userEvent.click(
-      await screen.findByRole("link", { name: "View 2027" }),
-    );
+    const link = await screen.findByRole("link", { name: "View 2027" });
+    expect(link).toHaveAttribute("href", "/2027");
+    await userEvent.click(link);
 
-    expect(JSON.parse(localStorage.getItem("year")!)).toBe("2027");
+    expect(localStorage.getItem("year")).toBeNull();
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/2027");
   });
 
   it("posts a games-only upload and reports no year", async () => {

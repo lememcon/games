@@ -2,6 +2,7 @@ import { Link } from "wouter";
 
 import { Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
 
+import { gamePath } from "@/lib/routes";
 import type { YearTopGames } from "@/types";
 
 const MEDALS: Record<number, string> = {
@@ -37,7 +38,7 @@ const TopGamesByYear = ({ topByYear }: { topByYear: YearTopGames[] }) => {
                   >
                     {g.rank}
                   </Badge>
-                  <Link href={`/games/${g.bggId}`}>{g.game}</Link>
+                  <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
                 <Text>{g.score}</Text>
               </Group>
