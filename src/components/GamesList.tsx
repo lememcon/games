@@ -5,6 +5,7 @@ import type { GamesData, SelectedGame } from "@/types";
 
 interface GamesListProps {
   games: SelectedGame[];
+  year: string;
   selectedMax: number;
   individualMax: number;
   gameData: GamesData;
@@ -22,6 +23,7 @@ const boundsFor = (gameData: GamesData, game: SelectedGame) =>
 // GameRows. Rank is the game's position in the already-sorted list.
 const GamesList = ({
   games,
+  year,
   selectedMax,
   individualMax,
   gameData,
@@ -39,6 +41,7 @@ const GamesList = ({
           <GameCard
             key={game.name}
             game={game}
+            year={year}
             rank={i + 1}
             selectedMax={selectedMax}
             individualMax={individualMax}
@@ -56,6 +59,7 @@ const GamesList = ({
             <GameRow
               key={game.name}
               game={game}
+              year={year}
               rank={i + 4}
               selectedMax={selectedMax}
               individualMax={individualMax}

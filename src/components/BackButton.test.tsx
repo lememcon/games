@@ -9,6 +9,11 @@ describe("BackButton", () => {
     expect(getByRole("link")).toHaveAttribute("href", "/");
   });
 
+  it("links to a given href", () => {
+    const { getByRole } = renderWithMantine(<BackButton href="/2024" />);
+    expect(getByRole("link")).toHaveAttribute("href", "/2024");
+  });
+
   it("labels its destination", () => {
     const { getByRole } = renderWithMantine(<BackButton />);
     expect(getByRole("link")).toHaveTextContent("Back to games");

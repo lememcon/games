@@ -3,10 +3,12 @@ import { Link } from "wouter";
 import PlayedCounter from "@/components/PlayedCounter";
 import ScorePopover from "@/components/ScorePopover";
 import { PALETTE, medalColor } from "@/lib/colors";
+import { gamePath } from "@/lib/routes";
 import type { Bounds, SelectedGame } from "@/types";
 
 interface GameCardProps {
   game: SelectedGame;
+  year: string;
   rank: number;
   selectedMax: number;
   individualMax: number;
@@ -21,6 +23,7 @@ interface GameCardProps {
 // the top games where the extra weight is the payoff of the leaderboard.
 const GameCard = ({
   game,
+  year,
   rank,
   selectedMax,
   individualMax,
@@ -48,7 +51,7 @@ const GameCard = ({
           </div>
           <div className="tray-card__title">
             <div className="tray-eyebrow">Rank {rank}</div>
-            <Link href={`/games/${game.id}`} className="tray-name">
+            <Link href={gamePath(year, game.id)} className="tray-name">
               {game.name}
             </Link>
           </div>

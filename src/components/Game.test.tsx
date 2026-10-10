@@ -50,7 +50,7 @@ const data: Data = {
 describe("Game", () => {
   it("renders the game name, player bounds, and BGG link", () => {
     const { getByRole } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="11" />,
+      <Game data={data} gameData={gameData} year="2024" id="11" />,
     );
 
     expect(getByRole("heading", { name: "Belfort" })).toBeInTheDocument();
@@ -61,6 +61,15 @@ describe("Game", () => {
     expect(getByRole("link", { name: "BGG Page" })).toHaveTextContent(
       "BGG Page",
     );
+  });
+
+  it("links back to the year's scoreboard", () => {
+    const { getAllByRole } = renderWithMantine(
+      <Game data={data} gameData={gameData} year="2024" id="11" />,
+    );
+    const back = getAllByRole("link", { name: /Back to games/ });
+    expect(back).toHaveLength(2);
+    for (const link of back) expect(link).toHaveAttribute("href", "/2024");
   });
 
   it("links only players that have a discord id", () => {
@@ -74,7 +83,7 @@ describe("Game", () => {
       },
     };
     const { getByRole, queryByRole } = renderWithMantine(
-      <Game data={linked} gameData={gameData} id="11" />,
+      <Game data={linked} gameData={gameData} year="2024" id="11" />,
     );
 
     expect(getByRole("link", { name: "alice" })).toHaveAttribute(
@@ -86,7 +95,7 @@ describe("Game", () => {
 
   it("renders a scores row per player", () => {
     const { getByText } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="11" />,
+      <Game data={data} gameData={gameData} year="2024" id="11" />,
     );
     expect(getByText("alice")).toBeInTheDocument();
     expect(getByText("bob")).toBeInTheDocument();
@@ -94,14 +103,14 @@ describe("Game", () => {
 
   it("handles a game with no metadata", () => {
     const { getByRole } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="999999" />,
+      <Game data={data} gameData={gameData} year="2024" id="999999" />,
     );
     expect(getByRole("heading", { name: "Unknown Game" })).toBeInTheDocument();
   });
 
   it("renders the cover image when the metadata has one", () => {
     const { getByRole } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="11" />,
+      <Game data={data} gameData={gameData} year="2024" id="11" />,
     );
     expect(getByRole("img")).toHaveAttribute(
       "src",
@@ -111,7 +120,7 @@ describe("Game", () => {
 
   it("falls back to the image URL and hides unknown bounds", () => {
     const { getByRole, queryByText } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="60" />,
+      <Game data={data} gameData={gameData} year="2024" id="60" />,
     );
     expect(getByRole("img")).toHaveAttribute("src", "https://x.test/60.png");
     expect(queryByText("Players:")).not.toBeInTheDocument();
@@ -119,7 +128,7 @@ describe("Game", () => {
 
   it("renders a game whose metadata has no image", () => {
     const { getByRole, queryByRole } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="50" />,
+      <Game data={data} gameData={gameData} year="2024" id="50" />,
     );
     expect(getByRole("heading", { name: "Imageless" })).toBeInTheDocument();
     expect(queryByRole("img")).not.toBeInTheDocument();
@@ -127,7 +136,7 @@ describe("Game", () => {
 
   it("renders nothing when the id has no scores", () => {
     const { queryByRole } = renderWithMantine(
-      <Game data={data} gameData={gameData} id="missing" />,
+      <Game data={data} gameData={gameData} year="2024" id="missing" />,
     );
     expect(queryByRole("heading")).not.toBeInTheDocument();
     expect(queryByRole("table")).not.toBeInTheDocument();

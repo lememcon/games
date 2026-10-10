@@ -3,15 +3,17 @@ import GameDetailHeader from "@/components/GameDetailHeader";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
+import { yearPath } from "@/lib/routes";
 import type { Data, GamesData } from "@/types";
 
 interface GameProps {
   data: Data;
   gameData: GamesData;
   id: string;
+  year: string;
 }
 
-const Game = ({ data, gameData, id }: GameProps) => {
+const Game = ({ data, gameData, id, year }: GameProps) => {
   const max = data.max;
   const players = data.by_id[id];
 
@@ -24,7 +26,7 @@ const Game = ({ data, gameData, id }: GameProps) => {
 
   return (
     <div>
-      <BackButton />
+      <BackButton href={yearPath(year)} />
       <GameDetailHeader
         name={players[0].game}
         bounds={bounds}
@@ -32,7 +34,7 @@ const Game = ({ data, gameData, id }: GameProps) => {
         image={image}
       />
       <PlayerScoresTable players={players} max={max} />
-      <BackButton style={{ marginTop: "2em" }} />
+      <BackButton href={yearPath(year)} style={{ marginTop: "2em" }} />
     </div>
   );
 };

@@ -4,11 +4,13 @@ import { useMantineTheme } from "@mantine/core";
 
 import PlayedCounter from "@/components/PlayedCounter";
 import ScorePopover from "@/components/ScorePopover";
+import { gamePath } from "@/lib/routes";
 import type { Bounds, SelectedGame } from "@/types";
 import { normalized_score, score_color } from "@/util";
 
 interface GameRowProps {
   game: SelectedGame;
+  year: string;
   rank: number;
   selectedMax: number;
   individualMax: number;
@@ -25,6 +27,7 @@ interface GameRowProps {
 // bar so a glance down the list reads strong-to-weak.
 const GameRow = ({
   game,
+  year,
   rank,
   selectedMax,
   individualMax,
@@ -50,7 +53,7 @@ const GameRow = ({
       </div>
 
       <div className="tray-row__main">
-        <Link href={`/games/${game.id}`} className="tray-name">
+        <Link href={gamePath(year, game.id)} className="tray-name">
           {game.name}
         </Link>
         {bounds && (

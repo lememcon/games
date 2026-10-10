@@ -46,10 +46,21 @@ describe("AuthedApp", () => {
     expect(screen.getByText("scoreboard")).toBeInTheDocument();
   });
 
-  it("renders the scoreboard for game detail routes", () => {
-    at("/games/11", member);
-    expect(screen.getByText("scoreboard")).toBeInTheDocument();
-  });
+  it.each(["/games/11", "/2024", "/2024/games/11"])(
+    "renders the scoreboard for %s",
+    (path) => {
+      at(path, member);
+      expect(screen.getByText("scoreboard")).toBeInTheDocument();
+    },
+  );
+
+  it.each(["/profile", "/players/1"])(
+    "does not render the scoreboard for %s",
+    (path) => {
+      at(path, member);
+      expect(screen.queryByText("scoreboard")).toBeNull();
+    },
+  );
 
   it("renders the admin page for admins without the year picker", () => {
     at("/admin", admin);

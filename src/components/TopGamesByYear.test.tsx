@@ -37,7 +37,11 @@ describe("TopGamesByYear", () => {
     expect(screen.getByLabelText("place 4")).toHaveTextContent("4");
     expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
       "href",
-      "/games/1",
+      "/2026/games/1",
+    );
+    expect(screen.getByRole("link", { name: "Root" })).toHaveAttribute(
+      "href",
+      "/2025/games/3",
     );
     expect(screen.getByText("87")).toBeInTheDocument();
   });

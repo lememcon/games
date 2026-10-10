@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -75,6 +75,9 @@ const member: ApprovedUser = {
 };
 const admin: ApprovedUser = { ...member, role: "admin" };
 
+const at = (path: string) => window.history.pushState({}, "", path);
+const path = () => window.location.pathname;
+
 const render = (user: ApprovedUser = member) =>
   renderWithMantine(<Scoreboard user={user} />);
 
@@ -87,11 +90,14 @@ describe("Scoreboard", () => {
     state.played = {};
   });
   afterEach(() => {
+    // Unmount before resetting the URL, or a mounted Scoreboard redirects.
+    cleanup();
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
   });
 
   it("gives the played counts the year only once the years have loaded", () => {
+    at("/2026");
     state.years = { years: [], loading: true, error: false };
     const { rerender } = render();
     expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
@@ -105,21 +111,23 @@ describe("Scoreboard", () => {
     expect(state.usePlayedCounts).toHaveBeenLastCalledWith("2026");
   });
 
-  it("renders the game detail on /games/:id", () => {
-    window.history.pushState({}, "", "/games/11");
+  it("renders the game detail on /:year/games/:id", () => {
+    at("/2025/games/11");
     const { getByRole, queryByText } = render();
 
     expect(getByRole("heading", { name: "Belfort" })).toBeInTheDocument();
     expect(queryByText("Filter By Players")).toBeNull();
+    expect(state.useData).toHaveBeenLastCalledWith("2025");
   });
 
   it("renders the header and the games list", () => {
+    at("/2026");
     const { getByRole, getByText } = render();
 
     expect(getByRole("heading", { name: "LememCon" })).toBeInTheDocument();
     expect(getByRole("link", { name: "Belfort" })).toHaveAttribute(
       "href",
-      "/games/11",
+      "/2026/games/11",
     );
     expect(getByText("Filter By Players")).toBeInTheDocument();
     // Belfort aggregates 50 + 30 = 80; normalized against selectedMax
@@ -127,16 +135,9 @@ describe("Scoreboard", () => {
     expect(getByText("40")).toBeInTheDocument();
   });
 
-  it("links each game row to its detail route", () => {
-    const { getByRole } = render();
-    expect(getByRole("link", { name: "Belfort" })).toHaveAttribute(
-      "href",
-      "/games/11",
-    );
-  });
-
-  it("clears the player filter when the year changes", async () => {
+  it("clears the player filter and navigates when a year is picked", async () => {
     const user = userEvent.setup();
+    at("/2026");
     localStorage.setItem("players", JSON.stringify(["alice"]));
     const { container } = render();
 
@@ -144,6 +145,7 @@ describe("Scoreboard", () => {
     // so target the year input directly. The default is the newest year.
     await user.click(container.querySelector("#year")!);
     await user.click(await screen.findByText("2025"));
+    expect(path()).toBe("/2025");
     expect(state.useData).toHaveBeenLastCalledWith("2025");
 
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
@@ -151,6 +153,7 @@ describe("Scoreboard", () => {
 
   it("counts plays through the played counter", async () => {
     const user = userEvent.setup();
+    at("/2026");
     render();
 
     await user.click(await screen.findByRole("button", { name: "+" }));
@@ -159,6 +162,7 @@ describe("Scoreboard", () => {
   });
 
   it("shows skeletons while the data loads", () => {
+    at("/2026");
     state.data = { ...emptyData, loading: true };
     const { container, queryByText } = render();
 
@@ -167,6 +171,7 @@ describe("Scoreboard", () => {
   });
 
   it("shows an error message when the fetch fails", () => {
+    at("/2026");
     state.data = { ...emptyData, error: true };
     const { getByText } = render();
 
@@ -174,6 +179,7 @@ describe("Scoreboard", () => {
   });
 
   it("shows an empty message when no games are ranked", () => {
+    at("/2026");
     state.data = emptyData;
     const { getByText } = render();
 
@@ -181,6 +187,7 @@ describe("Scoreboard", () => {
   });
 
   it("explains when no ranked game includes the selected players", () => {
+    at("/2026");
     state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
     localStorage.setItem("players", JSON.stringify(["alice"]));
     const { getByText } = render();
@@ -189,6 +196,7 @@ describe("Scoreboard", () => {
   });
 
   it("clears the selected players from the empty state", async () => {
+    at("/2026");
     const user = userEvent.setup();
     state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
     localStorage.setItem("players", JSON.stringify(["alice"]));
@@ -201,6 +209,7 @@ describe("Scoreboard", () => {
   });
 
   it("congratulates when every ranked game is hidden as played", () => {
+    at("/2026");
     localStorage.setItem("hide_played", "true");
     state.played = { 11: 1 };
     const { getByText } = render();
@@ -208,24 +217,8 @@ describe("Scoreboard", () => {
     expect(getByText(/played every ranked game/)).toBeInTheDocument();
   });
 
-  it("uses the newest year when none is stored", () => {
-    render();
-    expect(state.useData).toHaveBeenLastCalledWith("2026");
-  });
-
-  it("uses a stored year that is in the list (compared as a string)", () => {
-    localStorage.setItem("year", JSON.stringify("2025"));
-    render();
-    expect(state.useData).toHaveBeenLastCalledWith("2025");
-  });
-
-  it("falls back to the newest year when the stored one has no scores", () => {
-    localStorage.setItem("year", JSON.stringify("2019"));
-    render();
-    expect(state.useData).toHaveBeenLastCalledWith("2026");
-  });
-
   it("fetches no scores until the years are known", () => {
+    at("/2026");
     state.years = { years: [], loading: true, error: false };
     state.data = { ...emptyData, loading: true };
     const { container } = render();
@@ -235,6 +228,7 @@ describe("Scoreboard", () => {
   });
 
   it("waits for the game details", () => {
+    at("/2026");
     state.games = { games: {}, loading: true, error: false };
     const { container } = render();
     expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
@@ -248,6 +242,7 @@ describe("Scoreboard", () => {
   });
 
   it("shows a separate error when the game details fail to load", () => {
+    at("/2026");
     state.games = { games: {}, loading: false, error: true };
     const { getByText, queryByText } = render();
     expect(getByText(/Couldn.t load the game details/)).toBeInTheDocument();
@@ -272,5 +267,173 @@ describe("Scoreboard", () => {
       "href",
       "/admin/import",
     );
+  });
+
+  describe("routing", () => {
+    it("redirects / to the stored year", () => {
+      localStorage.setItem("year", JSON.stringify("2025"));
+      render();
+      expect(path()).toBe("/2025");
+      expect(state.useData).toHaveBeenLastCalledWith("2025");
+    });
+
+    it.each([[""], ["2019"]])(
+      "redirects / to the newest year when the stored year is %j",
+      (stored) => {
+        if (stored) localStorage.setItem("year", JSON.stringify(stored));
+        render();
+        expect(path()).toBe("/2026");
+      },
+    );
+
+    it("does not navigate while the years load", () => {
+      state.years = { years: [], loading: true, error: false };
+      at("/games/11");
+      const first = render();
+      expect(path()).toBe("/games/11");
+      first.unmount();
+      at("/abc");
+      render();
+      expect(path()).toBe("/abc");
+    });
+
+    it("loads the URL year regardless of the stored one and stores it", () => {
+      localStorage.setItem("year", JSON.stringify("2026"));
+      at("/2025");
+      render();
+      expect(state.useData).toHaveBeenLastCalledWith("2025");
+      expect(JSON.parse(localStorage.getItem("year")!)).toBe("2025");
+    });
+
+    it("writes the stored year only when it changes, with no render loop", () => {
+      const setItem = vi.spyOn(Storage.prototype, "setItem");
+      at("/2025");
+      const first = render();
+      const writes = setItem.mock.calls.filter(([k]) => k === "year");
+      expect(writes).toHaveLength(1);
+      first.unmount();
+
+      localStorage.setItem("year", JSON.stringify("2026"));
+      setItem.mockClear();
+      at("/2026");
+      render();
+      expect(setItem.mock.calls.filter(([k]) => k === "year")).toHaveLength(0);
+      setItem.mockRestore();
+    });
+
+    it("shows an unknown-year notice without fetching or storing it", () => {
+      at("/1999");
+      const { getByText, getByRole } = render();
+
+      expect(getByText("Unknown year")).toBeInTheDocument();
+      expect(getByRole("link", { name: "View 2026" })).toHaveAttribute(
+        "href",
+        "/2026",
+      );
+      expect(state.useData).not.toHaveBeenCalledWith("1999");
+      expect(state.useData).toHaveBeenLastCalledWith(null);
+      expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
+      expect(localStorage.getItem("year")).toBeNull();
+      expect(path()).toBe("/1999");
+    });
+
+    it("sends a legacy /games/:id into the default year", () => {
+      localStorage.setItem("year", JSON.stringify("2025"));
+      at("/games/11");
+      const { getByRole } = render();
+      expect(path()).toBe("/2025/games/11");
+      expect(getByRole("heading", { name: "Belfort" })).toBeInTheDocument();
+    });
+
+    it("treats a trailing slash like the bare year", () => {
+      at("/2025/");
+      render();
+      expect(state.useData).toHaveBeenLastCalledWith("2025");
+      expect(path()).toBe("/2025/");
+    });
+
+    it.each(["/abc", "/2025/foo", "/12345", "/admin/foo", "/profile/x"])(
+      "redirects %s to the default year via /",
+      (bad) => {
+        at(bad);
+        render();
+        expect(path()).toBe("/2026");
+      },
+    );
+
+    it("returns to the list when a year is picked on a game page", async () => {
+      const user = userEvent.setup();
+      at("/2026/games/11");
+      const { container, queryByText } = render();
+      expect(queryByText("Filter By Players")).toBeNull();
+
+      await user.click(container.querySelector("#year")!);
+      await user.click(await screen.findByText("2025"));
+      expect(path()).toBe("/2025");
+      expect(await screen.findByText("Filter By Players")).toBeInTheDocument();
+    });
+
+    it("refetches and clears stale players when the URL year changes", async () => {
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      const { findByText } = render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+
+      act(() => {
+        window.history.pushState({}, "", "/2025");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      await findByText("Filter By Players");
+      expect(state.useData).toHaveBeenLastCalledWith("2025");
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+    });
+
+    it("does not clear the players when the URL year matches the stored one", () => {
+      localStorage.setItem("year", JSON.stringify("2026"));
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+    });
+
+    it("does not clear the players when no year is stored yet", () => {
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+      expect(JSON.parse(localStorage.getItem("year")!)).toBe("2026");
+    });
+
+    it("clears the players when a link opens a different year than stored", () => {
+      localStorage.setItem("year", JSON.stringify("2025"));
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+      expect(JSON.parse(localStorage.getItem("year")!)).toBe("2026");
+    });
+
+    it("sends a legacy /games/:id to the newest year when none is stored", () => {
+      at("/games/11");
+      render();
+      expect(path()).toBe("/2026/games/11");
+    });
+
+    it("shows the empty state for a year URL when there are no years", () => {
+      state.years = { years: [], loading: false, error: false };
+      at("/2026");
+      const { getByText } = render();
+      expect(getByText("No scores yet")).toBeInTheDocument();
+    });
+
+    it("does not trap the back button after a redirect", () => {
+      at("/other");
+      const before = window.history.length;
+      at("/");
+      render();
+      expect(path()).toBe("/2026");
+      // replace, not push: one entry for "/" was pushed above, none added by the redirect
+      expect(window.history.length).toBe(before + 1);
+    });
   });
 });

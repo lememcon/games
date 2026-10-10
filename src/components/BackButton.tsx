@@ -8,11 +8,13 @@ import { Link } from "wouter";
 const BackButton = ({
   style,
   label = "Back to games",
+  href = "/",
 }: {
   style?: CSSProperties;
   label?: string;
+  href?: string;
 }) => (
-  <Link href="/" className="tray-back" style={style}>
+  <Link href={href} className="tray-back" style={style}>
     <ArrowLeft size={16} aria-hidden />
     {label}
   </Link>

@@ -82,6 +82,10 @@ pnpm dev
 
 ## How it works
 
+### URLs
+
+The year is in the path: `/:year` is a year's scoreboard and `/:year/games/:id` a game in that year. Bare `/` and the old `/games/:id` redirect to the last viewed year (kept in localStorage), else the newest. The parser lives in `src/lib/routes.ts`.
+
 ### Data flow
 
 Score data is **not** bundled — it comes from the API, which reads PostgreSQL:
