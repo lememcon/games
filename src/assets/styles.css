@@ -224,6 +224,7 @@ body {
 .splits__row--chosen,
 .splits__row--chosen:hover {
   border-color: #1f7a3d;
+  box-shadow: inset 3px 0 0 #1f7a3d;
 }
 
 .splits__row--chosen {

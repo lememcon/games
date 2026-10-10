@@ -465,7 +465,7 @@ describe("Scoreboard", () => {
       const { getByText } = render();
 
       expect(getByText("Suggested splits")).toBeInTheDocument();
-      expect(getByText(/Duel \+ Joust/)).toBeInTheDocument();
+      expect(getByText(/\d \+ \d · Duel \+ Joust/)).toBeInTheDocument();
     });
 
     it("hides them with fewer than four players or none selected", () => {
