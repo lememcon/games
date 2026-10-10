@@ -285,6 +285,27 @@ describe("buildSelectedGames", () => {
     ]);
   });
 
+  it("counts a repeated player/game row once, keeping the best score", () => {
+    const row = { player: "alice", game: "Root", bgg_id: 100, rank: 1 };
+    const [root] = buildSelectedGames({
+      byPlayer: {
+        alice: [
+          { ...row, score: 30 },
+          { ...row, score: 50 },
+          { ...row, score: 20 },
+        ],
+      },
+      players: [],
+      gameData,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+    });
+
+    expect(root.score).toBe(50);
+    expect(root.players.alice.score).toBe(50);
+  });
+
   it("records per-player rank and score", () => {
     const [root] = buildSelectedGames({
       byPlayer,

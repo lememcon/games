@@ -52,6 +52,20 @@ describe("useData", () => {
     expect(result.current.max).toBe(50);
   });
 
+  it("takes max from the highest score, not each game's first row", async () => {
+    mockFetch({
+      player_game_scores: [
+        { game: "Root", rank: 2, score: 40, player: "alice", bgg_id: 100 },
+        { game: "Root", rank: 1, score: 90, player: "bob", bgg_id: 100 },
+      ],
+    });
+    const { result } = renderHook(() => useData("2025"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.max).toBe(90);
+  });
+
   it("flags an error when the fetch fails", async () => {
     globalThis.fetch = vi.fn(() =>
       Promise.reject(new Error("network down")),
