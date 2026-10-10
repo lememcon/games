@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { gameOrder, mockApi } from "./fixtures";
+import { gameOrder, games, mockApi } from "./fixtures";
 
 test("scoreboard ranks the newest year's games", async ({ page }) => {
   await mockApi(page);
@@ -57,4 +57,19 @@ test("played counter updates and saves to the server", async ({ page }) => {
   await expect(page.getByText("Played 1×")).toBeVisible();
   await expect(page.getByText("Not Played")).toHaveCount(3);
   expect((await put).postDataJSON()).toEqual({ count: 1 });
+});
+
+test("a game that does not fit the group size is filtered out", async ({
+  page,
+}) => {
+  await mockApi(page, {
+    games: { ...games, "104": { players: { min: 4, max: 4 }, image: null } },
+  });
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+
+  await page.getByRole("button", { name: "Alice" }).click();
+  await page.getByRole("button", { name: "Bob" }).click();
+  await expect(page.getByText("3 of 4 games")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Delta" })).toHaveCount(0);
 });

@@ -69,12 +69,12 @@ describe("realBounds", () => {
   });
 });
 
-describe("player count overrides", () => {
+describe("player count bounds", () => {
   const root = {
     players: { min: 4, max: 4 },
   };
 
-  it("scores and filters by the effective range", () => {
+  it("scores and filters by the range", () => {
     expect(gameBounds({ 100: root }, "100")).toEqual({ min: 4, max: 4 });
     const rows = (n: number): Record<string, PlayerGameScore[]> =>
       Object.fromEntries(
@@ -105,7 +105,7 @@ describe("player count overrides", () => {
     expect(names(5)).toEqual([]);
   });
 
-  it("limits split groups to the effective range", () => {
+  it("limits split groups to the range", () => {
     const four = ["a", "b", "c", "d"];
     const byPlayer: Record<string, PlayerGameScore[]> = Object.fromEntries(
       four.map((p) => [
