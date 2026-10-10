@@ -2,13 +2,7 @@ import { and, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { AllMemberOverrides, MemberOverrideStore } from "../types";
-import {
-  game,
-  gameMetadata,
-  gamePlayerOverride,
-  memberPlayerOverride,
-  player,
-} from "./schema";
+import { game, gameMetadata, memberPlayerOverride, player } from "./schema";
 import type { StoreDb } from "./userStore";
 
 export function createMemberOverrideStore(db: StoreDb): MemberOverrideStore {
@@ -41,20 +35,13 @@ export function createMemberOverrideStore(db: StoreDb): MemberOverrideStore {
           .select({
             minPlayers: gameMetadata.minPlayers,
             maxPlayers: gameMetadata.maxPlayers,
-            overrideMin: gamePlayerOverride.minPlayers,
-            overrideMax: gamePlayerOverride.maxPlayers,
           })
           .from(game)
           .leftJoin(gameMetadata, eq(gameMetadata.bggId, game.bggId))
-          .leftJoin(
-            gamePlayerOverride,
-            eq(gamePlayerOverride.bggId, game.bggId),
-          )
           .where(eq(game.bggId, bggId));
         if (!found) return refuse(404, "unknown_game");
 
-        const min = found.overrideMin ?? found.minPlayers;
-        const max = found.overrideMax ?? found.maxPlayers;
+        const { minPlayers: min, maxPlayers: max } = found;
         if (min === null || max === null) return refuse(409, "no_player_range");
         if (range.min < min || range.max > max)
           return refuse(400, "out_of_range");

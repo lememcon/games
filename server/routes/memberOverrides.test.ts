@@ -10,6 +10,7 @@ import {
   fakeStore,
 } from "../testing";
 import type { AppUser } from "../types";
+import { parseRange } from "./memberOverrides";
 
 const WEB = "https://games.lememcon.com";
 const KEL = "222222222222222222";
@@ -180,5 +181,29 @@ describe("DELETE /api/me/player-overrides/:bggId", () => {
     const res = await send(makeApp().app, "DELETE", "abc");
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_id" });
+  });
+});
+
+describe("parseRange", () => {
+  it("accepts exactly {min, max} with 1 <= min <= max <= 99", () => {
+    expect(parseRange({ max: 4, min: 3 })).toEqual({ min: 3, max: 4 });
+    expect(parseRange({ min: 1, max: 99 })).toEqual({ min: 1, max: 99 });
+    expect(parseRange({ min: 2, max: 2 })).toEqual({ min: 2, max: 2 });
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { min: 2 },
+    { min: 0, max: 2 },
+    { min: 1, max: 100 },
+    { min: 5, max: 4 },
+    { min: 1.5, max: 2 },
+    { min: "2", max: "3" },
+    { min: 1, max: 2, extra: 1 },
+    { min: null, max: 2 },
+  ])("rejects %j", (body) => {
+    expect(parseRange(body)).toBeNull();
   });
 });

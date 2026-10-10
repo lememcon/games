@@ -295,63 +295,20 @@ describe("toGamesMap", () => {
     ).toEqual({ min: 0, max: 0 });
   });
 
-  it("uses the override for players and keeps BGG's range", () => {
-    expect(
-      toGamesMap([
-        row({ minPlayers: 2, maxPlayers: 6, overrideMin: 4, overrideMax: 4 }),
-      ])["1"],
-    ).toEqual({
-      players: { min: 4, max: 4 },
-      bggPlayers: { min: 2, max: 6 },
-      overridden: true,
-    });
-  });
-
-  it("flags an override without BGG data but has no original to show", () => {
-    expect(toGamesMap([row({ overrideMin: 3, overrideMax: 5 })])["1"]).toEqual({
-      players: { min: 3, max: 5 },
-      overridden: true,
-    });
-    expect(
-      toGamesMap([
-        row({
-          minPlayers: 2,
-          maxPlayers: null,
-          overrideMin: 3,
-          overrideMax: 5,
-        }),
-      ])["1"],
-    ).toEqual({ players: { min: 3, max: 5 }, overridden: true });
-  });
-
-  it("does not flag an override equal to BGG's range", () => {
-    expect(
-      toGamesMap([
-        row({ minPlayers: 2, maxPlayers: 6, overrideMin: 2, overrideMax: 6 }),
-      ])["1"],
-    ).toEqual({ players: { min: 2, max: 6 } });
-  });
-
-  it("ignores a half-null override and masks a changed BGG range", () => {
-    expect(
+  it("emits exactly players, image and ext, with no override fields", () => {
+    const [entry] = Object.values(
       toGamesMap([
         row({
           minPlayers: 2,
           maxPlayers: 6,
-          overrideMin: 4,
-          overrideMax: null,
+          imageUrl: "https://x/a.jpg",
+          imageExt: ".jpg",
         }),
-      ])["1"],
-    ).toEqual({ players: { min: 2, max: 6 } });
-    // BGG re-fetch widened to 1-8 under a 4-4 override: still 4-4.
-    expect(
-      toGamesMap([
-        row({ minPlayers: 1, maxPlayers: 8, overrideMin: 4, overrideMax: 4 }),
-      ])["1"],
-    ).toMatchObject({
-      players: { min: 4, max: 4 },
-      bggPlayers: { min: 1, max: 8 },
-    });
+      ]),
+    );
+    expect(Object.keys(entry).sort()).toEqual(["ext", "image", "players"]);
+    expect(entry).not.toHaveProperty("bggPlayers");
+    expect(entry).not.toHaveProperty("overridden");
   });
 });
 

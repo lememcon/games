@@ -1,9 +1,22 @@
 import { Hono } from "hono";
 
 import { privateNoCache, refusalResponse } from "../result";
-import type { AppEnv, MemberOverrideStore } from "../types";
-import { parseId32, readJson } from "../validate";
-import { parseRange } from "./gamePlayers";
+import type { AppEnv, MemberOverrideStore, PlayerRange } from "../types";
+import { isRecord, parseId32, readJson } from "../validate";
+
+const MAX_PLAYERS = 99;
+
+const isCount = (v: unknown): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= MAX_PLAYERS;
+
+/** A body of exactly `{min, max}`: integers 1..99 with min <= max; else null. */
+export function parseRange(body: unknown): PlayerRange | null {
+  if (!isRecord(body)) return null;
+  const keys = Object.keys(body).sort();
+  if (keys.length !== 2 || keys[0] !== "max" || keys[1] !== "min") return null;
+  const { min, max } = body;
+  return isCount(min) && isCount(max) && min <= max ? { min, max } : null;
+}
 
 /** Members' own player count ranges; all need an approved user (checked in app.ts). */
 export function memberOverrideRoutes(overrides: MemberOverrideStore) {

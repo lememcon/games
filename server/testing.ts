@@ -6,7 +6,6 @@ import type {
   BggRepo,
   DataStore,
   GameMetadataRow,
-  GamePlayersRow,
   GamesMap,
   ImportContext,
   LegacyScoreRow,
@@ -122,22 +121,12 @@ export function fakeData(
   initial: {
     years?: Record<number, LegacyScoreRow[]>;
     games?: GamesMap;
-    /** Games the admin player-count routes know about. */
-    gamePlayers?: GamePlayersRow[];
   } = {},
 ) {
   const years = new Map<number, LegacyScoreRow[]>(
     Object.entries(initial.years ?? {}).map(([y, rows]) => [Number(y), rows]),
   );
   const games: GamesMap = { ...initial.games };
-  const players = new Map<number, GamePlayersRow>(
-    (initial.gamePlayers ?? []).map((g) => [g.bggId, g]),
-  );
-  const overrideCalls: {
-    bggId: number;
-    range: PlayerRange;
-    updatedBy: string;
-  }[] = [];
   const imports: { input: NormalizedImport; context: ImportContext }[] = [];
   const scoreCalls: { year: number; resolveNames: boolean }[] = [];
 
@@ -161,19 +150,6 @@ export function fakeData(
         : null;
     },
     getGames: async () => games,
-    listGamePlayers: async () => [...players.values()],
-    setPlayerOverride: async (bggId, range, updatedBy) => {
-      overrideCalls.push({ bggId, range, updatedBy });
-      const found = players.get(bggId);
-      if (!found) return refuse(404, "unknown_game");
-      const same = found.bgg?.min === range.min && found.bgg?.max === range.max;
-      players.set(bggId, { ...found, override: same ? null : range });
-      return { ok: true, value: null };
-    },
-    clearPlayerOverride: async (bggId) => {
-      const found = players.get(bggId);
-      if (found) players.set(bggId, { ...found, override: null });
-    },
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
         return refuse(409, "year_exists");
@@ -201,7 +177,7 @@ export function fakeData(
       };
     },
   };
-  return { data, years, games, imports, scoreCalls, players, overrideCalls };
+  return { data, years, games, imports, scoreCalls };
 }
 
 /** In-memory LinkStore for tests; refuses unknown players and members like the SQL store. */
