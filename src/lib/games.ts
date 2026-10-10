@@ -219,13 +219,12 @@ export const MAX_SPLIT_PLAYERS = 8;
 export const MAX_SPLITS = 3;
 export const GAMES_PER_GROUP = 4;
 
-// Every way to divide the items into groups of at least two, except the single
-// group holding everyone.
+// Every way to divide the items into exactly two groups of at least two.
 export const partitions = (items: string[]): string[][][] => {
   const result: string[][][] = [];
   const place = (i: number, groups: string[][]) => {
     if (i === items.length) {
-      if (groups.length > 1 && groups.every((g) => g.length >= 2)) {
+      if (groups.length === 2 && groups.every((g) => g.length >= 2)) {
         result.push(groups.map((g) => [...g]));
       }
       return;
@@ -275,7 +274,7 @@ const pickGames = (lists: SelectedGame[][]): SelectedGame[] | null => {
   return best;
 };
 
-// Suggest ways to split 4-8 selected players into groups of two or more. Each
+// Suggest ways to split 4-8 selected players into two groups of two or more. Each
 // group lists its top games that every member scored; the headline plan picks
 // each group's best game without reusing a game, and splits are ranked by that
 // plan's summed score per player, compared with the best all-together game.
