@@ -22,6 +22,7 @@ import type {
   StoredUser,
   UserRow,
   UserStore,
+  YearTotal,
 } from "./types";
 
 export type FakeUser = Partial<StoredUser> & UserRow;
@@ -150,6 +151,18 @@ export function fakeData(
         : null;
     },
     getGames: async () => games,
+    getYearTotals: async () => {
+      const sums = new Map<string, YearTotal>();
+      for (const [year, rows] of years)
+        for (const r of rows) {
+          const key = `${year}:${r.bgg_id}`;
+          const found = sums.get(key) ?? { year, bgg_id: r.bgg_id, total: 0 };
+          sums.set(key, { ...found, total: found.total + r.score });
+        }
+      return [...sums.values()].sort(
+        (a, b) => a.year - b.year || a.bgg_id - b.bgg_id,
+      );
+    },
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
         return refuse(409, "year_exists");

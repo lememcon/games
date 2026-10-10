@@ -7,6 +7,13 @@ import type { Data, GamesData } from "@/types";
 
 // "11" maps to the real bundled src/assets/games/11.jpg; "50" has no image;
 // "60" only has an https URL.
+const yearTotals = vi.hoisted(() => ({
+  totals: [] as { year: number; bgg_id: number; total: number }[],
+}));
+vi.mock("@/hooks/useYearTotals", () => ({
+  default: () => ({ ...yearTotals, loading: false, error: false }),
+}));
+
 const gameData: GamesData = {
   11: {
     players: { min: 2, max: 7 },
@@ -49,6 +56,25 @@ const data: Data = {
 };
 
 describe("Game", () => {
+  it("shows the across-the-years sparkline only with totals in 2+ years", () => {
+    const view = () =>
+      renderWithMantine(
+        <Game data={data} gameData={gameData} year="2024" id="11" />,
+      );
+    yearTotals.totals = [{ year: 2024, bgg_id: 11, total: 120 }];
+    expect(view().queryByLabelText(/^Total score by year,/)).toBeNull();
+    yearTotals.totals = [
+      { year: 2023, bgg_id: 11, total: 90 },
+      { year: 2024, bgg_id: 11, total: 120 },
+      { year: 2024, bgg_id: 50, total: 1 },
+    ];
+    expect(view().getByLabelText(/^Total score by year,/)).toHaveAttribute(
+      "aria-label",
+      "Total score by year, 2023 to 2024: 2023 90, 2024 120",
+    );
+    yearTotals.totals = [];
+  });
+
   it("renders the game name, player bounds, and BGG link", () => {
     const { getByRole } = renderWithMantine(
       <Game data={data} gameData={gameData} year="2024" id="11" />,

@@ -160,6 +160,20 @@ describe("data store", () => {
     );
     expect(rows[0].n).toBe(7);
   });
+
+  it("sums scores per year and game, ordered by year then game", async () => {
+    const totals = await store.getYearTotals();
+    const expected = [];
+    for (const year of [2025, 2026]) {
+      const sums = new Map<number, number>();
+      for (const r of (await store.getScores(year))!)
+        sums.set(r.bgg_id, (sums.get(r.bgg_id) ?? 0) + r.score);
+      for (const [bgg_id, total] of [...sums].sort((a, b) => a[0] - b[0]))
+        expected.push({ year, bgg_id, total });
+    }
+    expect(totals).toEqual(expected);
+    expect(totals).toContainEqual({ year: 2026, bgg_id: 500, total: -4 });
+  });
 });
 
 describe("data store metadata", () => {

@@ -23,6 +23,11 @@ export function dataRoutes(data: DataStore) {
     c.json({ years: await data.listYears() }),
   );
 
+  // Totals only: no player names or ids, so the same for every caller.
+  routes.get("/years/totals", ...read, async (c) =>
+    c.json({ totals: await data.getYearTotals() }),
+  );
+
   routes.get("/years/:year/scores", ...read, async (c) => {
     const param = c.req.param("year");
     // Display names and profile ids are for approved sessions only, so the

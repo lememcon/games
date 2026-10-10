@@ -286,3 +286,10 @@ export interface PlayerOverride {
   min: number;
   max: number;
 }
+
+// One game's summed scores in one year, from GET /api/years/totals.
+export interface YearTotal {
+  year: number;
+  bgg_id: number;
+  total: number;
+}

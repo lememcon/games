@@ -2,10 +2,13 @@ import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import MyPlayerRange from "@/components/MyPlayerRange";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
+import YearSparkline from "@/components/YearSparkline";
 import type { PlayerOverridesState } from "@/hooks/usePlayerOverrides";
+import useYearTotals from "@/hooks/useYearTotals";
 import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
+import { seriesFor } from "@/lib/yearTotals";
 import type { Data, GamesData } from "@/types";
 
 interface GameProps {
@@ -27,6 +30,7 @@ const Game = ({
   overrides,
   discordId,
 }: GameProps) => {
+  const { totals } = useYearTotals();
   const max = data.max;
   const players = data.by_id[id];
 
@@ -48,6 +52,7 @@ const Game = ({
         image={image}
       />
       <PlayerScoresTable players={players} max={max} />
+      <YearSparkline series={seriesFor(totals, Number(id))} />
       {overrides && discordId && bounds && (
         <MyPlayerRange
           // Remount after a save or reset so the inputs show server state.
