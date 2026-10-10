@@ -222,6 +222,107 @@ describe("Scoreboard", () => {
     expect(getByText(/None of the ranked games include/)).toBeInTheDocument();
   });
 
+  describe("shareable filters", () => {
+    const search = () => window.location.search;
+    const stored = (key: string) => JSON.parse(localStorage.getItem(key)!);
+
+    it("lets the URL override the saved filters", () => {
+      at("/2026?players=alice&hidePlayed=1");
+      localStorage.setItem("players", JSON.stringify(["bob"]));
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(stored("hide_played")).toBe(true);
+      expect(search()).toBe("?players=alice&hidePlayed=1");
+    });
+
+    it("drops unknown names and normalises the URL", () => {
+      at("/2026?players=alice,zed");
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(search()).toBe("?players=alice");
+    });
+
+    it("keeps shared players when the year differs from the stored one", () => {
+      at("/2026?players=alice");
+      localStorage.setItem("year", JSON.stringify("2025"));
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(stored("year")).toBe("2026");
+    });
+
+    it("uses the saved filters for a bare year", () => {
+      at("/2026");
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(search()).toBe("?players=alice");
+    });
+
+    it("updates the query without adding history entries", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      const length = window.history.length;
+      const { getByRole } = render();
+
+      await user.click(getByRole("button", { name: "alice" }));
+      expect(search()).toBe("?players=alice");
+
+      await user.click(getByRole("checkbox"));
+      expect(search()).toBe("?players=alice&hidePlayed=1");
+      expect(window.history.length).toBe(length);
+
+      await user.click(getByRole("button", { name: "alice" }));
+      await user.click(getByRole("checkbox"));
+      expect(search()).toBe("");
+    });
+
+    it("clears players but keeps hide-played when a year is picked", async () => {
+      const user = userEvent.setup();
+      at("/2026?players=alice&hidePlayed=1");
+      const { container } = render();
+
+      await user.click(container.querySelector("#year")!);
+      await user.click(await screen.findByText("2025"));
+
+      expect(path()).toBe("/2025");
+      expect(search()).toBe("?hidePlayed=1");
+      expect(stored("players")).toEqual([]);
+    });
+
+    it("adds no query on game pages", () => {
+      at("/2025/games/11");
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      render();
+
+      expect(search()).toBe("");
+    });
+
+    it("keeps saved players when the scores fail to load", () => {
+      at("/2026?players=bob");
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      state.data = { ...emptyData, error: true };
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+    });
+
+    it("does not apply a link for an unknown year to another year", async () => {
+      const user = userEvent.setup();
+      at("/2030?players=alice");
+      localStorage.setItem("players", JSON.stringify(["bob"]));
+      const { getByRole } = render();
+
+      await user.click(getByRole("link", { name: "View 2026" }));
+
+      expect(stored("players")).toEqual(["bob"]);
+      expect(search()).toBe("?players=bob");
+    });
+  });
+
   describe("member player count ranges", () => {
     const linked: Data = {
       ...loadedData,
