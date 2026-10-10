@@ -10,12 +10,14 @@ import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
 import SplitSuggestions from "@/components/SplitSuggestions";
+import YearTrends from "@/components/YearTrends";
 import useAllPlayedCounts from "@/hooks/useAllPlayedCounts";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
+import useYearTotals from "@/hooks/useYearTotals";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
 import {
@@ -58,6 +60,7 @@ const Notice = ({
 
 function Scoreboard({ user }: ScoreboardProps) {
   const { years, loading: yearsLoading, error: yearsError } = useYears();
+  const { totals: yearTotals } = useYearTotals();
   const {
     games: game_data,
     loading: gamesLoading,
@@ -87,6 +90,10 @@ function Scoreboard({ user }: ScoreboardProps) {
   const allCounts = useAllPlayedCounts(year ?? "");
   // The member's own edits show at once, so they replace their fetched entry
   // (the fetched counts are only refreshed when the year changes).
+  const gameNames = useMemo(
+    () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
+    [data.scores],
+  );
   const playerCounts = useMemo(
     () =>
       playerCountsByName(
@@ -312,17 +319,24 @@ function Scoreboard({ user }: ScoreboardProps) {
                   {splitSuggestions}
                 </>
               ) : (
-                <GamesList
-                  afterPodium={splitSuggestions}
-                  games={games}
-                  year={year}
-                  selectedMax={selectedMax}
-                  individualMax={individualMax}
-                  gameData={game_data}
-                  getPlayedCount={getPlayedCount}
-                  onInc={incPlayedCount}
-                  onDec={decPlayedCount}
-                />
+                <>
+                  <GamesList
+                    afterPodium={splitSuggestions}
+                    games={games}
+                    year={year}
+                    selectedMax={selectedMax}
+                    individualMax={individualMax}
+                    gameData={game_data}
+                    getPlayedCount={getPlayedCount}
+                    onInc={incPlayedCount}
+                    onDec={decPlayedCount}
+                  />
+                  <YearTrends
+                    totals={yearTotals}
+                    year={Number(year)}
+                    names={gameNames}
+                  />
+                </>
               )}
             </>
           )}
