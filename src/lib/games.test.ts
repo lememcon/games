@@ -19,6 +19,7 @@ import {
   suggestSplits,
   validateMemberOverride,
   validateOverride,
+  vetoesByMember,
   worstRank,
   type PlayerRanges,
 } from "@/lib/games";
@@ -1369,5 +1370,108 @@ describe("suggestSplits sort modes", () => {
       ["c", "d"],
     ]);
     expect(lowest.map((s) => s.perPlayer)).toEqual([25, 50, 25]);
+  });
+});
+
+describe("vetoesByMember", () => {
+  it("groups the flat list by discord id with bgg ids as strings", () => {
+    expect(
+      vetoesByMember([
+        { discordId: "d1", bggId: 1 },
+        { discordId: "d1", bggId: 2 },
+        { discordId: "d2", bggId: 1 },
+      ]),
+    ).toEqual({ d1: new Set(["1", "2"]), d2: new Set(["1"]) });
+    expect(vetoesByMember([])).toEqual({});
+  });
+});
+
+describe("member vetoes", () => {
+  const row = (player: string, game: string, bgg_id: number, score = 10) => ({
+    player,
+    game,
+    rank: 1,
+    score,
+    bgg_id,
+  });
+  const scores: Record<string, PlayerGameScore[]> = {
+    Ann: [row("Ann", "Root", 1), row("Ann", "Azul", 2)],
+    Bo: [row("Bo", "Root", 1), row("Bo", "Azul", 2)],
+    Cy: [row("Cy", "Root", 1), row("Cy", "Azul", 2)],
+    Di: [row("Di", "Root", 1), row("Di", "Azul", 2)],
+  };
+  const ann = { Ann: new Set(["1"]) };
+  const names = (
+    players: string[],
+    playerVetoes: Record<string, ReadonlySet<string>> = ann,
+    extra: Partial<Parameters<typeof buildSelectedGames>[0]> = {},
+  ) =>
+    buildSelectedGames({
+      byPlayer: scores,
+      players,
+      gameData: {},
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerVetoes,
+      ...extra,
+    })
+      .map((g) => g.name)
+      .sort();
+
+  it("hides the game from a group that includes the vetoer", () => {
+    expect(names(["Ann", "Bo"])).toEqual(["Azul"]);
+  });
+
+  it("hides it for a group of one", () => {
+    expect(names(["Ann"])).toEqual(["Azul"]);
+  });
+
+  it("ignores the veto when the vetoer is not selected", () => {
+    expect(names(["Bo", "Cy"])).toEqual(["Azul", "Root"]);
+  });
+
+  it("ignores it with nobody selected, though everyone is then listed", () => {
+    expect(names([])).toEqual(["Azul", "Root"]);
+  });
+
+  it("leaves other games and other players' vetoes alone", () => {
+    expect(names(["Ann", "Bo"], { Bo: new Set(["2"]) })).toEqual(["Root"]);
+    expect(names(["Ann", "Bo"], { Ann: new Set(["1", "2"]) })).toEqual([]);
+  });
+
+  it("combines with hiding played games and player ranges", () => {
+    expect(
+      names(["Ann", "Bo"], ann, {
+        hidePlayed: true,
+        playerCounts: { Bo: { "2": 1 } },
+      }),
+    ).toEqual([]);
+    expect(
+      names(["Ann", "Bo", "Cy"], ann, {
+        playerRanges: { Bo: { "2": { min: 2, max: 2 } } },
+      }),
+    ).toEqual([]);
+  });
+
+  it("only drops the vetoed game from the vetoer's sub-group in splits", () => {
+    const players = ["Ann", "Bo", "Cy", "Di"];
+    const splits = suggestSplits({
+      byPlayer: scores,
+      players,
+      gameData: {},
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerVetoes: ann,
+    });
+    expect(splits.length).toBeGreaterThan(0);
+    for (const { groups } of splits) {
+      for (const group of groups) {
+        const shown = group.games.map((g) => g.name);
+        if (group.players.includes("Ann")) expect(shown).toEqual(["Azul"]);
+        else expect(shown).toContain("Root");
+      }
+    }
   });
 });

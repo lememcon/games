@@ -5,6 +5,7 @@ import {
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
+  fakeMemberVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -47,6 +48,7 @@ function makeApp() {
     profiles: fakeProfiles().profiles,
     played: fakePlayed().played,
     memberOverrides: fake.memberOverrides,
+    memberVetoes: fakeMemberVetoes().memberVetoes,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

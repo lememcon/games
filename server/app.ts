@@ -11,6 +11,7 @@ import { dataRoutes } from "./routes/data";
 import { importRoutes } from "./routes/import";
 import { linkRoutes } from "./routes/links";
 import { memberOverrideRoutes } from "./routes/memberOverrides";
+import { memberVetoRoutes } from "./routes/memberVetoes";
 import { playedRoutes } from "./routes/played";
 import { profileRoutes } from "./routes/profile";
 import type { AppDeps, AppEnv } from "./types";
@@ -101,6 +102,7 @@ export function createApp(deps: AppDeps) {
   api.route("/", profileRoutes(deps.profiles));
   api.route("/", playedRoutes(deps.played));
   api.route("/", memberOverrideRoutes(deps.memberOverrides));
+  api.route("/", memberVetoRoutes(deps.memberVetoes));
   api.route("/", dataRoutes(deps.data));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);

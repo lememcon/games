@@ -12,6 +12,15 @@ const hook = vi.hoisted(() => ({
   saving: false,
   onSaved: undefined as (() => void) | undefined,
 }));
+const vetoes = vi.hoisted(() => ({
+  state: {
+    vetoes: [] as { year: number; bggId: number; name: string | null }[],
+    loading: false,
+    error: null as string | null,
+    clear: vi.fn(),
+  },
+}));
+vi.mock("@/hooks/useMyVetoes", () => ({ default: () => vetoes.state }));
 vi.mock("@/hooks/useDisplayName", () => ({
   default: (onSaved: () => void) => {
     hook.onSaved = onSaved;
@@ -38,6 +47,10 @@ describe("ProfilePage", () => {
     hook.save.mockReset();
     hook.error = null;
     hook.saving = false;
+    vetoes.state.vetoes = [];
+    vetoes.state.loading = false;
+    vetoes.state.error = null;
+    vetoes.state.clear.mockReset();
   });
 
   it("shows the Discord name, a blank input and the public profile link", () => {
@@ -126,5 +139,47 @@ describe("ProfilePage", () => {
     await screen.findByText("Saved.");
     await userEvent.type(screen.getByLabelText("Display name"), "x");
     expect(screen.queryByText("Saved.")).toBeNull();
+  });
+
+  describe("vetoed games", () => {
+    it("shows an empty state", () => {
+      renderPage();
+      expect(screen.getByText("Games you've vetoed")).toBeInTheDocument();
+      expect(
+        screen.getByText("You haven't vetoed any games."),
+      ).toBeInTheDocument();
+    });
+
+    it("hides the empty state while loading", () => {
+      vetoes.state.loading = true;
+      renderPage();
+      expect(screen.queryByText("You haven't vetoed any games.")).toBeNull();
+    });
+
+    it("groups by year with links and undoes one", async () => {
+      vetoes.state.vetoes = [
+        { year: 2026, bggId: 1, name: "Root" },
+        { year: 2026, bggId: 3, name: null },
+        { year: 2025, bggId: 2, name: "Azul" },
+      ];
+      renderPage();
+      expect(screen.getByText("2026")).toBeInTheDocument();
+      expect(screen.getByText("2025")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Root" })).toHaveAttribute(
+        "href",
+        "/2026/games/1",
+      );
+      expect(screen.getByRole("link", { name: "Game 3" })).toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Undo veto of Azul in 2025" }),
+      );
+      expect(vetoes.state.clear).toHaveBeenCalledWith(2025, 2);
+    });
+
+    it("shows an error", () => {
+      vetoes.state.error = "Boom";
+      renderPage();
+      expect(screen.getByRole("alert")).toHaveTextContent("Boom");
+    });
   });
 });

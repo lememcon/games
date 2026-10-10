@@ -102,6 +102,18 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, { overrides: [] }),
   );
   await page.route(
+    (url) => pathOf(url) === "/api/vetoes",
+    (route) => json(route, { vetoes: [] }),
+  );
+  await page.route(
+    (url) => pathOf(url) === "/api/me/vetoes",
+    (route) => json(route, { vetoes: [] }),
+  );
+  await page.route(
+    (url) => /^\/api\/me\/vetoes\/\d+\/\d+$/.test(pathOf(url)),
+    (route) => route.fulfill({ status: 204 }),
+  );
+  await page.route(
     (url) => pathOf(url) === "/api/me/played",
     (route) => json(route, { counts: played }),
   );

@@ -7,6 +7,7 @@ import {
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
+  fakeMemberVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -54,6 +55,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     data: fakeData().data,
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
+    memberVetoes: fakeMemberVetoes().memberVetoes,
     profiles: fakeProfiles().profiles,
     played: fakePlayed().played,
     resolveSession: async (headers) => {
@@ -190,6 +192,7 @@ describe("error handler", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
+      memberVetoes: fakeMemberVetoes().memberVetoes,
       profiles: fakeProfiles().profiles,
       played: fakePlayed().played,
       resolveSession: async () => {
@@ -282,6 +285,7 @@ describe("GET /api/me display names", () => {
       data: fakeData().data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
+      memberVetoes: fakeMemberVetoes().memberVetoes,
       profiles: fakeProfiles().profiles,
       played: fakePlayed().played,
       resolveSession: async () => ({ user }),
