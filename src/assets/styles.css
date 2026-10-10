@@ -221,6 +221,15 @@ body {
   border-color: #ddd2bd;
 }
 
+.splits__row--chosen,
+.splits__row--chosen:hover {
+  border-color: #1f7a3d;
+}
+
+.splits__row--chosen {
+  background: #f1f8f3;
+}
+
 .tray-row__main {
   flex: 1 1 150px;
   min-width: 0;

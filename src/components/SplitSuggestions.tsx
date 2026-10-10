@@ -35,7 +35,7 @@ const SplitSuggestions = ({
         >
           <div className="splits__head">
             <strong>
-              {split.groups.map((g) => g.players.length).join(" + ")} · picked:{" "}
+              {split.groups.map((g) => g.players.length).join(" + ")} ·{" "}
               {split.groups.map((g) => g.picked).join(" + ")}
             </strong>
             <span>
@@ -65,7 +65,24 @@ const SplitSuggestions = ({
               </div>
               <div className="tray-rows">
                 {group.games.map((game) => (
-                  <div key={game.name} className="tray-row">
+                  <div
+                    key={game.name}
+                    className={
+                      game.name === group.picked
+                        ? "tray-row splits__row--chosen"
+                        : "tray-row"
+                    }
+                    aria-current={
+                      game.name === group.picked ? "true" : undefined
+                    }
+                  >
+                    <div className="tray-cover tray-cover--sm">
+                      {game.image ? (
+                        <img src={game.image} alt={game.name} />
+                      ) : (
+                        <div className="tray-cover__blank" aria-hidden />
+                      )}
+                    </div>
                     <div className="tray-row__main">
                       <Link
                         href={gamePath(year, game.id)}
@@ -73,11 +90,6 @@ const SplitSuggestions = ({
                       >
                         {game.name}
                       </Link>
-                      {game.name === group.picked && (
-                        <div className="tray-row__meta">
-                          <span className="tray-meta">picked</span>
-                        </div>
-                      )}
                     </div>
                     <div className="tray-row__score">
                       <ScorePopover
