@@ -65,7 +65,45 @@ const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
     />,
   );
 
+const scored = (name: string, ranks: [string, number][]): SelectedGame => ({
+  name,
+  id: name,
+  score: 10,
+  min: 0,
+  max: 99,
+  players: Object.fromEntries(
+    ranks.map(([p, rank]) => [p, { name: p, rank, score: 5 }]),
+  ),
+  playedBy: {},
+});
+
 describe("GamesList", () => {
+  it("names the least happy player on the top card only", () => {
+    const { getAllByText } = renderList({
+      games: [
+        scored("One", [
+          ["amy", 1],
+          ["bo", 3],
+        ]),
+        scored("Two", [
+          ["amy", 1],
+          ["bo", 3],
+        ]),
+      ],
+    });
+
+    expect(getAllByText(/least happy/)).toHaveLength(1);
+    expect(getAllByText("bo")).toHaveLength(1);
+  });
+
+  it("shows no badge with fewer than two scorers", () => {
+    const { queryByText } = renderList({
+      games: [scored("One", [["amy", 1]])],
+    });
+
+    expect(queryByText(/least happy/)).toBeNull();
+  });
+
   it("links every game into the given year", () => {
     const { getAllByRole } = renderList();
     const hrefs = getAllByRole("link").map((l) => l.getAttribute("href"));

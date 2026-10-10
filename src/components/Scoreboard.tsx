@@ -21,6 +21,7 @@ import { buildPlayerColors } from "@/lib/colors";
 import {
   buildSelectedGames,
   computeMaxScores,
+  parseSortMode,
   playerCountsByName,
   suggestSplits,
 } from "@/lib/games";
@@ -79,6 +80,8 @@ function Scoreboard({ user }: ScoreboardProps) {
   const data = useData(year);
   const [players, setPlayers] = useLocalState<string[]>("players", []);
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
+  const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
+  const sortMode = parseSortMode(storedSort);
   const [getPlayedCount, incPlayedCount, decPlayedCount, ownCounts] =
     usePlayedCounts(year ?? "");
   const allCounts = useAllPlayedCounts(year ?? "");
@@ -127,13 +130,18 @@ function Scoreboard({ user }: ScoreboardProps) {
       shared.players.filter((name) => Object.hasOwn(data.by_player, name)),
     );
     setHidePlayed(shared.hidePlayed);
+    setSortMode(shared.sort);
   });
 
   // Keep the address bar in step with the filters, replacing the history entry.
   useEffect(() => {
     if (pending.current !== null || year === null || !isYearList || !dataReady)
       return;
-    const query = buildFilterSearch({ players, hidePlayed });
+    const query = buildFilterSearch({
+      players,
+      hidePlayed,
+      sort: sortMode,
+    });
     if (query !== window.location.search) {
       setLocation(location + query, { replace: true });
     }
@@ -149,6 +157,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     hidePlayed,
     playerCounts,
     playerRanges,
+    sortMode,
   });
   const splits = useMemo(
     () =>
@@ -160,6 +169,7 @@ function Scoreboard({ user }: ScoreboardProps) {
         hidePlayed,
         playerCounts,
         playerRanges,
+        sortMode,
       }),
     [
       data.by_player,
@@ -168,6 +178,7 @@ function Scoreboard({ user }: ScoreboardProps) {
       hidePlayed,
       playerCounts,
       playerRanges,
+      sortMode,
     ],
   );
   const splitSuggestions = (
@@ -269,11 +280,13 @@ function Scoreboard({ user }: ScoreboardProps) {
                 onPlayersChange={setPlayers}
                 hidePlayed={hidePlayed}
                 onHidePlayedChange={setHidePlayed}
+                sortMode={sortMode}
+                onSortModeChange={setSortMode}
                 shown={games.length}
                 total={keys(data.by_game).length}
                 shareUrl={
                   window.location.origin +
-                  sharePath(year, { players, hidePlayed })
+                  sharePath(year, { players, hidePlayed, sort: sortMode })
                 }
               />
               {games.length === 0 ? (

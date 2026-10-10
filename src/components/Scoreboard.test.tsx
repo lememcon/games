@@ -331,6 +331,103 @@ describe("Scoreboard", () => {
     });
   });
 
+  describe("sort mode", () => {
+    // Everyone scores every game: Y has the best score but the worst rank.
+    const rows = (game: string, id: number, rank: number, score: number) =>
+      ["a", "b", "c", "d"].map((player) => ({
+        player,
+        game,
+        rank,
+        score,
+        bgg_id: id,
+      }));
+    const all = [
+      ...rows("Y", 1, 3, 90),
+      ...rows("Z", 2, 1, 70),
+      ...rows("X", 3, 2, 50),
+    ];
+    const trio: Data = {
+      ...emptyData,
+      max: 100,
+      by_player: Object.fromEntries(
+        ["a", "b", "c", "d"].map((p) => [p, all.filter((r) => r.player === p)]),
+      ),
+    };
+    const order = (container: HTMLElement) =>
+      [...container.querySelectorAll(".tray-podium .tray-name")].map(
+        (el) => el.textContent,
+      );
+    const picked = (container: HTMLElement) =>
+      container.querySelector(".splits__head strong")?.textContent;
+    const stored = () => JSON.parse(localStorage.getItem("sort_mode")!);
+
+    beforeEach(() => {
+      at("/2026");
+      state.data = trio;
+      localStorage.setItem("players", JSON.stringify(["a", "b", "c", "d"]));
+    });
+
+    it("defaults to total", () => {
+      const { container, getByRole } = render();
+
+      expect(getByRole("radio", { name: "Total" })).toBeChecked();
+      expect(order(container)).toEqual(["Y", "Z", "X"]);
+      expect(picked(container)).toContain("Y + Z");
+      expect(window.location.search).not.toContain("sort");
+    });
+
+    it("restores a saved mode", () => {
+      localStorage.setItem("sort_mode", JSON.stringify("lowest"));
+      const { container, getByRole } = render();
+
+      expect(getByRole("radio", { name: "Lowest rank" })).toBeChecked();
+      expect(order(container)).toEqual(["Z", "X", "Y"]);
+    });
+
+    it("falls back to total for an invalid saved value", () => {
+      localStorage.setItem("sort_mode", JSON.stringify("bogus"));
+      const { container, getByRole } = render();
+
+      expect(getByRole("radio", { name: "Total" })).toBeChecked();
+      expect(order(container)).toEqual(["Y", "Z", "X"]);
+    });
+
+    it("reorders the list and the splits, and updates the link", async () => {
+      const user = userEvent.setup();
+      const { container, getByText } = render();
+
+      await user.click(getByText("Lowest rank"));
+
+      expect(order(container)).toEqual(["Z", "X", "Y"]);
+      expect(picked(container)).toContain("X + Z");
+      expect(stored()).toBe("lowest");
+      expect(window.location.search).toContain("sort=lowest");
+    });
+
+    it("lets a shared link override the saved mode", () => {
+      localStorage.setItem("sort_mode", JSON.stringify("even"));
+      at("/2026?players=a,b,c,d&sort=lowest");
+      const { container } = render();
+
+      expect(stored()).toBe("lowest");
+      expect(order(container)).toEqual(["Z", "X", "Y"]);
+      expect(window.location.search).toBe("?players=a,b,c,d&sort=lowest");
+    });
+
+    it("includes the mode in the copied link", async () => {
+      const user = userEvent.setup();
+      localStorage.setItem("sort_mode", JSON.stringify("even"));
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole } = render();
+
+      await user.click(getByRole("button", { name: "Copy link" }));
+
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("sort=even"),
+      );
+    });
+  });
+
   describe("member player count ranges", () => {
     const linked: Data = {
       ...loadedData,

@@ -98,6 +98,20 @@ describe("GameCard", () => {
     expect(getByText(String(rank))).toHaveStyle({ background: PALETTE[0] });
   });
 
+  it("shows the least happy player when given one", () => {
+    const { getByText } = renderCard({ leastHappy: "bob" });
+
+    expect(getByText(/least happy/)).toBeInTheDocument();
+    expect(getByText("bob")).toBeInTheDocument();
+  });
+
+  it("shows no badge by default or when null", () => {
+    expect(renderCard().queryByText(/least happy/)).toBeNull();
+    expect(
+      renderCard({ leastHappy: null }).queryByText(/least happy/),
+    ).toBeNull();
+  });
+
   it("forwards the play-count increment", async () => {
     const user = userEvent.setup();
     const onInc = vi.fn();
