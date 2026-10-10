@@ -57,17 +57,6 @@ export const games: GamesData = {
   "104": { players: { min: 2, max: 4 }, image: null },
 };
 
-// Delta's BGG range of 2-4 restricted to exactly 4 by an admin.
-export const overriddenGames: GamesData = {
-  ...games,
-  "104": {
-    players: { min: 4, max: 4 },
-    bggPlayers: { min: 2, max: 4 },
-    overridden: true,
-    image: null,
-  },
-};
-
 interface MockOptions {
   me?: Me;
   games?: GamesData;

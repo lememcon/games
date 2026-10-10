@@ -4,10 +4,8 @@ import {
   avatarUrl,
   buildSelectedGames,
   computeMaxScores,
-  filterGamePlayers,
   formatBounds,
   gameBounds,
-  originalBounds,
   partitions,
   playerCountsByName,
   rangesByMember,
@@ -18,7 +16,7 @@ import {
   validateOverride,
   type PlayerRanges,
 } from "@/lib/games";
-import type { Data, GamePlayersRow, GamesData, PlayerGameScore } from "@/types";
+import type { Data, GamesData, PlayerGameScore } from "@/types";
 
 const gameData: GamesData = {
   100: { players: { min: 2, max: 4 } },
@@ -71,14 +69,12 @@ describe("realBounds", () => {
   });
 });
 
-describe("player count overrides", () => {
+describe("player count bounds", () => {
   const root = {
     players: { min: 4, max: 4 },
-    bggPlayers: { min: 2, max: 6 },
-    overridden: true,
   };
 
-  it("scores and filters by the effective range", () => {
+  it("scores and filters by the range", () => {
     expect(gameBounds({ 100: root }, "100")).toEqual({ min: 4, max: 4 });
     const rows = (n: number): Record<string, PlayerGameScore[]> =>
       Object.fromEntries(
@@ -109,7 +105,7 @@ describe("player count overrides", () => {
     expect(names(5)).toEqual([]);
   });
 
-  it("limits split groups to the effective range", () => {
+  it("limits split groups to the range", () => {
     const four = ["a", "b", "c", "d"];
     const byPlayer: Record<string, PlayerGameScore[]> = Object.fromEntries(
       four.map((p) => [
@@ -139,13 +135,6 @@ describe("player count overrides", () => {
     expect(picked({ 1: root })).not.toContain("X");
   });
 
-  it("reads BGG's range only for an overridden game", () => {
-    expect(originalBounds({ 100: root }[100])).toEqual({ min: 2, max: 6 });
-    expect(originalBounds({ players: { min: 2, max: 6 } })).toBeNull();
-    expect(originalBounds({ overridden: true })).toBeNull();
-    expect(originalBounds(undefined)).toBeNull();
-  });
-
   it("formats a fixed count as a single number", () => {
     expect(formatBounds({ min: 4, max: 4 })).toBe("4");
     expect(formatBounds({ min: 2, max: 6 })).toBe("2-6");
@@ -166,16 +155,6 @@ describe("player count overrides", () => {
         error: "Use whole numbers from 1 to 99",
       });
     expect(validateOverride(5, 4)).toEqual({ error: "Min can't exceed max" });
-  });
-
-  it("filters admin rows by name or id", () => {
-    const rows: GamePlayersRow[] = [
-      { bggId: 11, name: "Root", bgg: null, override: null },
-      { bggId: 22, name: "Wingspan", bgg: null, override: null },
-    ];
-    expect(filterGamePlayers(rows, "  ROO ")).toEqual([rows[0]]);
-    expect(filterGamePlayers(rows, "22")).toEqual([rows[1]]);
-    expect(filterGamePlayers(rows, "")).toBe(rows);
   });
 });
 

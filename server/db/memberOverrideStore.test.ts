@@ -2,7 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createMemberOverrideStore } from "./memberOverrideStore";
-import { createTestDb } from "./testDb";
+import { applyMigrations, createTestDb } from "./testDb";
 import { createUserStore } from "./userStore";
 
 const ALEX = "998877665544332211";
@@ -27,11 +27,10 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec(
-    `DELETE FROM member_player_override; DELETE FROM game_player_override;
+    `DELETE FROM member_player_override;
      DELETE FROM game_metadata; DELETE FROM player; DELETE FROM game; DELETE FROM app_user;
-     INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Admin'), (3, 'Bare');
-     INSERT INTO game_metadata (bgg_id, min_players, max_players) VALUES (1, 2, 6), (2, 1, 8);
-     INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (2, 3, 5);`,
+     INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Wide'), (3, 'Bare');
+     INSERT INTO game_metadata (bgg_id, min_players, max_players) VALUES (1, 2, 6), (2, 1, 8);`,
   );
   const users = createUserStore(db);
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
@@ -50,17 +49,6 @@ describe("set", () => {
     expect(await rows()).toEqual([
       { discord_id: ALEX, bgg_id: 1, min_players: 3, max_players: 4 },
     ]);
-  });
-
-  it("narrows within the admin range, not BGG's", async () => {
-    expect((await store.set(ALEX, 2, { min: 4, max: 5 })).ok).toBe(true);
-    expect(await store.set(ALEX, 2, { min: 1, max: 5 })).toMatchObject({
-      status: 400,
-      error: "out_of_range",
-    });
-    expect(await store.set(ALEX, 2, { min: 3, max: 8 })).toMatchObject({
-      error: "out_of_range",
-    });
   });
 
   it("refuses widening either side", async () => {
@@ -129,5 +117,24 @@ describe("clear", () => {
     expect(await rows()).toEqual([
       { discord_id: JO, bgg_id: 1, min_players: 2, max_players: 2 },
     ]);
+  });
+});
+
+describe("dropping admin overrides (migration 0012)", () => {
+  it("removes game_player_override and keeps member overrides", async () => {
+    const pre = new PGlite();
+    await applyMigrations(pre, 0, 12);
+    await pre.exec(
+      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}');
+       INSERT INTO game (bgg_id, name) VALUES (1, 'Root');
+       INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (1, 3, 5);
+       INSERT INTO member_player_override (discord_id, bgg_id, min_players, max_players) VALUES ('${ALEX}', 1, 3, 4);`,
+    );
+    await applyMigrations(pre, 12);
+    const { rows } = await pre.query(
+      "SELECT to_regclass('game_player_override') AS gone, (SELECT count(*)::int FROM member_player_override) AS kept",
+    );
+    expect(rows).toEqual([{ gone: null, kept: 1 }]);
+    await pre.close();
   });
 });

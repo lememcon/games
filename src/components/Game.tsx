@@ -3,7 +3,7 @@ import GameDetailHeader from "@/components/GameDetailHeader";
 import MyPlayerRange from "@/components/MyPlayerRange";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import type { PlayerOverridesState } from "@/hooks/usePlayerOverrides";
-import { originalBounds, realBounds, resolveImage } from "@/lib/games";
+import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
 import type { Data, GamesData } from "@/types";
@@ -44,7 +44,6 @@ const Game = ({
       <GameDetailHeader
         name={players[0].game}
         bounds={bounds}
-        original={originalBounds(meta)}
         id={id}
         image={image}
       />

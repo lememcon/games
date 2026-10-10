@@ -6,7 +6,7 @@ import { formatBounds, validateMemberOverride } from "@/lib/games";
 import type { Bounds } from "@/types";
 
 interface MyPlayerRangeProps {
-  // The range the game allows now (the admin override, else BGG's).
+  // The range the game allows now (BGG's range).
   allowed: Bounds;
   // The member's stored range, shown as-is even if it has gone stale.
   stored: Bounds | null;
@@ -35,7 +35,7 @@ const MyPlayerRange = ({
   const changed =
     range !== null && (range.min !== current.min || range.max !== current.max);
   const messageId = "my-range-error";
-  // See PlayerCountsTable: withAria hands aria-describedby back to us.
+  // withAria: false hands aria-describedby back to us.
   const ariaProps = {
     withAria: false,
     "aria-invalid": invalid ? true : undefined,

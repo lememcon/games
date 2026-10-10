@@ -1,6 +1,3 @@
-import { Badge } from "@mantine/core";
-
-import PlayerRange from "@/components/PlayerRange";
 import { formatBounds } from "@/lib/games";
 import type { Bounds } from "@/types";
 
@@ -9,8 +6,6 @@ const BGG_URL = "https://boardgamegeek.com/boardgame/";
 interface GameDetailHeaderProps {
   name: string;
   bounds: Bounds | null;
-  // BGG's range when an admin restricted this game.
-  original?: Bounds | null;
   id: string;
   image?: string | null;
 }
@@ -18,7 +13,6 @@ interface GameDetailHeaderProps {
 const GameDetailHeader = ({
   name,
   bounds,
-  original,
   id,
   image,
 }: GameDetailHeaderProps) => (
@@ -38,19 +32,7 @@ const GameDetailHeader = ({
           <>
             <strong>Players:</strong>
             &nbsp;
-            <PlayerRange bounds={bounds} />
-            {original && (
-              <>
-                &nbsp;
-                <Badge variant="outline" color="orange" size="sm">
-                  Restricted
-                </Badge>
-                <br />
-                <small className="player-range__bgg">
-                  BGG lists {formatBounds(original)}
-                </small>
-              </>
-            )}
+            {formatBounds(bounds)}
           </>
         )}
       </p>

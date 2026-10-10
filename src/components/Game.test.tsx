@@ -49,25 +49,6 @@ const data: Data = {
 };
 
 describe("Game", () => {
-  it("shows a restricted range with what BGG lists", () => {
-    const { container } = renderWithMantine(
-      <Game
-        data={data}
-        gameData={{
-          11: {
-            players: { min: 4, max: 4 },
-            bggPlayers: { min: 2, max: 7 },
-            overridden: true,
-          },
-        }}
-        year="2024"
-        id="11"
-      />,
-    );
-    expect(container.textContent).toContain("Restricted");
-    expect(container.textContent).toContain("BGG lists 2-7");
-  });
-
   it("renders the game name, player bounds, and BGG link", () => {
     const { getByRole } = renderWithMantine(
       <Game data={data} gameData={gameData} year="2024" id="11" />,

@@ -6,8 +6,6 @@ import type {
   BggKeyInfo,
   BggKeyTest,
   BggStatus,
-  Bounds,
-  GamePlayersRow,
 } from "@/types";
 
 const BASE = "/admin/bgg";
@@ -51,20 +49,3 @@ export const bggApi = (fetchImpl: typeof fetch = fetch) => ({
 });
 
 export type BggApi = ReturnType<typeof bggApi>;
-
-export const gamePlayersApi = (fetchImpl: typeof fetch = fetch) => ({
-  list: () =>
-    apiFetch<{ games: GamePlayersRow[] }>("/admin/game-players", {}, fetchImpl),
-  set: (bggId: number, range: Bounds) =>
-    apiFetch<void>(
-      `/admin/games/${bggId}/players`,
-      { method: "PUT", body: { min: range.min, max: range.max } },
-      fetchImpl,
-    ),
-  clear: (bggId: number) =>
-    apiFetch<void>(
-      `/admin/games/${bggId}/players`,
-      { method: "DELETE" },
-      fetchImpl,
-    ),
-});

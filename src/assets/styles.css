@@ -541,27 +541,6 @@ body {
   font-weight: 700;
 }
 
-/* A player range an admin restricted: the effective range in the accent color,
-   BGG's original struck through beside it. */
-.player-range {
-  white-space: nowrap;
-}
-
-.player-range__now {
-  color: var(--mantine-color-orange-9);
-  font-weight: 700;
-}
-
-.player-range__was {
-  margin-left: 0.3em;
-  font-weight: 400;
-  color: var(--mantine-color-dimmed);
-}
-
-.player-range__bgg {
-  color: var(--mantine-color-dimmed);
-}
-
 /* The member's own player count range form on the game page. */
 .my-range {
   margin-top: 1.5em;

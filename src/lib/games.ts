@@ -4,7 +4,6 @@ import type {
   Bounds,
   Data,
   GameMeta,
-  GamePlayersRow,
   GameSplit,
   GamesData,
   PlayerGameScore,
@@ -27,33 +26,14 @@ export const realBounds = (meta: GameMeta | undefined): Bounds | null => {
 export const gameBounds = (gameData: GamesData, id: string): Bounds =>
   realBounds(gameData[id]) ?? { min: 0, max: 99 };
 
-// BGG's range for an overridden game, else null (nothing to show alongside).
-export const originalBounds = (meta: GameMeta | undefined): Bounds | null =>
-  meta?.overridden && meta.bggPlayers
-    ? { min: meta.bggPlayers.min, max: meta.bggPlayers.max }
-    : null;
-
 // "4" for a fixed count, "2-6" otherwise.
 export const formatBounds = ({ min, max }: Bounds): string =>
   min === max ? `${min}` : `${min}-${max}`;
 
-// Case-insensitive match on the name or BGG id.
-export const filterGamePlayers = (
-  games: GamePlayersRow[],
-  query: string,
-): GamePlayersRow[] => {
-  const q = query.trim().toLowerCase();
-  return q
-    ? games.filter(
-        (g) => g.name.toLowerCase().includes(q) || String(g.bggId).includes(q),
-      )
-    : games;
-};
-
 const isCount = (v: number | string): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 99;
 
-// Checks an admin's override input (a blank NumberInput gives ""). Mirrors the
+// Checks a player count range input (a blank NumberInput gives ""). Mirrors the
 // server rules: whole numbers 1..99 with min <= max.
 export const validateOverride = (
   min: number | string,
@@ -66,7 +46,7 @@ export const validateOverride = (
   return { range: { min, max } };
 };
 
-// Checks a member's own range for a game: valid like an admin override, and
+// Checks a member's own range for a game: valid like a range input, and
 // inside the range the game currently allows (members can only narrow).
 export const validateMemberOverride = (
   min: number | string,

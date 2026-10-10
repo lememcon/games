@@ -48,11 +48,7 @@ function makeApp(user: AppUser | null = null) {
         ext: ".jpg",
       },
       "2": {},
-      "3": {
-        players: { min: 4, max: 4 },
-        bggPlayers: { min: 2, max: 6 },
-        overridden: true,
-      },
+      "3": { players: { min: 4, max: 4 } },
     },
   });
   const app = createApp({
@@ -157,15 +153,11 @@ describe("GET /api/games", () => {
         ext: ".jpg",
       },
       "2": {},
-      "3": {
-        players: { min: 4, max: 4 },
-        bggPlayers: { min: 2, max: 6 },
-        overridden: true,
-      },
+      "3": { players: { min: 4, max: 4 } },
     });
   });
 
-  it("changes the ETag and body after an override is set", async () => {
+  it("changes the ETag and body after the games change", async () => {
     const { data, games } = fakeData({
       games: { "1": { players: { min: 2, max: 6 } } },
     });
@@ -181,15 +173,11 @@ describe("GET /api/games", () => {
       resolveSession: async () => ({ user: null }),
     });
     const before = await app.request("/api/games");
-    games["1"] = {
-      players: { min: 4, max: 4 },
-      bggPlayers: { min: 2, max: 6 },
-      overridden: true,
-    };
+    games["1"] = { players: { min: 4, max: 4 } };
     const after = await app.request("/api/games");
     expect(after.headers.get("etag")).not.toBe(before.headers.get("etag"));
-    expect(await after.json()).toMatchObject({
-      "1": { players: { min: 4, max: 4 }, overridden: true },
+    expect(await after.json()).toStrictEqual({
+      "1": { players: { min: 4, max: 4 } },
     });
   });
 });
