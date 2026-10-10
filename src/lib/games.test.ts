@@ -3,20 +3,32 @@ import { describe, expect, it } from "vitest";
 import {
   avatarUrl,
   buildSelectedGames,
+  compareGames,
   computeMaxScores,
   formatBounds,
   gameBounds,
+  leastHappyPlayer,
+  parseSortMode,
   partitions,
   playerCountsByName,
   rangesByMember,
   realBounds,
   resolveImage,
+  scoreSpread,
+  sortGames,
   suggestSplits,
   validateMemberOverride,
   validateOverride,
+  worstRank,
   type PlayerRanges,
 } from "@/lib/games";
-import type { Data, GamesData, PlayerGameScore } from "@/types";
+import type {
+  Data,
+  GamesData,
+  PlayerGameScore,
+  SelectedGame,
+  SortMode,
+} from "@/types";
 
 const gameData: GamesData = {
   100: { players: { min: 2, max: 4 } },
@@ -972,5 +984,367 @@ describe("suggestSplits", () => {
     });
 
     expect(best.groups.map((g) => g.picked)).toEqual(["A", "B"]);
+  });
+});
+
+// name, then [player, rank, score] per scorer.
+const mk = (
+  name: string,
+  scorers: [string, number, number][],
+): SelectedGame => ({
+  name,
+  id: name,
+  min: 0,
+  max: 99,
+  score: scorers.reduce((sum, [, , score]) => sum + score, 0),
+  players: Object.fromEntries(
+    scorers.map(([player, rank, score]) => [
+      player,
+      { name: player, rank, score },
+    ]),
+  ),
+  playedBy: {},
+});
+
+const names = (games: SelectedGame[]) => games.map((g) => g.name);
+
+describe("parseSortMode", () => {
+  it.each(["total", "lowest", "even"] as const)("keeps %s", (mode) => {
+    expect(parseSortMode(mode)).toBe(mode);
+  });
+
+  it.each([undefined, null, "", "bogus", 3, {}])(
+    "falls back to total for %j",
+    (value) => {
+      expect(parseSortMode(value)).toBe("total");
+    },
+  );
+});
+
+describe("worstRank and scoreSpread", () => {
+  const game = mk("G", [
+    ["a", 1, 60],
+    ["b", 4, 20],
+    ["c", 2, 35],
+  ]);
+
+  it("take the worst rank and the max minus min score of the scorers", () => {
+    expect(worstRank(game)).toBe(4);
+    expect(scoreSpread(game)).toBe(40);
+  });
+
+  it("are finite for a single scorer", () => {
+    const solo = mk("S", [["a", 3, 25]]);
+    expect(worstRank(solo)).toBe(3);
+    expect(scoreSpread(solo)).toBe(0);
+  });
+
+  it("are zero without scorers", () => {
+    expect(worstRank(mk("E", []))).toBe(0);
+    expect(scoreSpread(mk("E", []))).toBe(0);
+  });
+});
+
+describe("leastHappyPlayer", () => {
+  it("is the scorer with the worst rank", () => {
+    expect(
+      leastHappyPlayer(
+        mk("G", [
+          ["a", 1, 60],
+          ["b", 4, 20],
+        ]),
+      ),
+    ).toBe("b");
+  });
+
+  it("goes to the first name alphabetically on a tie", () => {
+    expect(
+      leastHappyPlayer(
+        mk("G", [
+          ["zed", 3, 60],
+          ["amy", 3, 20],
+          ["bo", 1, 20],
+        ]),
+      ),
+    ).toBe("amy");
+  });
+
+  it("is null below two scorers", () => {
+    expect(leastHappyPlayer(mk("G", [["a", 1, 60]]))).toBeNull();
+    expect(leastHappyPlayer(mk("G", []))).toBeNull();
+  });
+});
+
+describe("compareGames", () => {
+  const sorted = (games: SelectedGame[], mode: SortMode) =>
+    names(sortGames(games, mode));
+
+  it("total is by score, keeping the input order on ties", () => {
+    const games = [
+      mk("Zed", [["a", 1, 10]]),
+      mk("Amy", [["a", 1, 10]]),
+      mk("Top", [["a", 1, 20]]),
+    ];
+    expect(sorted(games, "total")).toEqual(["Top", "Zed", "Amy"]);
+  });
+
+  it("lowest orders by worst rank, then score, then name", () => {
+    const games = [
+      mk("Bad", [
+        ["a", 1, 50],
+        ["b", 5, 50],
+      ]),
+      mk("Low", [
+        ["a", 2, 10],
+        ["b", 2, 10],
+      ]),
+      mk("High", [
+        ["a", 2, 40],
+        ["b", 1, 40],
+      ]),
+      mk("Alpha", [
+        ["a", 2, 40],
+        ["b", 2, 40],
+      ]),
+    ];
+    // High and Alpha tie on rank 2 and score 80; Alpha wins by name.
+    expect(sorted(games, "lowest")).toEqual(["Alpha", "High", "Low", "Bad"]);
+  });
+
+  it("even orders by spread, then score, then name", () => {
+    const games = [
+      mk("Wide", [
+        ["a", 1, 90],
+        ["b", 2, 10],
+      ]),
+      mk("Flat", [
+        ["a", 1, 20],
+        ["b", 2, 20],
+      ]),
+      mk("FlatBig", [
+        ["a", 1, 30],
+        ["b", 2, 30],
+      ]),
+      mk("Close", [
+        ["a", 1, 25],
+        ["b", 2, 35],
+      ]),
+      mk("Aaa", [
+        ["a", 1, 30],
+        ["b", 2, 30],
+      ]),
+    ];
+    expect(sorted(games, "even")).toEqual([
+      "Aaa",
+      "FlatBig",
+      "Flat",
+      "Close",
+      "Wide",
+    ]);
+  });
+
+  it.each(["lowest", "even"] as const)(
+    "%s puts games with more scorers before one-scorer games",
+    (mode) => {
+      const games = [
+        mk("Solo", [["a", 1, 99]]),
+        mk("Pair", [
+          ["a", 5, 10],
+          ["b", 5, 70],
+        ]),
+      ];
+      expect(sorted(games, mode)).toEqual(["Pair", "Solo"]);
+    },
+  );
+
+  it.each(["lowest", "even"] as const)(
+    "%s ranks two one-scorer games by key, then score",
+    (mode) => {
+      const games = [
+        mk("B", [["a", 3, 10]]),
+        mk("A", [["a", 3, 10]]),
+        mk("Best", [["a", 1, 5]]),
+        mk("Rich", [["a", 3, 50]]),
+      ];
+      // Spread is 0 for every one-scorer game, so even falls to score.
+      expect(sorted(games, mode)).toEqual(
+        mode === "lowest"
+          ? ["Best", "Rich", "A", "B"]
+          : ["Rich", "A", "B", "Best"],
+      );
+    },
+  );
+
+  it("treats two empty games as equal", () => {
+    const compare = compareGames("even");
+    expect(compare(mk("A", []), mk("A", []))).toBe(0);
+  });
+});
+
+describe("buildSelectedGames sort modes", () => {
+  const row = (
+    player: string,
+    game: string,
+    bgg_id: number,
+    rank: number,
+    score: number,
+  ) => ({ player, game, bgg_id, rank, score });
+  const modeData: Record<string, PlayerGameScore[]> = {
+    alice: [
+      row("alice", "Alpha", 1, 1, 60),
+      row("alice", "Beta", 2, 3, 40),
+      row("alice", "Gamma", 3, 2, 30),
+      row("alice", "Delta", 4, 1, 70),
+    ],
+    bob: [
+      row("bob", "Alpha", 1, 5, 20),
+      row("bob", "Beta", 2, 3, 40),
+      row("bob", "Delta", 4, 2, 20),
+    ],
+  };
+  const build = (sortMode?: SortMode) =>
+    names(
+      buildSelectedGames({
+        byPlayer: modeData,
+        players: [],
+        gameData: {},
+        images: {},
+        hidePlayed: false,
+        playerCounts: {},
+        sortMode,
+      }),
+    );
+
+  it("defaults to total", () => {
+    expect(build()).toEqual(["Delta", "Alpha", "Beta", "Gamma"]);
+    expect(build("total")).toEqual(build());
+  });
+
+  it("orders by the least happy scorer's rank for lowest", () => {
+    expect(build("lowest")).toEqual(["Delta", "Beta", "Alpha", "Gamma"]);
+  });
+
+  it("orders by score spread for even", () => {
+    expect(build("even")).toEqual(["Beta", "Alpha", "Delta", "Gamma"]);
+  });
+
+  it("ignores selected players who did not score a game", () => {
+    const games = buildSelectedGames({
+      byPlayer: { ...modeData, cara: [] },
+      players: ["alice", "bob", "cara"],
+      gameData: {},
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      sortMode: "lowest",
+    });
+    // Nobody scored with cara, so the group's rules would exclude nothing here.
+    expect(games.length).toBeGreaterThan(0);
+  });
+});
+
+describe("suggestSplits sort modes", () => {
+  const four = ["a", "b", "c", "d"];
+  // game -> player -> [rank, score]
+  const build = (table: Record<string, Record<string, [number, number]>>) => {
+    const out: Record<string, PlayerGameScore[]> = {};
+    Object.entries(table).forEach(([game, scores], i) => {
+      for (const [player, [rank, score]] of Object.entries(scores)) {
+        (out[player] ??= []).push({ player, game, rank, score, bgg_id: i + 1 });
+      }
+    });
+    return out;
+  };
+  const everyone = (rank: number, score: number) =>
+    Object.fromEntries(four.map((p) => [p, [rank, score] as [number, number]]));
+  const run = (
+    table: Record<string, Record<string, [number, number]>>,
+    sortMode?: SortMode,
+  ) =>
+    suggestSplits({
+      byPlayer: build(table),
+      players: four,
+      gameData: {},
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      sortMode,
+    });
+
+  // Best score is worst rank, so the best lowest-rank pick is the 3rd game
+  // in the total-sorted list.
+  const trio = { Y: everyone(3, 90), Z: everyone(1, 70), X: everyone(2, 50) };
+
+  it("total picks the top scores and lists them best first", () => {
+    const [best] = run(trio);
+    expect(best.groups.map((g) => g.picked)).toEqual(["Y", "Z"]);
+    expect(names(best.groups[0].games)).toEqual(["Y", "Z", "X"]);
+    expect(best.perPlayer).toBe(80);
+    expect(best.delta).toBe(-10);
+  });
+
+  it("total is identical with an explicit mode", () => {
+    expect(run(trio, "total")).toEqual(run(trio));
+  });
+
+  it("lowest follows the mode in each list and searches past the top games", () => {
+    const [best] = run(trio, "lowest");
+    expect(names(best.groups[0].games)).toEqual(["Z", "X", "Y"]);
+    expect(best.groups.map((g) => g.picked)).toEqual(["X", "Z"]);
+    expect(best.perPlayer).toBe(60);
+  });
+
+  it("keeps the delta against the best total-score game", () => {
+    const [best] = run(trio, "lowest");
+    // Y is 360 over four players; the picks give 60 per player.
+    expect(best.delta).toBe(60 - 90);
+  });
+
+  it("even picks the smallest worst spread, then the most score", () => {
+    const table = {
+      Flat: Object.fromEntries(
+        four.map((p) => [p, [1, 20] as [number, number]]),
+      ),
+      Wide: {
+        a: [1, 90] as [number, number],
+        b: [2, 10] as [number, number],
+        c: [3, 10] as [number, number],
+        d: [4, 10] as [number, number],
+      },
+      Mid: Object.fromEntries(
+        four.map((p) => [p, [1, 30] as [number, number]]),
+      ),
+    };
+    const [best] = run(table, "even");
+    expect(best.groups.map((g) => g.picked).sort()).toEqual(["Flat", "Mid"]);
+  });
+
+  it("ranks splits by the mode's key before score", () => {
+    const table = {
+      G: {
+        a: [1, 50] as [number, number],
+        b: [1, 0] as [number, number],
+        c: [3, 50] as [number, number],
+        d: [3, 0] as [number, number],
+      },
+      H: {
+        a: [3, 0] as [number, number],
+        b: [3, 50] as [number, number],
+        c: [1, 0] as [number, number],
+        d: [1, 50] as [number, number],
+      },
+    };
+    const total = run(table, "total");
+    const lowest = run(table, "lowest");
+    expect(total[0].groups.map((g) => g.players)).toEqual([
+      ["a", "c"],
+      ["b", "d"],
+    ]);
+    expect(total.map((s) => s.perPlayer)).toEqual([50, 25, 25]);
+    expect(lowest[0].groups.map((g) => g.players)).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
+    expect(lowest.map((s) => s.perPlayer)).toEqual([25, 50, 25]);
   });
 });

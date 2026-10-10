@@ -70,6 +70,10 @@ export interface SelectedGame {
   image?: string;
 }
 
+// How the game list is ordered: by total score, by the least happy scorer's
+// rank, or by how evenly the scorers did.
+export type SortMode = "total" | "lowest" | "even";
+
 // One subgroup of a suggested split: its members, their top games (every member
 // scored them) and the name of the game the headline plan picks for the group.
 export interface SplitGroup {

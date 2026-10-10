@@ -1,4 +1,4 @@
-import { descend, keys, prop, sort, values } from "ramda";
+import { ascend, descend, keys, prop, sort, values } from "ramda";
 
 import type {
   Bounds,
@@ -9,6 +9,7 @@ import type {
   PlayerGameScore,
   PlayerOverride,
   SelectedGame,
+  SortMode,
   SplitGroup,
 } from "@/types";
 
@@ -139,6 +140,74 @@ export const playerCountsByName = <T>(
   return result;
 };
 
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+export const SORT_MODES: { value: SortMode; label: string }[] = [
+  { value: "total", label: "Total" },
+  { value: "lowest", label: "Lowest rank" },
+  { value: "even", label: "Most even" },
+];
+
+// Any stored or shared value to a sort mode; unknown values mean "total".
+export const parseSortMode = (v: unknown): SortMode =>
+  SORT_MODES.find((m) => m.value === v)?.value ?? "total";
+
+const scorers = (game: SelectedGame) => Object.values(game.players);
+
+// The worst (highest-numbered) rank among the players who scored the game.
+export const worstRank = (game: SelectedGame): number =>
+  scorers(game).reduce((worst, p) => (p.rank > worst ? p.rank : worst), 0);
+
+// The gap between the best and worst scorer, 0 for a single scorer.
+export const scoreSpread = (game: SelectedGame): number => {
+  const all = scorers(game).map((p) => p.score);
+  return all.length === 0 ? 0 : Math.max(...all) - Math.min(...all);
+};
+
+// The mode's key for one game, lower being better; 0 for "total".
+const modeKey = (mode: SortMode, game: SelectedGame): number =>
+  mode === "lowest" ? worstRank(game) : mode === "even" ? scoreSpread(game) : 0;
+
+// The mode's key across several games: the worst one.
+export const pickKey = (mode: SortMode, games: SelectedGame[]): number =>
+  games.reduce((worst, g) => Math.max(worst, modeKey(mode, g)), 0);
+
+// Orders games for a mode. "total" is by total score only (the sort is stable,
+// so the input order breaks ties). The others put games scored by more of the
+// players first, then the mode's key, then total score, then name.
+export const compareGames = (
+  mode: SortMode,
+): ((a: SelectedGame, b: SelectedGame) => number) => {
+  if (mode === "total") return descend(prop("score"));
+  const steps = [
+    descend((g: SelectedGame) => scorers(g).length),
+    ascend((g: SelectedGame) => modeKey(mode, g)),
+    descend((g: SelectedGame) => g.score),
+    ascend((g: SelectedGame) => g.name),
+  ];
+  return (a, b) => {
+    for (const step of steps) {
+      const result = step(a, b);
+      if (result !== 0) return result;
+    }
+    return 0;
+  };
+};
+
+export const sortGames = (
+  games: SelectedGame[],
+  mode: SortMode,
+): SelectedGame[] => sort(compareGames(mode), games);
+
+// The scorer with the worst rank (first name alphabetically on a tie), or null
+// when fewer than two players scored the game.
+export const leastHappyPlayer = (game: SelectedGame): string | null => {
+  const all = scorers(game);
+  if (all.length < 2) return null;
+  return [...all].sort((a, b) => b.rank - a.rank || byText(a.name, b.name))[0]
+    .name;
+};
+
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
 // (images/gameData/playerCounts injected) so it can be tested without Vite or
 // a rendered tree.
@@ -151,6 +220,8 @@ interface BuildSelectedGamesArgs {
   playerCounts: PlayerCounts;
   // Defaults to none.
   playerRanges?: PlayerRanges;
+  // Defaults to "total".
+  sortMode?: SortMode;
 }
 
 export const buildSelectedGames = ({
@@ -161,6 +232,7 @@ export const buildSelectedGames = ({
   hidePlayed,
   playerCounts,
   playerRanges = {},
+  sortMode = "total",
 }: BuildSelectedGamesArgs): SelectedGame[] => {
   const numPlayers = players.length;
   const selectedGames: Record<string, SelectedGame> = {};
@@ -239,7 +311,7 @@ export const buildSelectedGames = ({
     }
   }
 
-  return sort(descend(prop("score")), values(selectedGames));
+  return sortGames(values(selectedGames), sortMode);
 };
 
 export const MIN_SPLIT_PLAYERS = 4;
@@ -270,28 +342,34 @@ export const partitions = (items: string[]): string[][][] => {
   return result;
 };
 
-const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-
-// The best reuse-free pick: one game per group maximizing the summed score.
-// Only each group's top `groups.length` games can matter, since that many
-// alternatives always leave one unused. Ties go to the earlier game names.
-const pickGames = (lists: SelectedGame[][]): SelectedGame[] | null => {
+// The best reuse-free pick: one game per group. In "total" it maximizes the
+// summed score, and only each group's top `groups.length` games can matter,
+// since that many alternatives always leave one unused. In the other modes it
+// first minimizes the mode's key across the picks (searching whole lists), then
+// maximizes the summed score. Ties go to the earlier game names.
+const pickGames = (
+  lists: SelectedGame[][],
+  mode: SortMode,
+): SelectedGame[] | null => {
   const k = lists.length;
-  let best: SelectedGame[] | null = null;
-  let bestScore = -Infinity;
+  let best: { picks: SelectedGame[]; key: number; score: number } | null = null;
   const names = (picks: SelectedGame[]) => picks.map((g) => g.name).join("\n");
   const walk = (i: number, picks: SelectedGame[], score: number) => {
     if (i === k) {
+      const key = pickKey(mode, picks);
       if (
-        score > bestScore ||
-        (score === bestScore && best && names(picks) < names(best))
+        best === null ||
+        key < best.key ||
+        (key === best.key &&
+          (score > best.score ||
+            (score === best.score && names(picks) < names(best.picks))))
       ) {
-        best = [...picks];
-        bestScore = score;
+        best = { picks: [...picks], key, score };
       }
       return;
     }
-    for (const game of lists[i].slice(0, k)) {
+    const candidates = mode === "total" ? lists[i].slice(0, k) : lists[i];
+    for (const game of candidates) {
       if (picks.some((p) => p.name === game.name)) continue;
       picks.push(game);
       walk(i + 1, picks, score + game.score);
@@ -299,7 +377,7 @@ const pickGames = (lists: SelectedGame[][]): SelectedGame[] | null => {
     }
   };
   walk(0, [], 0);
-  return best;
+  return (best as { picks: SelectedGame[] } | null)?.picks ?? null;
 };
 
 // Suggest ways to split 4-8 selected players into two groups of two or more. Each
@@ -324,13 +402,19 @@ export const suggestSplits = (args: BuildSelectedGamesArgs): GameSplit[] => {
     return games;
   };
 
-  const baseline = scoredBy(players)[0];
+  const mode = args.sortMode ?? "total";
+
+  // The best total-score game, whatever order the list is in (first on ties).
+  const baseline = scoredBy(players).reduce<SelectedGame | undefined>(
+    (top, g) => (top === undefined || g.score > top.score ? g : top),
+    undefined,
+  );
   const baselineValue = baseline ? baseline.score / players.length : null;
 
-  const splits: { split: GameSplit; tie: string }[] = [];
+  const splits: { split: GameSplit; key: number; tie: string }[] = [];
   for (const parts of partitions(players)) {
     const lists = parts.map(scoredBy);
-    const picks = pickGames(lists);
+    const picks = pickGames(lists, mode);
     if (!picks) continue;
     const perPlayer =
       picks.reduce((sum, g) => sum + g.score, 0) / players.length;
@@ -345,6 +429,7 @@ export const suggestSplits = (args: BuildSelectedGamesArgs): GameSplit[] => {
         perPlayer,
         delta: baselineValue === null ? null : perPlayer - baselineValue,
       },
+      key: pickKey(mode, picks),
       tie:
         picks.map((g) => g.name).join("\n") +
         "\n\n" +
@@ -353,7 +438,10 @@ export const suggestSplits = (args: BuildSelectedGamesArgs): GameSplit[] => {
   }
 
   splits.sort(
-    (a, b) => b.split.perPlayer - a.split.perPlayer || byText(a.tie, b.tie),
+    (a, b) =>
+      (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) ||
+      b.split.perPlayer - a.split.perPlayer ||
+      byText(a.tie, b.tie),
   );
   return splits.slice(0, MAX_SPLITS).map((s) => s.split);
 };
