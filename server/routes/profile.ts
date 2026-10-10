@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { parseDisplayName } from "../profile";
+import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, ProfileStore } from "../types";
 import { readJson } from "../validate";
 
@@ -14,7 +15,7 @@ export function profileRoutes(profiles: ProfileStore) {
 
     const user = c.get("user")!;
     const result = await profiles.setDisplayName(user.discordId, parsed.value);
-    if (!result.ok) return c.json({ error: result.error }, result.status);
+    if (!result.ok) return refusalResponse(c, result);
     const { displayName } = result.value;
     return c.json({ name: displayName ?? user.discordName, displayName });
   });
@@ -24,7 +25,7 @@ export function profileRoutes(profiles: ProfileStore) {
     if (!/^\d{15,25}$/.test(id)) return c.json({ error: "invalid_id" }, 400);
     const profile = await profiles.getProfile(id);
     if (!profile) return c.json({ error: "not_found" }, 404);
-    c.header("Cache-Control", "private, no-cache");
+    privateNoCache(c);
     return c.json(profile);
   });
 

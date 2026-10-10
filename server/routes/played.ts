@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { parseBggId, parseCount, parseImportBody, parseYear } from "../played";
+import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, PlayedStore } from "../types";
 import { readJson } from "../validate";
 
@@ -13,7 +14,7 @@ export function playedRoutes(played: PlayedStore) {
     if (year === null) return c.json({ error: "invalid_year" }, 400);
     const counts = await played.get(c.get("user")!.discordId, year);
     if (!counts) return c.json({ error: "unknown_year" }, 404);
-    c.header("Cache-Control", "private, no-cache");
+    privateNoCache(c);
     return c.json({ counts });
   });
 
@@ -31,7 +32,7 @@ export function playedRoutes(played: PlayedStore) {
       bggId,
       parsed.value,
     );
-    if (!result.ok) return c.json({ error: result.error }, result.status);
+    if (!result.ok) return refusalResponse(c, result);
     return c.json({ count: parsed.value });
   });
 
@@ -46,7 +47,7 @@ export function playedRoutes(played: PlayedStore) {
       year,
       parsed.value,
     );
-    if (!result.ok) return c.json({ error: result.error }, result.status);
+    if (!result.ok) return refusalResponse(c, result);
     return c.json({ counts: result.value });
   });
 

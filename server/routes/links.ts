@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { refusalResponse } from "../result";
 import type { AppEnv, LinkStore } from "../types";
 import { exactKeys, parseId32, readJson } from "../validate";
 
@@ -26,9 +27,7 @@ export function linkRoutes(links: LinkStore) {
     if (!valid) return c.json({ error: "invalid_body" }, 400);
 
     const result = await links.setLink(id, discordId as string | null);
-    return result.ok
-      ? c.body(null, 204)
-      : c.json({ error: result.error }, result.status);
+    return result.ok ? c.body(null, 204) : refusalResponse(c, result);
   });
 
   return routes;

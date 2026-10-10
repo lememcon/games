@@ -1,3 +1,4 @@
+import { refuse } from "./result";
 import type { MutationResult, Role, UserRow } from "./types";
 import { isRecord } from "./validate";
 
@@ -23,9 +24,6 @@ export interface Change {
   status?: "approved";
   role?: Role;
 }
-
-const refuse = (status: 400 | 403 | 404 | 409, error: string) =>
-  ({ ok: false, status, error }) as const;
 
 function parseChange(body: unknown): Change | null {
   if (!isRecord(body)) return null;

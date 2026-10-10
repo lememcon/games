@@ -68,6 +68,31 @@ describe("createNeededIds", () => {
     ]);
   });
 
+  it("passes an abort signal to each fetch", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}"));
+    await createNeededIds({
+      fetch: fetchMock as unknown as typeof fetch,
+      now: at("2025-06-01"),
+    })();
+    const init = (fetchMock.mock.calls as unknown[][])[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("maps a timed-out fetch to ScoresUnavailableError", async () => {
+    const hang = (_url: string, init: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        init.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason),
+        );
+      });
+    const needed = createNeededIds({
+      fetch: hang as unknown as typeof fetch,
+      now: at("2025-06-01"),
+      timeoutMs: 5,
+    });
+    await expect(needed()).rejects.toBeInstanceOf(ScoresUnavailableError);
+  });
+
   it("treats a missing year file and a missing score list as empty", async () => {
     const fetchMock = vi.fn(async (url: string) =>
       url.endsWith("2026.json")

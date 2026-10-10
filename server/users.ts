@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { refusalResponse } from "./result";
 import { effectiveUser, isProtected } from "./roles";
 import type { AdminUser, AppEnv, StoredUser, UserStore } from "./types";
 import { readJson } from "./validate";
@@ -39,7 +40,7 @@ export function adminRoutes(store: UserStore) {
       c.req.param("discordId"),
       body,
     );
-    if (!result.ok) return c.json({ error: result.error }, result.status);
+    if (!result.ok) return refusalResponse(c, result);
     return c.json(toAdminUser(result.value));
   });
 
@@ -48,7 +49,7 @@ export function adminRoutes(store: UserStore) {
       c.get("user")!.discordId,
       c.req.param("discordId"),
     );
-    if (!result.ok) return c.json({ error: result.error }, result.status);
+    if (!result.ok) return refusalResponse(c, result);
     return c.body(null, 204);
   });
 
