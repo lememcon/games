@@ -54,6 +54,7 @@ const state = vi.hoisted(() => ({
   // Everyone's vetoes for the year, by discord id then bgg id.
   vetoes: {} as Record<string, ReadonlySet<string>>,
   useVetoes: vi.fn(),
+  unplayed: [] as { bgg_id: number; name: string }[],
 }));
 vi.mock("@/hooks/useData", () => ({
   default: (year: string | null) => {
@@ -63,6 +64,9 @@ vi.mock("@/hooks/useData", () => ({
 }));
 vi.mock("@/hooks/useYearTotals", () => ({
   default: () => ({ totals: [], loading: false, error: false }),
+}));
+vi.mock("@/hooks/useUnplayedGames", () => ({
+  default: () => state.unplayed,
 }));
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
@@ -135,6 +139,7 @@ describe("Scoreboard", () => {
     state.allPlayed = {};
     state.ranges = {};
     state.vetoes = {};
+    state.unplayed = [];
   });
   afterEach(() => {
     // Unmount before resetting the URL, or a mounted Scoreboard redirects.
@@ -206,6 +211,23 @@ describe("Scoreboard", () => {
     await user.click(await screen.findByRole("button", { name: "+" }));
 
     expect(state.incPlayed).toHaveBeenCalledWith("11");
+  });
+
+  it("shows the never-played shelf on the year landing", () => {
+    at("/2026");
+    state.unplayed = [{ bgg_id: 7, name: "Ghost" }];
+    render();
+
+    expect(
+      screen.getByRole("button", { name: "Never played (1)" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no never-played shelf when every game has been played", () => {
+    at("/2026");
+    render();
+
+    expect(screen.queryByText(/Never played/)).toBeNull();
   });
 
   it("shows skeletons while the data loads", () => {

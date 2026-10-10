@@ -187,6 +187,30 @@ describe("data store metadata", () => {
     expect(games["900101"]).toEqual({});
   });
 
+  it("lists named games with no scores in any year, sorted by name", async () => {
+    await client.query(
+      "INSERT INTO game (bgg_id, name) VALUES (900201, 'zebra'), (900202, 'Apple'), (900203, NULL)",
+    );
+    const unplayed = await store.listUnplayedGames();
+    const names = unplayed.map((g) => g.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    expect(unplayed).toContainEqual({ bgg_id: 900202, name: "Apple" });
+    expect(unplayed.findIndex((g) => g.bgg_id === 900202)).toBeLessThan(
+      unplayed.findIndex((g) => g.bgg_id === 900201),
+    );
+    // Nameless (900203, 900100) and scored (237182) games are excluded.
+    const ids = unplayed.map((g) => g.bgg_id);
+    expect(ids).not.toContain(900203);
+    expect(ids).not.toContain(237182);
+    for (const id of ids) {
+      const { rows } = await client.query(
+        "SELECT 1 FROM score WHERE bgg_id = $1",
+        [id],
+      );
+      expect(rows).toEqual([]);
+    }
+  });
+
   it("imports more metadata rows than one chunk", async () => {
     const games = Object.fromEntries(
       Array.from({ length: 1200 }, (_, i) => [

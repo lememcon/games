@@ -51,6 +51,8 @@ function makeApp(user: AppUser | null = null) {
       "2": {},
       "3": { players: { min: 4, max: 4 } },
     },
+    // 1 is scored; 4 has a name but no metadata; 5 is nameless (absent here).
+    names: { 1: "Root", 2: "Beta", 3: "alpha", 4: "Zulu" },
   });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
@@ -200,6 +202,33 @@ describe("GET /api/games", () => {
     expect(await after.json()).toStrictEqual({
       "1": { players: { min: 4, max: 4 } },
     });
+  });
+});
+
+describe("GET /api/games/unplayed", () => {
+  it.each([
+    ["anonymous", null, 401],
+    ["pending", PENDING, 403],
+  ])("rejects %s callers", async (_label, user, status) => {
+    const res = await makeApp(user).request("/api/games/unplayed");
+    expect(res.status).toBe(status);
+  });
+
+  it("lists named games with no scores in any year, sorted by name", async () => {
+    const res = await makeApp(MEMBER).request("/api/games/unplayed");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      games: [
+        { bgg_id: 3, name: "alpha" },
+        { bgg_id: 2, name: "Beta" },
+        { bgg_id: 4, name: "Zulu" },
+      ],
+    });
+  });
+
+  it("is not captured by another games route", async () => {
+    const res = await makeApp(MEMBER).request("/api/games/unplayed");
+    expect(res.headers.get("Cache-Control")).toContain("private");
   });
 });
 

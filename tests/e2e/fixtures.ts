@@ -90,6 +90,10 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, { totals: [] }),
   );
   await page.route(
+    (url) => pathOf(url) === "/api/games/unplayed",
+    (route) => json(route, { games: [] }),
+  );
+  await page.route(
     (url) => pathOf(url) === "/api/games",
     (route) => json(route, gamesData),
   );

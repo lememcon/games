@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, sql, sum } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  isNotNull,
+  notExists,
+  sql,
+  sum,
+} from "drizzle-orm";
 
 import {
   collapseMemberScores,
@@ -10,6 +19,7 @@ import type {
   GamesMap,
   LegacyScoreRow,
   MutationResult,
+  UnplayedGame,
   YearTotal,
 } from "../types";
 import {
@@ -146,4 +156,24 @@ export async function getYearTotals(db: StoreDb): Promise<YearTotal[]> {
     .groupBy(score.year, score.bggId)
     .orderBy(asc(score.year), asc(score.bggId));
   return rows.map((r) => ({ year: r.year, bgg_id: r.bggId, total: r.total }));
+}
+
+/** Named games with no score row in any year, sorted by name. */
+export async function listUnplayedGames(db: StoreDb): Promise<UnplayedGame[]> {
+  const rows = await db
+    .select({ bggId: game.bggId, name: game.name })
+    .from(game)
+    .where(
+      and(
+        isNotNull(game.name),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(score)
+            .where(eq(score.bggId, game.bggId)),
+        ),
+      ),
+    )
+    .orderBy(asc(sql`lower(${game.name})`), asc(game.name), asc(game.bggId));
+  return rows.map((r) => ({ bgg_id: r.bggId, name: r.name! }));
 }

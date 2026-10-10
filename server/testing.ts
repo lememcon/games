@@ -124,6 +124,8 @@ export function fakeData(
   initial: {
     years?: Record<number, LegacyScoreRow[]>;
     games?: GamesMap;
+    /** Game names by bgg id, for `listUnplayedGames` (scored games are skipped). */
+    names?: Record<number, string>;
   } = {},
 ) {
   const years = new Map<number, LegacyScoreRow[]>(
@@ -164,6 +166,15 @@ export function fakeData(
       return [...sums.values()].sort(
         (a, b) => a.year - b.year || a.bgg_id - b.bgg_id,
       );
+    },
+    listUnplayedGames: async () => {
+      const scored = new Set(
+        [...years.values()].flatMap((rows) => rows.map((r) => r.bgg_id)),
+      );
+      return Object.entries(initial.names ?? {})
+        .filter(([id]) => !scored.has(Number(id)))
+        .map(([id, name]) => ({ bgg_id: Number(id), name }))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.bgg_id - b.bgg_id);
     },
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
