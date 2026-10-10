@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql, sum } from "drizzle-orm";
 
 import {
   collapseMemberScores,
@@ -6,7 +6,12 @@ import {
   toGamesMap,
   toLegacyRow,
 } from "../shape";
-import type { GamesMap, LegacyScoreRow, MutationResult } from "../types";
+import type {
+  GamesMap,
+  LegacyScoreRow,
+  MutationResult,
+  YearTotal,
+} from "../types";
 import {
   account,
   appUser,
@@ -127,4 +132,18 @@ export async function getGames(db: StoreDb): Promise<GamesMap> {
     .fullJoin(game, eq(game.bggId, gameMetadata.bggId))
     .orderBy(asc(bggId));
   return toGamesMap(rows);
+}
+
+/**
+ * Sum of every recorded score row per game and year (not collapsed per member
+ * like getScores for approved viewers); names no players.
+ */
+export async function getYearTotals(db: StoreDb): Promise<YearTotal[]> {
+  const total = sum(score.score).mapWith(Number);
+  const rows = await db
+    .select({ year: score.year, bggId: score.bggId, total })
+    .from(score)
+    .groupBy(score.year, score.bggId)
+    .orderBy(asc(score.year), asc(score.bggId));
+  return rows.map((r) => ({ year: r.year, bgg_id: r.bggId, total: r.total }));
 }

@@ -86,6 +86,10 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, { years }),
   );
   await page.route(
+    (url) => pathOf(url) === "/api/years/totals",
+    (route) => json(route, { totals: [] }),
+  );
+  await page.route(
     (url) => pathOf(url) === "/api/games",
     (route) => json(route, gamesData),
   );

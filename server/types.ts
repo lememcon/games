@@ -204,6 +204,13 @@ export interface ImportContext {
   sourceFilename: string | null;
 }
 
+/** One game's summed scores in one year. */
+export interface YearTotal {
+  year: number;
+  bgg_id: number;
+  total: number;
+}
+
 /** All SQL for years, games and scores lives behind this interface (server/db/dataStore.ts). */
 export interface DataStore {
   /** Newest first. */
@@ -215,6 +222,8 @@ export interface DataStore {
     resolveNames?: boolean,
   ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;
+  /** Summed scores per game and year, ordered by year then game. */
+  getYearTotals(): Promise<YearTotal[]>;
   /** One transaction; refuses with 409 when the year already exists. */
   importData(
     input: NormalizedImport,

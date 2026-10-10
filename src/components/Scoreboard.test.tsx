@@ -58,6 +58,9 @@ vi.mock("@/hooks/useData", () => ({
     return state.data;
   },
 }));
+vi.mock("@/hooks/useYearTotals", () => ({
+  default: () => ({ totals: [], loading: false, error: false }),
+}));
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
 vi.mock("@/hooks/usePlayedCounts", () => ({

@@ -90,6 +90,24 @@ describe("GET /api/years", () => {
   });
 });
 
+describe("GET /api/years/totals", () => {
+  it("returns summed scores per year and game without a session", async () => {
+    const app = makeApp();
+    const res = await app.request("/api/years/totals");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ totals: [{ year: 2025, bgg_id: 1, total: 3 }] });
+    expect(JSON.stringify(body)).not.toMatch(/kelsin|pat|discord/);
+    expect(app.scoreCalls).toEqual([]);
+  });
+
+  it("is not captured by the :year scores route", async () => {
+    const res = await makeApp().request("/api/years/totals");
+    expect(res.headers.get("Cache-Control")).toContain("private");
+    expect(await res.json()).not.toHaveProperty("error");
+  });
+});
+
 describe("GET /api/years/:year/scores", () => {
   it("returns the legacy row shape without discord_id to anonymous callers", async () => {
     const app = makeApp();

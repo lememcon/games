@@ -22,6 +22,7 @@ const isPublic = (path: string, method: string) =>
   path.startsWith("/api/auth/") ||
   (method === "GET" &&
     (path === "/api/years" ||
+      path === "/api/years/totals" ||
       path === "/api/games" ||
       /^\/api\/years\/[^/]+\/scores$/.test(path)));
 
