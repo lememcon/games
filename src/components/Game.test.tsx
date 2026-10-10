@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import Game from "@/components/Game";
 import { renderWithMantine } from "@/test/utils";
@@ -159,5 +160,75 @@ describe("Game", () => {
     );
     expect(queryByRole("heading")).not.toBeInTheDocument();
     expect(queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  describe("player count range form", () => {
+    const overrides = (all = {}, extra = {}) => ({
+      all,
+      saving: false,
+      error: null,
+      save: vi.fn(),
+      reset: vi.fn(),
+      ...extra,
+    });
+
+    it("shows the member's stored range and saves for this game", async () => {
+      const state = overrides({ d1: { "11": { min: 3, max: 4 } } });
+      const { getByText, getByRole } = renderWithMantine(
+        <Game
+          data={data}
+          gameData={gameData}
+          year="2024"
+          id="11"
+          overrides={state}
+          discordId="d1"
+        />,
+      );
+      expect(getByText("Your player count")).toBeInTheDocument();
+      expect(getByText("Allowed now: 2-7")).toBeInTheDocument();
+      expect(getByRole("textbox", { name: "Minimum players" })).toHaveValue(
+        "3",
+      );
+      await userEvent.click(getByRole("button", { name: "Reset" }));
+      expect(state.reset).toHaveBeenCalledWith(11);
+    });
+
+    it("saves the narrowed range", async () => {
+      const state = overrides();
+      const { getByRole } = renderWithMantine(
+        <Game
+          data={data}
+          gameData={gameData}
+          year="2024"
+          id="11"
+          overrides={state}
+          discordId="d1"
+        />,
+      );
+      const input = getByRole("textbox", { name: "Minimum players" });
+      await userEvent.clear(input);
+      await userEvent.type(input, "4");
+      await userEvent.click(getByRole("button", { name: "Save" }));
+      expect(state.save).toHaveBeenCalledWith(11, { min: 4, max: 7 });
+    });
+
+    it("is hidden for a game with no known range or without overrides", () => {
+      const noRange = renderWithMantine(
+        <Game
+          data={data}
+          gameData={gameData}
+          year="2024"
+          id="60"
+          overrides={overrides()}
+          discordId="d1"
+        />,
+      );
+      expect(noRange.queryByText("Your player count")).toBeNull();
+      noRange.unmount();
+      const without = renderWithMantine(
+        <Game data={data} gameData={gameData} year="2024" id="11" />,
+      );
+      expect(without.queryByText("Your player count")).toBeNull();
+    });
   });
 });

@@ -105,6 +105,10 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, { player_game_scores: scores }),
   );
   await page.route(
+    (url) => pathOf(url) === "/api/player-overrides",
+    (route) => json(route, { overrides: [] }),
+  );
+  await page.route(
     (url) => pathOf(url) === "/api/me/played",
     (route) => json(route, { counts: played }),
   );

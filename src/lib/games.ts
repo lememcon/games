@@ -1,7 +1,6 @@
 import { descend, keys, prop, sort, values } from "ramda";
 
 import type {
-  AllPlayedCountsResponse,
   Bounds,
   Data,
   GameMeta,
@@ -9,6 +8,7 @@ import type {
   GameSplit,
   GamesData,
   PlayerGameScore,
+  PlayerOverride,
   SelectedGame,
   SplitGroup,
 } from "@/types";
@@ -66,6 +66,23 @@ export const validateOverride = (
   return { range: { min, max } };
 };
 
+// Checks a member's own range for a game: valid like an admin override, and
+// inside the range the game currently allows (members can only narrow).
+export const validateMemberOverride = (
+  min: number | string,
+  max: number | string,
+  allowed: Bounds,
+): { range: Bounds } | { error: string } => {
+  const checked = validateOverride(min, max);
+  if ("error" in checked) return checked;
+  const { range } = checked;
+  if (range.min < allowed.min || range.max > allowed.max)
+    return {
+      error: `Must stay within ${formatBounds(allowed)} (can't widen)`,
+    };
+  return checked;
+};
+
 const isHttpsUrl = (value: string | null | undefined): value is string => {
   if (!value) return false;
   try {
@@ -112,18 +129,31 @@ export const computeMaxScores = (
 // Play counts by player name, then bgg id; absent means zero.
 export type PlayerCounts = Record<string, Record<string, number>>;
 
-// Re-keys the members' counts (by discord id) to the score data's player names.
+// Members' own player count ranges by player name, then bgg id.
+export type PlayerRanges = Record<string, Record<string, Bounds>>;
+
+// Groups the flat override list by discord id, then bgg id.
+export const rangesByMember = (
+  overrides: PlayerOverride[],
+): Record<string, Record<string, Bounds>> => {
+  const result: Record<string, Record<string, Bounds>> = {};
+  for (const { discordId, bggId, min, max } of overrides)
+    (result[discordId] ??= {})[bggId] = { min, max };
+  return result;
+};
+
+// Re-keys per-member values (by discord id) to the score data's player names.
 // The name -> discord id link comes from every score row, so it still resolves
 // when all of a player's games are hidden. Players without a linked member get
 // no entry.
-export const playerCountsByName = (
+export const playerCountsByName = <T>(
   byPlayer: Record<string, PlayerGameScore[]>,
-  counts: AllPlayedCountsResponse["counts"],
-): PlayerCounts => {
-  const result: PlayerCounts = {};
+  values: Record<string, T>,
+): Record<string, T> => {
+  const result: Record<string, T> = {};
   for (const [player, rows] of Object.entries(byPlayer)) {
     const discordId = rows.find((r) => r.discord_id)?.discord_id;
-    if (discordId && counts[discordId]) result[player] = counts[discordId];
+    if (discordId && values[discordId]) result[player] = values[discordId];
   }
   return result;
 };
@@ -138,6 +168,8 @@ interface BuildSelectedGamesArgs {
   images: Record<string, string>;
   hidePlayed: boolean;
   playerCounts: PlayerCounts;
+  // Defaults to none.
+  playerRanges?: PlayerRanges;
 }
 
 export const buildSelectedGames = ({
@@ -147,6 +179,7 @@ export const buildSelectedGames = ({
   images,
   hidePlayed,
   playerCounts,
+  playerRanges = {},
 }: BuildSelectedGamesArgs): SelectedGame[] => {
   const numPlayers = players.length;
   const selectedGames: Record<string, SelectedGame> = {};
@@ -165,13 +198,24 @@ export const buildSelectedGames = ({
 
   // Whether a not-yet-seen game should be left out of the list entirely.
   const isExcluded = (
+    id: string,
     playedBy: Record<string, number>,
     min: number,
     max: number,
   ): boolean => {
     if (hidePlayed && Object.keys(playedBy).length > 0) return true;
     if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) return true;
-    return false;
+    // A member in the group who narrowed this game's range to exclude the
+    // group's size, whether or not they scored the game.
+    return (
+      numPlayers > 1 &&
+      players.some((p) => {
+        const own = playerRanges[p]?.[id];
+        return (
+          own !== undefined && (numPlayers < own.min || numPlayers > own.max)
+        );
+      })
+    );
   };
 
   for (const player of selectedPlayers) {
@@ -182,7 +226,7 @@ export const buildSelectedGames = ({
         const { min, max } = gameBounds(gameData, id);
 
         const playedBy = playedByFor(id);
-        if (isExcluded(playedBy, min, max)) continue;
+        if (isExcluded(id, playedBy, min, max)) continue;
 
         selectedGames[item.game] = {
           name: item.game,

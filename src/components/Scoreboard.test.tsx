@@ -48,6 +48,9 @@ const state = vi.hoisted(() => ({
   useAllPlayedCounts: vi.fn(),
   incPlayed: vi.fn(),
   usePlayedCounts: vi.fn(),
+  // Everyone's own player count ranges, by discord id then bgg id.
+  ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
+  savePlayerRange: vi.fn(),
 }));
 vi.mock("@/hooks/useData", () => ({
   default: (year: string | null) => {
@@ -67,6 +70,16 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
       state.own,
     ];
   },
+}));
+
+vi.mock("@/hooks/usePlayerOverrides", () => ({
+  default: () => ({
+    all: state.ranges,
+    saving: false,
+    error: null,
+    save: state.savePlayerRange,
+    reset: vi.fn(),
+  }),
 }));
 
 vi.mock("@/hooks/useAllPlayedCounts", () => ({
@@ -101,6 +114,7 @@ describe("Scoreboard", () => {
     state.played = {};
     state.own = {};
     state.allPlayed = {};
+    state.ranges = {};
   });
   afterEach(() => {
     // Unmount before resetting the URL, or a mounted Scoreboard redirects.
@@ -206,6 +220,64 @@ describe("Scoreboard", () => {
     const { getByText } = render();
 
     expect(getByText(/None of the ranked games include/)).toBeInTheDocument();
+  });
+
+  describe("member player count ranges", () => {
+    const linked: Data = {
+      ...loadedData,
+      by_player: {
+        alice: [
+          {
+            game: "Belfort",
+            player: "alice",
+            rank: 1,
+            score: 50,
+            bgg_id: 11,
+            discord_id: "d1",
+          },
+        ],
+        bob: loadedData.by_player.bob,
+      },
+    };
+    const pick = () =>
+      localStorage.setItem("players", JSON.stringify(["alice", "bob"]));
+
+    it("hides a game whose range excludes the selected group size", () => {
+      at("/2026");
+      state.data = linked;
+      state.ranges = { d1: { "11": { min: 3, max: 4 } } };
+      pick();
+      const { getByText, queryByText } = render();
+
+      expect(queryByText("Belfort")).toBeNull();
+      expect(
+        getByText(/fit a group of that size/, { exact: false }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the game when the group size is inside the range", () => {
+      at("/2026");
+      state.data = linked;
+      state.ranges = { d1: { "11": { min: 2, max: 2 } } };
+      pick();
+      const { getByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("shows the member's own range form on the game page", () => {
+      at("/2026/games/11");
+      state.games = {
+        games: { 11: { players: { min: 2, max: 6 } } },
+        loading: false,
+        error: false,
+      };
+      state.ranges = { "1": { "11": { min: 3, max: 4 } } };
+      const { getByText } = render();
+
+      expect(getByText("Your player count")).toBeInTheDocument();
+      expect(getByText("Your override")).toBeInTheDocument();
+    });
   });
 
   it("clears the selected players from the empty state", async () => {
