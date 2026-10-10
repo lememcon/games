@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useYearTotals from "@/hooks/useYearTotals";
@@ -42,13 +42,26 @@ describe("useYearTotals", () => {
     await waitFor(() => expect(result.current.error).toBe(true));
   });
 
-  it("ignores a response after unmount", async () => {
-    let resolve!: (r: Response) => void;
-    const fetchImpl = vi.fn(() => new Promise<Response>((r) => (resolve = r)));
-    const { unmount } = renderHook(() => useYearTotals(fetchImpl));
-    unmount();
-    resolve(res({ totals: [] }));
-    await Promise.resolve();
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  // React 18+ no longer warns on a state update after unmount, so the guard is
+  // observable only when a stale request settles after a newer one.
+  it("ignores a stale response once the fetch implementation changes", async () => {
+    let resolveOld!: (r: Response) => void;
+    const oldFetch = vi.fn(
+      () => new Promise<Response>((r) => (resolveOld = r)),
+    );
+    const fresh = [{ year: 2025, bgg_id: 1, total: 9 }];
+    const newFetch = vi.fn().mockResolvedValue(res({ totals: fresh }));
+    const { result, rerender } = renderHook(
+      ({ f }) => useYearTotals(f as typeof fetch),
+      { initialProps: { f: oldFetch } },
+    );
+    rerender({ f: newFetch });
+    await waitFor(() => expect(result.current.totals).toEqual(fresh));
+
+    await act(async () => {
+      resolveOld(res({ totals: [{ year: 2020, bgg_id: 2, total: 1 }] }));
+      await new Promise((r) => setTimeout(r));
+    });
+    expect(result.current.totals).toEqual(fresh);
   });
 });

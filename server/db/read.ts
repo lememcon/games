@@ -134,7 +134,10 @@ export async function getGames(db: StoreDb): Promise<GamesMap> {
   return toGamesMap(rows);
 }
 
-/** Sum of every score per game and year; names no players. */
+/**
+ * Sum of every recorded score row per game and year (not collapsed per member
+ * like getScores for approved viewers); names no players.
+ */
 export async function getYearTotals(db: StoreDb): Promise<YearTotal[]> {
   const total = sum(score.score).mapWith(Number);
   const rows = await db

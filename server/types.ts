@@ -204,7 +204,6 @@ export interface ImportContext {
   sourceFilename: string | null;
 }
 
-/** All SQL for years, games and scores lives behind this interface (server/db/dataStore.ts). */
 /** One game's summed scores in one year. */
 export interface YearTotal {
   year: number;
@@ -212,6 +211,7 @@ export interface YearTotal {
   total: number;
 }
 
+/** All SQL for years, games and scores lives behind this interface (server/db/dataStore.ts). */
 export interface DataStore {
   /** Newest first. */
   listYears(): Promise<number[]>;
