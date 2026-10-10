@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import ProfilePage from "@/components/ProfilePage";
 import PublicProfile from "@/components/PublicProfile";
 import Scoreboard from "@/components/Scoreboard";
+import YearRecap from "@/components/YearRecap";
 import AdminImport from "@/components/admin/AdminImport";
 import type { ApprovedUser } from "@/types";
 
@@ -60,6 +61,13 @@ function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
         <AdminShell user={user}>
           <ProfilePage user={user} onSaved={onUserChanged} />
         </AdminShell>
+      </Route>
+      <Route path="/players/:discordId/recap/:year">
+        {(params) => (
+          <AdminShell user={user}>
+            <YearRecap discordId={params.discordId} year={params.year} />
+          </AdminShell>
+        )}
       </Route>
       <Route path="/players/:discordId">
         {(params) => (

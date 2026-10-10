@@ -1,5 +1,8 @@
+import { Link } from "wouter";
+
 import {
   Alert,
+  Anchor,
   Avatar,
   Group,
   Loader,
@@ -12,6 +15,7 @@ import {
 import StatTile from "@/components/StatTile";
 import TopGamesByYear from "@/components/TopGamesByYear";
 import useProfile from "@/hooks/useProfile";
+import { recapPath } from "@/lib/routes";
 
 const PublicProfile = ({ discordId }: { discordId: string }) => {
   const state = useProfile(discordId);
@@ -45,7 +49,25 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
         <StatTile label="total plays" value={`${totalPlays}`} />
       </SimpleGrid>
       {stats ? (
-        <TopGamesByYear topByYear={stats.topByYear} />
+        <>
+          {stats.topByYear.length > 0 && (
+            <Stack gap="xs">
+              <Title order={4}>Year in review</Title>
+              <Group>
+                {stats.topByYear.map(({ year }) => (
+                  <Anchor
+                    key={year}
+                    component={Link}
+                    href={recapPath(discordId, year)}
+                  >
+                    {year} in review
+                  </Anchor>
+                ))}
+              </Group>
+            </Stack>
+          )}
+          <TopGamesByYear topByYear={stats.topByYear} />
+        </>
       ) : (
         <Text c="dimmed">No scores are linked to this member yet.</Text>
       )}
