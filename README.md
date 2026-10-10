@@ -68,6 +68,7 @@ pnpm dev
 | `pnpm test`          | Run Vitest in watch mode                            |
 | `pnpm test:run`      | Run tests once                                      |
 | `pnpm test:coverage` | Run tests with a V8 coverage report (90% threshold) |
+| `pnpm test:e2e`      | Playwright smoke tests (API mocked; see Testing)    |
 | `pnpm lint`          | ESLint                                              |
 | `pnpm pretty`        | Check formatting with Prettier                      |
 | `pnpm typecheck`     | Type-check the app and node configs                 |
@@ -289,8 +290,12 @@ Server tests inject their dependencies (a fake session resolver, an in-memory us
 store), and a third `server-db` project runs the real
 migrations and SQL on an in-process PGlite database, so none need an external
 PostgreSQL or the network. Running the app locally (`pnpm dev` proxies `/api` to
-`pnpm server:dev`) needs the server, PostgreSQL and Discord keys. There are no
-end-to-end tests yet.
+`pnpm server:dev`) needs the server, PostgreSQL and Discord keys.
+
+Browser smoke tests live in `tests/e2e/` (Playwright, Chromium). They start their own
+Vite server on port 3100 and mock every `/api` call, so they need no backend. Run
+`pnpm exec playwright install chromium` once, then `pnpm test:e2e`. They run in CI as a
+separate `e2e` job and are not part of `pnpm check`.
 
 [Lefthook](https://github.com/evilmartians/lefthook) runs pre-commit hooks —
 Prettier, ESLint, typecheck, and the related Vitest tests — plus commit-message linting.
