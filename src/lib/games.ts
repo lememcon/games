@@ -354,9 +354,14 @@ const pickGames = (
   const k = lists.length;
   let best: { picks: SelectedGame[]; key: number; score: number } | null = null;
   const names = (picks: SelectedGame[]) => picks.map((g) => g.name).join("\n");
-  const walk = (i: number, picks: SelectedGame[], score: number) => {
+  const walk = (
+    i: number,
+    picks: SelectedGame[],
+    score: number,
+    partialKey: number,
+  ) => {
     if (i === k) {
-      const key = pickKey(mode, picks);
+      const key = partialKey;
       if (
         best === null ||
         key < best.key ||
@@ -371,12 +376,16 @@ const pickGames = (
     const candidates = mode === "total" ? lists[i].slice(0, k) : lists[i];
     for (const game of candidates) {
       if (picks.some((p) => p.name === game.name)) continue;
+      // The key only grows as picks are added, so a branch already worse than
+      // the best key can never win (equal keys still compete on score).
+      const nextKey = Math.max(partialKey, modeKey(mode, game));
+      if (best !== null && nextKey > (best as { key: number }).key) continue;
       picks.push(game);
-      walk(i + 1, picks, score + game.score);
+      walk(i + 1, picks, score + game.score, nextKey);
       picks.pop();
     }
   };
-  walk(0, [], 0);
+  walk(0, [], 0, 0);
   return (best as { picks: SelectedGame[] } | null)?.picks ?? null;
 };
 
@@ -418,11 +427,15 @@ export const suggestSplits = (args: BuildSelectedGamesArgs): GameSplit[] => {
     if (!picks) continue;
     const perPlayer =
       picks.reduce((sum, g) => sum + g.score, 0) / players.length;
-    const groups: SplitGroup[] = parts.map((group, i) => ({
-      players: group,
-      games: lists[i].slice(0, GAMES_PER_GROUP),
-      picked: picks[i].name,
-    }));
+    const groups: SplitGroup[] = parts.map((group, i) => {
+      const shown = lists[i].slice(0, GAMES_PER_GROUP);
+      // The pick can sit past the shown games in the non-total modes; keep it
+      // visible by replacing the last one.
+      if (!shown.some((g) => g.name === picks[i].name)) {
+        shown[shown.length - 1] = picks[i];
+      }
+      return { players: group, games: shown, picked: picks[i].name };
+    });
     splits.push({
       split: {
         groups,

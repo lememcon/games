@@ -9,7 +9,7 @@
 // A year's page may also carry its filters in the query, so a link can be
 // shared: /:year?players=Alice,Bob&hidePlayed=1&sort=even (see buildFilterSearch).
 
-import { parseSortMode } from "@/lib/games";
+import { SORT_MODES, parseSortMode } from "@/lib/games";
 import type { SortMode } from "@/types";
 
 export type ScoreboardRoute =
@@ -98,7 +98,11 @@ export const parseFilterSearch = (search: string): FilterState | null => {
     } else if (key === "hidePlayed") {
       hidePlayed = value === "1";
     } else if (key === "sort") {
-      sort = parseSortMode(decodePiece(value));
+      // Only a recognised mode counts, so a junk value leaves the link unusable.
+      const wanted = decodePiece(value);
+      if (SORT_MODES.some((m) => m.value === wanted)) {
+        sort = parseSortMode(wanted);
+      }
     }
   }
   if (players === null && hidePlayed === null && sort === null) return null;

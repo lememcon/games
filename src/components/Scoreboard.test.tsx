@@ -414,6 +414,24 @@ describe("Scoreboard", () => {
       expect(window.location.search).toBe("?players=a,b,c,d&sort=lowest");
     });
 
+    it("orders the list by the even mode", () => {
+      localStorage.setItem("sort_mode", JSON.stringify("even"));
+      const { container, getByRole } = render();
+
+      expect(getByRole("radio", { name: "Most even" })).toBeChecked();
+      // Every game is perfectly even, so total score breaks the tie.
+      expect(order(container)).toEqual(["Y", "Z", "X"]);
+    });
+
+    it("resets a saved mode when a link carries filters but no sort", () => {
+      localStorage.setItem("sort_mode", JSON.stringify("even"));
+      at("/2026?players=a,b,c,d");
+      const { getByRole } = render();
+
+      expect(stored()).toBe("total");
+      expect(getByRole("radio", { name: "Total" })).toBeChecked();
+    });
+
     it("includes the mode in the copied link", async () => {
       const user = userEvent.setup();
       localStorage.setItem("sort_mode", JSON.stringify("even"));

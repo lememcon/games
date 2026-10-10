@@ -1294,6 +1294,29 @@ describe("suggestSplits sort modes", () => {
     expect(best.perPlayer).toBe(60);
   });
 
+  it("keeps the picked game in the shown games when it ranks past them", () => {
+    // a+b can pick from g1-g4 (rank 1) or e (rank 2); c+d only have e and f,
+    // so the key is 2 either way and the score favors e + f.
+    const table = {
+      g1: { a: [1, 5], b: [1, 5] },
+      g2: { a: [1, 4], b: [1, 4] },
+      g3: { a: [1, 3], b: [1, 3] },
+      g4: { a: [1, 2], b: [1, 2] },
+      e: { a: [2, 100], b: [2, 100], c: [2, 100], d: [2, 100] },
+      f: { c: [2, 100], d: [2, 100] },
+    } as Record<string, Record<string, [number, number]>>;
+    const splits = run(table, "lowest");
+    const group = splits
+      .flatMap((s) => s.groups)
+      .find((g) => g.players.join() === "a,b" && g.picked === "e")!;
+    expect(group).toBeDefined();
+    expect(names(group.games)).toHaveLength(4);
+    expect(names(group.games)).toContain("e");
+    for (const g of splits.flatMap((s) => s.groups)) {
+      expect(names(g.games)).toContain(g.picked);
+    }
+  });
+
   it("keeps the delta against the best total-score game", () => {
     const [best] = run(trio, "lowest");
     // Y is 360 over four players; the picks give 60 per player.

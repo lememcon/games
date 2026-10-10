@@ -90,6 +90,13 @@ describe("buildFilterSearch", () => {
   });
 });
 
+describe("parseFilterSearch with an unusable sort", () => {
+  it("returns null so saved filters are kept", () => {
+    expect(parseFilterSearch("?sort=bogus")).toBeNull();
+    expect(parseFilterSearch("?sort=")).toBeNull();
+  });
+});
+
 describe("apostrophes in names", () => {
   it("escapes ' as %27 and round-trips", () => {
     const filters: FilterState = {
@@ -191,8 +198,8 @@ describe("sort in the query", () => {
   });
 
   it("falls back to total for unknown or malformed values", () => {
-    expect(parseFilterSearch("?sort=bogus")?.sort).toBe("total");
-    expect(parseFilterSearch("?sort=%E0")?.sort).toBe("total");
+    expect(parseFilterSearch("?players=Al&sort=bogus")?.sort).toBe("total");
+    expect(parseFilterSearch("?players=Al&sort=%E0")?.sort).toBe("total");
     expect(parseFilterSearch("?players=Al&sort=")?.sort).toBe("total");
   });
 
