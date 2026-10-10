@@ -55,4 +55,15 @@ describe("YearTrends", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Rising games" })).toBeNull();
   });
+
+  it("fills the panel with named games past unnamed ones", () => {
+    const many = { ...names, "10": "Ark Nova" };
+    const totals = [1, 2, 3, 4, 5, 6].flatMap((id) => [
+      t(id, 2025, 1),
+      t(id, 2026, id === 10 ? 1 : 100 - id),
+    ]);
+    totals.push(t(10, 2025, 1), t(10, 2026, 2));
+    renderWithMantine(<YearTrends totals={totals} year={2026} names={many} />);
+    expect(screen.getByRole("link", { name: "Ark Nova" })).toBeInTheDocument();
+  });
 });

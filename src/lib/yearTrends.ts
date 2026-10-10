@@ -28,24 +28,46 @@ const totalsByGame = (
     years.set(year, (years.get(year) ?? 0) + total);
     byGame.set(bgg_id, years);
   }
+  // A game only counts as scored in a year when its total is above zero.
+  for (const years of byGame.values()) {
+    for (const [y, t] of years) if (t <= 0) years.delete(y);
+  }
   return byGame;
 };
 
-// Returning favorites: games scored in `year` that were missing the year
-// before but did score in an earlier one. Ranked by their best earlier total
-// (earliest peak year, then lowest id, break ties).
+// The latest scored year before `year` anywhere in the data.
+const previousYear = (
+  byGame: Map<number, Map<number, number>>,
+  year: number,
+): number | undefined => {
+  let prev: number | undefined;
+  for (const years of byGame.values()) {
+    for (const y of years.keys()) {
+      if (y < year && (prev === undefined || y > prev)) prev = y;
+    }
+  }
+  return prev;
+};
+
+// Returning favorites: games scored in `year` that were missing the previous
+// scored year but did score in an earlier one. Ranked by their best earlier
+// total (earliest peak year, then lowest id, break ties). `has` filters
+// before the limit.
 export const returningFavorites = (
   totals: YearTotal[],
   year: number,
   limit = TREND_LIMIT,
+  has: (bggId: number) => boolean = () => true,
 ): ReturningFavorite[] => {
   const found: ReturningFavorite[] = [];
-  for (const [bggId, years] of totalsByGame(totals)) {
+  const byGame = totalsByGame(totals);
+  const prev = previousYear(byGame, year);
+  for (const [bggId, years] of byGame) {
     const total = years.get(year);
-    if (total === undefined || years.has(year - 1)) continue;
+    if (total === undefined || years.has(prev ?? year) || !has(bggId)) continue;
     let best: { peak: number; peakYear: number } | null = null;
     for (const [y, t] of years) {
-      if (y >= year || t <= 0) continue;
+      if (y >= year) continue;
       if (!best || t > best.peak || (t === best.peak && y < best.peakYear)) {
         best = { peak: t, peakYear: y };
       }
@@ -59,18 +81,21 @@ export const returningFavorites = (
     .slice(0, limit);
 };
 
-// Rising games: games scored in both `year` and the year before, ranked by how
+// Rising games: games scored in both `year` and the previous scored year, ranked by how
 // much their total grew (then by this year's total, then lowest id).
 export const risingGames = (
   totals: YearTotal[],
   year: number,
   limit = TREND_LIMIT,
+  has: (bggId: number) => boolean = () => true,
 ): RisingGame[] => {
   const found: RisingGame[] = [];
-  for (const [bggId, years] of totalsByGame(totals)) {
+  const byGame = totalsByGame(totals);
+  const prev = previousYear(byGame, year);
+  for (const [bggId, years] of byGame) {
     const total = years.get(year);
-    const previous = years.get(year - 1);
-    if (total === undefined || previous === undefined) continue;
+    const previous = prev === undefined ? undefined : years.get(prev);
+    if (total === undefined || previous === undefined || !has(bggId)) continue;
     if (total > previous) {
       found.push({ bggId, total, previous, delta: total - previous });
     }
