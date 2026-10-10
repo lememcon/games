@@ -7,7 +7,10 @@
 //   /games/:id         legacy game URL (redirects into the default year)
 //
 // A year's page may also carry its filters in the query, so a link can be
-// shared: /:year?players=Alice,Bob&hidePlayed=1 (see buildFilterSearch).
+// shared: /:year?players=Alice,Bob&hidePlayed=1&sort=even (see buildFilterSearch).
+
+import { parseSortMode } from "@/lib/games";
+import type { SortMode } from "@/types";
 
 export type ScoreboardRoute =
   | { kind: "home" }
@@ -41,6 +44,7 @@ export const parseScoreboardPath = (pathname: string): ScoreboardRoute => {
 export interface FilterState {
   players: string[];
   hidePlayed: boolean;
+  sort: SortMode;
 }
 
 const encodeName = (name: string): string =>
@@ -52,12 +56,14 @@ const encodeName = (name: string): string =>
 export const buildFilterSearch = ({
   players,
   hidePlayed,
+  sort,
 }: FilterState): string => {
   const parts: string[] = [];
   if (players.length > 0) {
     parts.push(`players=${players.map(encodeName).join(",")}`);
   }
   if (hidePlayed) parts.push("hidePlayed=1");
+  if (sort !== "total") parts.push(`sort=${sort}`);
   return parts.length > 0 ? `?${parts.join("&")}` : "";
 };
 
@@ -69,12 +75,13 @@ const decodePiece = (piece: string): string => {
   }
 };
 
-// The inverse of buildFilterSearch. null when neither param is present, so the
+// The inverse of buildFilterSearch. null when none of the params is present, so the
 // caller falls back to its saved filters. Splits by hand: URLSearchParams would
 // decode the commas before they can be told apart from a separator.
 export const parseFilterSearch = (search: string): FilterState | null => {
   let players: string[] | null = null;
   let hidePlayed: boolean | null = null;
+  let sort: SortMode | null = null;
   for (const pair of search.replace(/^\?/, "").split("&")) {
     const at = pair.indexOf("=");
     const key = at === -1 ? pair : pair.slice(0, at);
@@ -90,10 +97,16 @@ export const parseFilterSearch = (search: string): FilterState | null => {
       ];
     } else if (key === "hidePlayed") {
       hidePlayed = value === "1";
+    } else if (key === "sort") {
+      sort = parseSortMode(decodePiece(value));
     }
   }
-  if (players === null && hidePlayed === null) return null;
-  return { players: players ?? [], hidePlayed: hidePlayed ?? false };
+  if (players === null && hidePlayed === null && sort === null) return null;
+  return {
+    players: players ?? [],
+    hidePlayed: hidePlayed ?? false,
+    sort: sort ?? "total",
+  };
 };
 
 export const sharePath = (year: string | number, filters: FilterState) =>
