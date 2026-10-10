@@ -28,6 +28,9 @@ const hook = vi.hoisted(() => ({
 vi.mock("@/components/admin/PlayerLinksPanel", () => ({
   default: () => <div>links panel</div>,
 }));
+vi.mock("@/components/admin/PlayerCountsPanel", () => ({
+  default: () => <div>counts panel</div>,
+}));
 vi.mock("@/components/admin/BggDataPanel", () => ({
   default: () => <div>bgg panel</div>,
 }));
@@ -101,6 +104,11 @@ describe("AdminPage", () => {
   it("mounts the player links panel", () => {
     renderWithMantine(<AdminPage meId="3" />);
     expect(screen.getByText("links panel")).toBeInTheDocument();
+  });
+
+  it("mounts the player counts panel", () => {
+    renderWithMantine(<AdminPage meId="3" />);
+    expect(screen.getByText("counts panel")).toBeInTheDocument();
   });
 
   it("shows a fallback when the Discord username is unknown", () => {

@@ -4,6 +4,7 @@ import type {
   Bounds,
   Data,
   GameMeta,
+  GamePlayersRow,
   GameSplit,
   GamesData,
   PlayerGameScore,
@@ -24,6 +25,45 @@ export const realBounds = (meta: GameMeta | undefined): Bounds | null => {
 // Player-count bounds for a game, defaulting to 0/99 when they are unknown.
 export const gameBounds = (gameData: GamesData, id: string): Bounds =>
   realBounds(gameData[id]) ?? { min: 0, max: 99 };
+
+// BGG's range for an overridden game, else null (nothing to show alongside).
+export const originalBounds = (meta: GameMeta | undefined): Bounds | null =>
+  meta?.overridden && meta.bggPlayers
+    ? { min: meta.bggPlayers.min, max: meta.bggPlayers.max }
+    : null;
+
+// "4" for a fixed count, "2-6" otherwise.
+export const formatBounds = ({ min, max }: Bounds): string =>
+  min === max ? `${min}` : `${min}-${max}`;
+
+// Case-insensitive match on the name or BGG id.
+export const filterGamePlayers = (
+  games: GamePlayersRow[],
+  query: string,
+): GamePlayersRow[] => {
+  const q = query.trim().toLowerCase();
+  return q
+    ? games.filter(
+        (g) => g.name.toLowerCase().includes(q) || String(g.bggId).includes(q),
+      )
+    : games;
+};
+
+const isCount = (v: number | string): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 99;
+
+// Checks an admin's override input (a blank NumberInput gives ""). Mirrors the
+// server rules: whole numbers 1..99 with min <= max.
+export const validateOverride = (
+  min: number | string,
+  max: number | string,
+): { range: Bounds } | { error: string } => {
+  if (min === "" || max === "") return { error: "Enter both counts" };
+  if (!isCount(min) || !isCount(max))
+    return { error: "Use whole numbers from 1 to 99" };
+  if (min > max) return { error: "Min can't exceed max" };
+  return { range: { min, max } };
+};
 
 const isHttpsUrl = (value: string | null | undefined): value is string => {
   if (!value) return false;
