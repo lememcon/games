@@ -8,6 +8,7 @@ import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
 import { gamePath } from "@/lib/routes";
 import type { GameSplit } from "@/types";
+import { normalized_score } from "@/util";
 
 interface SplitSuggestionsProps {
   splits: GameSplit[];
@@ -59,14 +60,15 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
             {split.groups.map((g) => g.picked).join(" + ")}
           </strong>
           <span>
-            {split.perPlayer.toFixed(1)} per player{" "}
+            {normalized_score(split.perPlayer, individualMax).toFixed(1)} per
+            player{" "}
             {split.delta !== null && (
               <span
                 className={
                   split.delta < 0 ? "splits__delta--down" : "splits__delta--up"
                 }
               >
-                {formatDelta(split.delta)}
+                {formatDelta(normalized_score(split.delta, individualMax))}
               </span>
             )}
           </span>

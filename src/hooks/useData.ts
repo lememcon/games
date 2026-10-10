@@ -23,7 +23,7 @@ const pending: Data = {
 const failed: Data = { ...pending, loading: false, error: true };
 
 const build = (rows: PlayerGameScore[]): Data => {
-  let max = 0;
+  const max = rows.reduce((m, row) => Math.max(m, row.score), 0);
 
   const by_id = reduce<PlayerGameScore, Group>(
     (games, score) => {
@@ -36,7 +36,6 @@ const build = (rows: PlayerGameScore[]): Data => {
         ) as Group;
       }
 
-      max = Math.max(max, score.score);
       return assoc(id, [dissoc("bgg_id", score)], games) as Group;
     },
     {},

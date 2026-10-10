@@ -114,6 +114,18 @@ describe("SplitSuggestions", () => {
     expect(buttons[1]).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("normalizes the headline and difference against the individual max", () => {
+    const { getByText } = renderWithMantine(
+      <SplitSuggestions
+        splits={[split(-5, 25)]}
+        year="2024"
+        individualMax={50}
+      />,
+    );
+    expect(getByText(/50\.0 per player/)).toBeVisible();
+    expect(getByText("-10.0")).toHaveClass("splits__delta--down");
+  });
+
   it("marks a worse plan with a negative difference", () => {
     const { getByText } = renderSplits([split(-2.5)]);
     expect(getByText("-2.5")).toHaveClass("splits__delta--down");

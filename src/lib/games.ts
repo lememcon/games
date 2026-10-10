@@ -243,7 +243,10 @@ export const buildSelectedGames = ({
       }
 
       const game = selectedGames[item.game];
-      game.score += item.score;
+      // A repeated (player, game) row counts once, keeping the best score.
+      const existing = game.players[player];
+      if (existing && existing.score >= item.score) continue;
+      game.score += item.score - (existing?.score ?? 0);
       game.players[player] = {
         name: player,
         rank: item.rank,
