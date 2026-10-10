@@ -25,6 +25,22 @@ describe("GameDetailHeader", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("shows the restriction and what BGG lists", () => {
+    const { container } = renderWithMantine(
+      <GameDetailHeader
+        name="Root"
+        bounds={{ min: 4, max: 4 }}
+        original={{ min: 2, max: 6 }}
+        id="237182"
+        image={null}
+      />,
+    );
+
+    expect(container.textContent).toContain("Players:");
+    expect(container.textContent).toContain("Restricted");
+    expect(container.textContent).toContain("BGG lists 2-6");
+  });
+
   it("omits the player range when bounds is null", () => {
     const { container } = renderWithMantine(
       <GameDetailHeader name="Root" bounds={null} id="237182" image={null} />,

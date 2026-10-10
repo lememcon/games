@@ -53,6 +53,16 @@ describe("GameRow", () => {
     expect(getByText("2-4")).toBeInTheDocument();
   });
 
+  it("shows the original range struck through when restricted", () => {
+    const { container, getByText } = renderRow({
+      bounds: { min: 4, max: 4 },
+      original: { min: 2, max: 6 },
+    });
+
+    expect(container.querySelector("s")).toHaveTextContent("2-6");
+    expect(getByText("(restricted from 2-6)")).toBeInTheDocument();
+  });
+
   it("reveals the per-player breakdown when the score is clicked", async () => {
     const user = userEvent.setup();
     renderRow();

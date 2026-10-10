@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
-import { realBounds } from "@/lib/games";
+import { originalBounds, realBounds } from "@/lib/games";
 import type { GamesData, SelectedGame } from "@/types";
 
 interface GamesListProps {
@@ -51,6 +51,7 @@ const GamesList = ({
             selectedMax={selectedMax}
             individualMax={individualMax}
             bounds={boundsFor(gameData, game)}
+            original={originalBounds(gameData[game.id])}
             played={getPlayedCount(game.id)}
             onInc={() => onInc(game.id)}
             onDec={() => onDec(game.id)}
@@ -71,6 +72,7 @@ const GamesList = ({
               selectedMax={selectedMax}
               individualMax={individualMax}
               bounds={boundsFor(gameData, game)}
+              original={originalBounds(gameData[game.id])}
               played={getPlayedCount(game.id)}
               onInc={() => onInc(game.id)}
               onDec={() => onDec(game.id)}
