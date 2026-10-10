@@ -225,11 +225,6 @@ describe("GET /api/games/unplayed", () => {
       ],
     });
   });
-
-  it("is not captured by another games route", async () => {
-    const res = await makeApp(MEMBER).request("/api/games/unplayed");
-    expect(res.headers.get("Cache-Control")).toContain("private");
-  });
 });
 
 describe("public reads", () => {

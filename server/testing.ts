@@ -119,6 +119,9 @@ export function fakeBggRepo() {
   return { repo, settings, rows, writes };
 }
 
+/** Code-unit string comparison, matching the SQL collation. */
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
 /** In-memory DataStore for tests; the import applies the same rules as the SQL store. */
 export function fakeData(
   initial: {
@@ -174,7 +177,12 @@ export function fakeData(
       return Object.entries(initial.names ?? {})
         .filter(([id]) => !scored.has(Number(id)))
         .map(([id, name]) => ({ bgg_id: Number(id), name }))
-        .sort((a, b) => a.name.localeCompare(b.name) || a.bgg_id - b.bgg_id);
+        .sort(
+          (a, b) =>
+            cmp(a.name.toLowerCase(), b.name.toLowerCase()) ||
+            cmp(a.name, b.name) ||
+            a.bgg_id - b.bgg_id,
+        );
     },
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))

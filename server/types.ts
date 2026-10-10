@@ -206,12 +206,13 @@ export interface ImportContext {
   sourceFilename: string | null;
 }
 
-/** One game's summed scores in one year. */
+/** A named game with no scores in any year. */
 export interface UnplayedGame {
   bgg_id: number;
   name: string;
 }
 
+/** One game's summed scores in one year. */
 export interface YearTotal {
   year: number;
   bgg_id: number;

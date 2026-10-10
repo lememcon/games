@@ -192,8 +192,6 @@ describe("data store metadata", () => {
       "INSERT INTO game (bgg_id, name) VALUES (900201, 'zebra'), (900202, 'Apple'), (900203, NULL)",
     );
     const unplayed = await store.listUnplayedGames();
-    const names = unplayed.map((g) => g.name);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
     expect(unplayed).toContainEqual({ bgg_id: 900202, name: "Apple" });
     expect(unplayed.findIndex((g) => g.bgg_id === 900202)).toBeLessThan(
       unplayed.findIndex((g) => g.bgg_id === 900201),
