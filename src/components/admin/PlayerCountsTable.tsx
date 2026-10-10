@@ -8,6 +8,7 @@ import {
   Table,
   Text,
   TextInput,
+  VisuallyHidden,
 } from "@mantine/core";
 
 import { filterGamePlayers, formatBounds, validateOverride } from "@/lib/games";
@@ -29,9 +30,18 @@ const Row = ({ game, saving, error, onSave, onReset }: RowProps) => {
   const checked = validateOverride(min, max);
   const invalid = touched && "error" in checked ? checked.error : null;
   const range = "range" in checked ? checked.range : null;
+  const current = override ?? bgg;
   const changed =
     range !== null &&
-    (range.min !== override?.min || range.max !== override?.max);
+    (range.min !== current?.min || range.max !== current?.max);
+  const messageId = `override-error-${bggId}`;
+  // Mantine overwrites aria-describedby with its own error element; withAria
+  // (an InputBase prop missing from the NumberInput types) hands it back to us.
+  const ariaProps = {
+    withAria: false,
+    "aria-invalid": invalid ? true : undefined,
+    "aria-describedby": invalid ? messageId : undefined,
+  };
   const wider =
     range !== null &&
     bgg !== null &&
@@ -52,6 +62,8 @@ const Row = ({ game, saving, error, onSave, onReset }: RowProps) => {
             allowDecimal={false}
             allowNegative={false}
             hideControls
+            error={invalid ? true : undefined}
+            {...ariaProps}
             value={min}
             onChange={setMin}
           />
@@ -65,6 +77,8 @@ const Row = ({ game, saving, error, onSave, onReset }: RowProps) => {
             allowDecimal={false}
             allowNegative={false}
             hideControls
+            error={invalid ? true : undefined}
+            {...ariaProps}
             value={max}
             onChange={setMax}
           />
@@ -75,12 +89,12 @@ const Row = ({ game, saving, error, onSave, onReset }: RowProps) => {
           )}
         </Group>
         {invalid && (
-          <Text size="xs" c="red" role="alert">
+          <Text size="xs" c="red" id={messageId}>
             {invalid}
           </Text>
         )}
         {wider && !invalid && (
-          <Text size="xs" c="yellow.8">
+          <Text size="xs" c="orange.9">
             Wider than BGG&apos;s range
           </Text>
         )}
@@ -149,7 +163,9 @@ const PlayerCountsTable = ({
               <Table.Th>Game</Table.Th>
               <Table.Th>BGG</Table.Th>
               <Table.Th>Override</Table.Th>
-              <Table.Th />
+              <Table.Th>
+                <VisuallyHidden>Actions</VisuallyHidden>
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>

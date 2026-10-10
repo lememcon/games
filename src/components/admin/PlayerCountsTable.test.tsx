@@ -52,6 +52,7 @@ describe("PlayerCountsTable", () => {
     expect(max("Wingspan")).toHaveValue("4");
     expect(min("Root")).toHaveValue("");
     expect(screen.getAllByText("Overridden")).toHaveLength(1);
+    expect(screen.getByText("Actions")).toBeInTheDocument();
   });
 
   it("saves a valid new range", async () => {
@@ -68,12 +69,28 @@ describe("PlayerCountsTable", () => {
     expect(save("Wingspan")).toBeDisabled();
   });
 
+  it("disables Save when a game with no override is set to BGG's range", async () => {
+    const { user } = setup();
+    await user.type(min("Root"), "2");
+    await user.type(max("Root"), "6");
+    expect(save("Root")).toBeDisabled();
+    await user.clear(max("Root"));
+    await user.type(max("Root"), "5");
+    expect(save("Root")).toBeEnabled();
+  });
+
   it("explains an invalid range and blocks saving", async () => {
     const { onSave, user } = setup();
     await user.type(min("Root"), "5");
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter both counts");
+    expect(screen.getByText("Enter both counts")).toBeInTheDocument();
+    expect(min("Root")).toHaveAttribute("aria-invalid", "true");
+    expect(max("Root")).toHaveAttribute("aria-invalid", "true");
     await user.type(max("Root"), "3");
-    expect(screen.getByRole("alert")).toHaveTextContent("Min can't exceed max");
+    const message = screen.getByText("Min can't exceed max");
+    expect(message).toHaveAttribute("id");
+    expect(min("Root")).toHaveAttribute("aria-describedby", message.id);
+    expect(max("Root")).toHaveAttribute("aria-describedby", message.id);
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(save("Root")).toBeDisabled();
     expect(onSave).not.toHaveBeenCalled();
   });
