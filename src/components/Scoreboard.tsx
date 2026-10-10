@@ -111,7 +111,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     [data.by_player, overrides.all],
   );
 
-  const vetoes = useVetoes(year ?? "");
+  const vetoes = useVetoes();
   const playerVetoes = useMemo(
     () => playerCountsByName(data.by_player, vetoes.all),
     [data.by_player, vetoes.all],

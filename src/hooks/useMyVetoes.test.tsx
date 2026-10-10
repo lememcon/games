@@ -6,7 +6,7 @@ import { GENERIC_ERROR } from "@/lib/apiErrors";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
-const mine = [{ year: 2025, bggId: 1, name: "Root" }];
+const mine = [{ bggId: 1, name: "Root" }];
 
 describe("useMyVetoes", () => {
   it("loads the member's vetoes", async () => {
@@ -34,8 +34,8 @@ describe("useMyVetoes", () => {
       .mockResolvedValueOnce(res({ vetoes: [] }));
     const hook = renderHook(() => useMyVetoes(fetchImpl));
     await waitFor(() => expect(hook.result.current.vetoes).toEqual(mine));
-    await act(() => hook.result.current.clear(2025, 1));
-    expect(fetchImpl.mock.calls[1][0]).toBe("/api/me/vetoes/2025/1");
+    await act(() => hook.result.current.clear(1));
+    expect(fetchImpl.mock.calls[1][0]).toBe("/api/me/vetoes/1");
     expect(fetchImpl.mock.calls[1][1]).toMatchObject({ method: "DELETE" });
     expect(hook.result.current.vetoes).toEqual([]);
   });
@@ -47,7 +47,7 @@ describe("useMyVetoes", () => {
       .mockResolvedValueOnce(res({}, 500));
     const hook = renderHook(() => useMyVetoes(fetchImpl));
     await waitFor(() => expect(hook.result.current.vetoes).toEqual(mine));
-    await act(() => hook.result.current.clear(2025, 1));
+    await act(() => hook.result.current.clear(1));
     expect(hook.result.current.error).toBe(GENERIC_ERROR);
     expect(hook.result.current.vetoes).toEqual(mine);
   });

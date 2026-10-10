@@ -8,15 +8,17 @@ import * as schema from "./schema";
 
 const folder = path.resolve(import.meta.dirname, "../../drizzle");
 
-/** Applies migrations `from` (inclusive) to `to` (exclusive) from drizzle/. */
+/** Applies migrations `from` (inclusive) to `to` (exclusive) from drizzle/, each in a transaction. */
 export async function applyMigrations(client: PGlite, from = 0, to?: number) {
   const journal = JSON.parse(
     readFileSync(path.join(folder, "meta/_journal.json"), "utf8"),
   ) as { entries: { tag: string }[] };
   for (const { tag } of journal.entries.slice(from, to)) {
     const sql = readFileSync(path.join(folder, `${tag}.sql`), "utf8");
-    for (const statement of sql.split("--> statement-breakpoint"))
-      await client.exec(statement);
+    await client.transaction(async (tx) => {
+      for (const statement of sql.split("--> statement-breakpoint"))
+        await tx.exec(statement);
+    });
   }
 }
 

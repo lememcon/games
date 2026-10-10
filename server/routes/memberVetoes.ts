@@ -1,18 +1,15 @@
 import { Hono } from "hono";
 
-import { parseBggId, parseYear } from "../played";
+import { parseBggId } from "../played";
 import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, MemberVetoStore } from "../types";
 
-/** Members' per-year game vetoes; all need an approved user (checked in app.ts). */
+/** Members' game vetoes, shared by every year; all need an approved user (checked in app.ts). */
 export function memberVetoRoutes(vetoes: MemberVetoStore) {
   const routes = new Hono<AppEnv>();
 
   routes.get("/vetoes", async (c) => {
-    const year = parseYear(c.req.query("year"));
-    if (year === null) return c.json({ error: "invalid_year" }, 400);
-    const all = await vetoes.getAll(year);
-    if (!all) return c.json({ error: "unknown_year" }, 404);
+    const all = await vetoes.getAll();
     privateNoCache(c);
     return c.json({ vetoes: all });
   });
@@ -23,21 +20,17 @@ export function memberVetoRoutes(vetoes: MemberVetoStore) {
     return c.json({ vetoes: mine });
   });
 
-  routes.put("/me/vetoes/:year/:bggId", async (c) => {
-    const year = parseYear(c.req.param("year"));
-    if (year === null) return c.json({ error: "invalid_year" }, 400);
+  routes.put("/me/vetoes/:bggId", async (c) => {
     const bggId = parseBggId(c.req.param("bggId"));
     if (bggId === null) return c.json({ error: "invalid_bgg_id" }, 400);
-    const result = await vetoes.set(c.get("user")!.discordId, year, bggId);
+    const result = await vetoes.set(c.get("user")!.discordId, bggId);
     return result.ok ? c.body(null, 204) : refusalResponse(c, result);
   });
 
-  routes.delete("/me/vetoes/:year/:bggId", async (c) => {
-    const year = parseYear(c.req.param("year"));
-    if (year === null) return c.json({ error: "invalid_year" }, 400);
+  routes.delete("/me/vetoes/:bggId", async (c) => {
     const bggId = parseBggId(c.req.param("bggId"));
     if (bggId === null) return c.json({ error: "invalid_bgg_id" }, 400);
-    await vetoes.clear(c.get("user")!.discordId, year, bggId);
+    await vetoes.clear(c.get("user")!.discordId, bggId);
     return c.body(null, 204);
   });
 

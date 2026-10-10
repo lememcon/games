@@ -4,7 +4,7 @@ import { GENERIC_ERROR } from "@/lib/apiErrors";
 import { vetoesApi } from "@/lib/vetoesApi";
 import type { MyVeto } from "@/types";
 
-// The signed-in member's vetoes across all years, with undo. Not optimistic:
+// The signed-in member's vetoes, which apply to every year, with undo. Not optimistic:
 // the list is refetched after each clear.
 const useMyVetoes = (fetchImpl: typeof fetch = fetch) => {
   const [vetoes, setVetoes] = useState<MyVeto[]>([]);
@@ -24,10 +24,10 @@ const useMyVetoes = (fetchImpl: typeof fetch = fetch) => {
   }, [fetchImpl]);
 
   const clear = useCallback(
-    async (year: number, bggId: number) => {
+    async (bggId: number) => {
       setError(null);
       try {
-        await vetoesApi(fetchImpl).clear(year, bggId);
+        await vetoesApi(fetchImpl).clear(bggId);
         setVetoes((await vetoesApi(fetchImpl).listMine()).vetoes);
       } catch {
         setError(GENERIC_ERROR);

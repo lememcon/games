@@ -114,7 +114,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, { vetoes: [] }),
   );
   await page.route(
-    (url) => /^\/api\/me\/vetoes\/\d+\/\d+$/.test(pathOf(url)),
+    (url) => /^\/api\/me\/vetoes\/\d+$/.test(pathOf(url)),
     (route) => route.fulfill({ status: 204 }),
   );
   await page.route(

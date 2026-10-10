@@ -20,7 +20,7 @@ interface GameProps {
   year: string;
   // The member's own player count range for this game; omitted to hide the form.
   overrides?: PlayerOverridesState;
-  // The member's vetoes for the year; omitted to hide the switch.
+  // The members' vetoes, for every year; omitted to hide the switch.
   vetoes?: VetoesState;
   // The signed-in member's Discord id, the key of their ranges in `overrides`
   // and their vetoes in `vetoes`.
