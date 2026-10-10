@@ -253,3 +253,22 @@ export const playedCount = pgTable(
     ),
   ],
 );
+
+/** A member's veto of a game for a year: the game drops out of suggestions for groups including them. */
+export const memberVeto = pgTable(
+  "member_veto",
+  {
+    discordId: text("discord_id")
+      .notNull()
+      .references(() => appUser.discordId, { onDelete: "cascade" }),
+    year: integer("year")
+      .notNull()
+      .references(() => year.year, { onDelete: "cascade" }),
+    bggId: integer("bgg_id")
+      .notNull()
+      .references(() => game.bggId, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.discordId, table.year, table.bggId] }),
+  ],
+);

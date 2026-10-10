@@ -10,6 +10,7 @@ import { createBggRepo } from "./db/bggRepo";
 import { createDataStore } from "./db/dataStore";
 import { createLinkStore } from "./db/linkStore";
 import { createMemberOverrideStore } from "./db/memberOverrideStore";
+import { createMemberVetoStore } from "./db/memberVetoStore";
 import { createPlayedStore } from "./db/playedStore";
 import { createProfileStore } from "./db/profileStore";
 import { createUserStore } from "./db/userStore";
@@ -31,6 +32,7 @@ const links = createLinkStore(db);
 const profiles = createProfileStore(db);
 const played = createPlayedStore(db);
 const memberOverrides = createMemberOverrideStore(db);
+const memberVetoes = createMemberVetoStore(db);
 
 const app = createApp({
   baseUrl: env.BETTER_AUTH_URL,
@@ -44,6 +46,7 @@ const app = createApp({
   profiles,
   played,
   memberOverrides,
+  memberVetoes,
 });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
