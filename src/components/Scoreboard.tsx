@@ -18,6 +18,7 @@ import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useYearTotals from "@/hooks/useYearTotals";
+import useVetoes from "@/hooks/useVetoes";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
 import {
@@ -109,6 +110,12 @@ function Scoreboard({ user }: ScoreboardProps) {
     [data.by_player, overrides.all],
   );
 
+  const vetoes = useVetoes(year ?? "");
+  const playerVetoes = useMemo(
+    () => playerCountsByName(data.by_player, vetoes.all),
+    [data.by_player, vetoes.all],
+  );
+
   // Filters from a shared link, read once. They wait here until the scores are
   // loaded (so unknown names can be dropped), then replace the saved filters.
   const pending = useRef(parseFilterSearch(window.location.search));
@@ -164,6 +171,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     hidePlayed,
     playerCounts,
     playerRanges,
+    playerVetoes,
     sortMode,
   });
   const splits = useMemo(
@@ -176,6 +184,7 @@ function Scoreboard({ user }: ScoreboardProps) {
         hidePlayed,
         playerCounts,
         playerRanges,
+        playerVetoes,
         sortMode,
       }),
     [
@@ -185,6 +194,7 @@ function Scoreboard({ user }: ScoreboardProps) {
       hidePlayed,
       playerCounts,
       playerRanges,
+      playerVetoes,
       sortMode,
     ],
   );
@@ -277,6 +287,7 @@ function Scoreboard({ user }: ScoreboardProps) {
               id={route.gameId}
               year={year}
               overrides={overrides}
+              vetoes={vetoes}
               discordId={user.discordId}
             />
           ) : (

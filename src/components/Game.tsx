@@ -1,9 +1,11 @@
 import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import MyPlayerRange from "@/components/MyPlayerRange";
+import MyVeto from "@/components/MyVeto";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import YearSparkline from "@/components/YearSparkline";
 import type { PlayerOverridesState } from "@/hooks/usePlayerOverrides";
+import type { VetoesState } from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
 import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
@@ -18,7 +20,10 @@ interface GameProps {
   year: string;
   // The member's own player count range for this game; omitted to hide the form.
   overrides?: PlayerOverridesState;
-  // The signed-in member's Discord id, the key of their ranges in `overrides`.
+  // The member's vetoes for the year; omitted to hide the switch.
+  vetoes?: VetoesState;
+  // The signed-in member's Discord id, the key of their ranges in `overrides`
+  // and their vetoes in `vetoes`.
   discordId?: string;
 }
 
@@ -28,6 +33,7 @@ const Game = ({
   id,
   year,
   overrides,
+  vetoes,
   discordId,
 }: GameProps) => {
   const { totals } = useYearTotals();
@@ -63,6 +69,16 @@ const Game = ({
           error={overrides.error}
           onSave={(range) => overrides.save(Number(id), range)}
           onReset={() => overrides.reset(Number(id))}
+        />
+      )}
+      {vetoes && discordId && (
+        <MyVeto
+          vetoed={vetoes.all[discordId]?.has(id) ?? false}
+          saving={vetoes.saving}
+          error={vetoes.error}
+          onChange={(on) =>
+            on ? vetoes.veto(Number(id)) : vetoes.unveto(Number(id))
+          }
         />
       )}
       <BackButton href={yearPath(year)} style={{ marginTop: "2em" }} />

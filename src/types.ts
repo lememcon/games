@@ -287,6 +287,20 @@ export interface PlayerOverride {
   max: number;
 }
 
+// One member's veto of a game for a year, from GET /api/vetoes?year=.
+export interface Veto {
+  discordId: string;
+  bggId: number;
+}
+
+// The signed-in member's own veto across years, from GET /api/me/vetoes; the
+// name is null when the game has none.
+export interface MyVeto {
+  year: number;
+  bggId: number;
+  name: string | null;
+}
+
 // One game's summed scores in one year, from GET /api/years/totals.
 export interface YearTotal {
   year: number;

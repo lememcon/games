@@ -541,7 +541,8 @@ body {
   font-weight: 700;
 }
 
-/* The member's own player count range form on the game page. */
-.my-range {
+/* The member's own player count range and veto on the game page. */
+.my-range,
+.my-veto {
   margin-top: 1.5em;
 }

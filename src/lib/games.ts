@@ -11,6 +11,7 @@ import type {
   SelectedGame,
   SortMode,
   SplitGroup,
+  Veto,
 } from "@/types";
 
 // The real player-count bounds for a game, or null when the metadata is
@@ -123,6 +124,19 @@ export const rangesByMember = (
   return result;
 };
 
+// Games each player vetoed this year by player name, as bgg id strings.
+export type PlayerVetoes = Record<string, ReadonlySet<string>>;
+
+// Groups the flat veto list by discord id, then bgg id.
+export const vetoesByMember = (
+  vetoes: Veto[],
+): Record<string, ReadonlySet<string>> => {
+  const result: Record<string, Set<string>> = {};
+  for (const { discordId, bggId } of vetoes)
+    (result[discordId] ??= new Set()).add(`${bggId}`);
+  return result;
+};
+
 // Re-keys per-member values (by discord id) to the score data's player names.
 // The name -> discord id link comes from every score row, so it still resolves
 // when all of a player's games are hidden. Players without a linked member get
@@ -220,6 +234,8 @@ interface BuildSelectedGamesArgs {
   playerCounts: PlayerCounts;
   // Defaults to none.
   playerRanges?: PlayerRanges;
+  // Defaults to none.
+  playerVetoes?: PlayerVetoes;
   // Defaults to "total".
   sortMode?: SortMode;
 }
@@ -232,6 +248,7 @@ export const buildSelectedGames = ({
   hidePlayed,
   playerCounts,
   playerRanges = {},
+  playerVetoes = {},
   sortMode = "total",
 }: BuildSelectedGamesArgs): SelectedGame[] => {
   const numPlayers = players.length;
@@ -256,6 +273,11 @@ export const buildSelectedGames = ({
     min: number,
     max: number,
   ): boolean => {
+    // A member in the group who vetoed this game drops it, even for a group of
+    // one. This checks the raw selection, not `selectedPlayers`: with nobody
+    // selected that falls back to everyone, and one veto must not hide the game
+    // from the unfiltered list.
+    if (players.some((p) => playerVetoes[p]?.has(id))) return true;
     if (hidePlayed && Object.keys(playedBy).length > 0) return true;
     if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) return true;
     // A member in the group who narrowed this game's range to exclude the

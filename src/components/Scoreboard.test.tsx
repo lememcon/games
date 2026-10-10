@@ -51,6 +51,9 @@ const state = vi.hoisted(() => ({
   // Everyone's own player count ranges, by discord id then bgg id.
   ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
   savePlayerRange: vi.fn(),
+  // Everyone's vetoes for the year, by discord id then bgg id.
+  vetoes: {} as Record<string, ReadonlySet<string>>,
+  useVetoes: vi.fn(),
 }));
 vi.mock("@/hooks/useData", () => ({
   default: (year: string | null) => {
@@ -83,6 +86,19 @@ vi.mock("@/hooks/usePlayerOverrides", () => ({
     save: state.savePlayerRange,
     reset: vi.fn(),
   }),
+}));
+
+vi.mock("@/hooks/useVetoes", () => ({
+  default: (year: string) => {
+    state.useVetoes(year);
+    return {
+      all: state.vetoes,
+      saving: false,
+      error: null,
+      veto: vi.fn(),
+      unveto: vi.fn(),
+    };
+  },
 }));
 
 vi.mock("@/hooks/useAllPlayedCounts", () => ({
@@ -118,6 +134,7 @@ describe("Scoreboard", () => {
     state.own = {};
     state.allPlayed = {};
     state.ranges = {};
+    state.vetoes = {};
   });
   afterEach(() => {
     // Unmount before resetting the URL, or a mounted Scoreboard redirects.
@@ -504,6 +521,59 @@ describe("Scoreboard", () => {
 
       expect(getByText("Your player count")).toBeInTheDocument();
       expect(getByText("Your override")).toBeInTheDocument();
+    });
+  });
+
+  describe("member vetoes", () => {
+    const linked: Data = {
+      ...loadedData,
+      by_player: {
+        alice: [
+          {
+            game: "Belfort",
+            player: "alice",
+            rank: 1,
+            score: 50,
+            bgg_id: 11,
+            discord_id: "d1",
+          },
+        ],
+        bob: loadedData.by_player.bob,
+      },
+    };
+
+    it("hides a game vetoed by a selected member", () => {
+      at("/2026");
+      state.data = linked;
+      state.vetoes = { d1: new Set(["11"]) };
+      localStorage.setItem("players", JSON.stringify(["alice", "bob"]));
+      const { queryByText } = render();
+
+      expect(queryByText("Belfort")).toBeNull();
+    });
+
+    it("keeps it when the vetoer is not selected", () => {
+      at("/2026");
+      state.data = linked;
+      state.vetoes = { d1: new Set(["11"]) };
+      localStorage.setItem("players", JSON.stringify(["bob"]));
+      const { getByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("fetches the viewed year's vetoes", () => {
+      at("/2026");
+      render();
+      expect(state.useVetoes).toHaveBeenCalledWith("2026");
+    });
+
+    it("shows the member's veto switch on the game page", () => {
+      at("/2026/games/11");
+      state.vetoes = { "1": new Set(["11"]) };
+      const { getByRole } = render();
+
+      expect(getByRole("switch", { name: "Not for me" })).toBeChecked();
     });
   });
 

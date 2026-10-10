@@ -238,4 +238,46 @@ describe("Game", () => {
       expect(without.queryByText("Your player count")).toBeNull();
     });
   });
+
+  describe("veto switch", () => {
+    const vetoes = (all = {}, extra = {}) => ({
+      all,
+      saving: false,
+      error: null,
+      veto: vi.fn(),
+      unveto: vi.fn(),
+      ...extra,
+    });
+    const view = (state: ReturnType<typeof vetoes> | undefined) =>
+      renderWithMantine(
+        <Game
+          data={data}
+          gameData={gameData}
+          year="2024"
+          id="11"
+          vetoes={state}
+          discordId="d1"
+        />,
+      );
+
+    it("vetoes this game", async () => {
+      const state = vetoes();
+      const { getByRole } = view(state);
+      await userEvent.click(getByRole("switch", { name: "Not for me" }));
+      expect(state.veto).toHaveBeenCalledWith(11);
+    });
+
+    it("shows an existing veto and undoes it", async () => {
+      const state = vetoes({ d1: new Set(["11"]) });
+      const { getByRole } = view(state);
+      const toggle = getByRole("switch", { name: "Not for me" });
+      expect(toggle).toBeChecked();
+      await userEvent.click(toggle);
+      expect(state.unveto).toHaveBeenCalledWith(11);
+    });
+
+    it("is hidden without the vetoes prop", () => {
+      expect(view(undefined).queryByText("Not for me")).toBeNull();
+    });
+  });
 });
