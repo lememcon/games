@@ -165,14 +165,30 @@ export function toProfileStats(
   return { years: top.length, topByYear: top };
 }
 
-/** The games.json shape. Null columns are omitted so gameBounds sees undefined. */
+/**
+ * The games.json shape. Null columns are omitted so gameBounds sees undefined.
+ * `players` is the override when set; `overridden` only when it differs from
+ * BGG's range, which then stays in `bggPlayers` (when BGG has a full range).
+ */
 export function toGamesMap(rows: readonly GameRow[]): GamesMap {
   const map: GamesMap = {};
   for (const r of rows) {
+    const bgg =
+      r.minPlayers !== null && r.maxPlayers !== null
+        ? { min: r.minPlayers, max: r.maxPlayers }
+        : null;
+    const override =
+      r.overrideMin != null && r.overrideMax != null
+        ? { min: r.overrideMin, max: r.overrideMax }
+        : null;
+    const players = override ?? bgg;
+    const overridden =
+      override !== null &&
+      (bgg === null || bgg.min !== override.min || bgg.max !== override.max);
     map[String(r.bggId)] = {
-      ...(r.minPlayers !== null && r.maxPlayers !== null
-        ? { players: { min: r.minPlayers, max: r.maxPlayers } }
-        : {}),
+      ...(players ? { players } : {}),
+      ...(overridden && bgg ? { bggPlayers: bgg } : {}),
+      ...(overridden ? { overridden: true } : {}),
       ...(r.imageUrl !== null ? { image: r.imageUrl } : {}),
       ...(r.imageExt !== null ? { ext: r.imageExt } : {}),
     };

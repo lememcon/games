@@ -47,6 +47,11 @@ function makeApp(user: AppUser | null = null) {
         ext: ".jpg",
       },
       "2": {},
+      "3": {
+        players: { min: 4, max: 4 },
+        bggPlayers: { min: 2, max: 6 },
+        overridden: true,
+      },
     },
   });
   const app = createApp({
@@ -150,6 +155,38 @@ describe("GET /api/games", () => {
         ext: ".jpg",
       },
       "2": {},
+      "3": {
+        players: { min: 4, max: 4 },
+        bggPlayers: { min: 2, max: 6 },
+        overridden: true,
+      },
+    });
+  });
+
+  it("changes the ETag and body after an override is set", async () => {
+    const { data, games } = fakeData({
+      games: { "1": { players: { min: 2, max: 6 } } },
+    });
+    const app = createApp({
+      baseUrl: "https://api.lememcon.com",
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data,
+      links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
+      resolveSession: async () => ({ user: null }),
+    });
+    const before = await app.request("/api/games");
+    games["1"] = {
+      players: { min: 4, max: 4 },
+      bggPlayers: { min: 2, max: 6 },
+      overridden: true,
+    };
+    const after = await app.request("/api/games");
+    expect(after.headers.get("etag")).not.toBe(before.headers.get("etag"));
+    expect(await after.json()).toMatchObject({
+      "1": { players: { min: 4, max: 4 }, overridden: true },
     });
   });
 });

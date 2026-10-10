@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useMantineTheme } from "@mantine/core";
 
 import PlayedCounter from "@/components/PlayedCounter";
+import PlayerRange from "@/components/PlayerRange";
 import ScorePopover from "@/components/ScorePopover";
 import { gamePath } from "@/lib/routes";
 import type { Bounds, SelectedGame } from "@/types";
@@ -15,6 +16,8 @@ interface GameRowProps {
   selectedMax: number;
   individualMax: number;
   bounds: Bounds | null;
+  // BGG's range when an admin restricted this game.
+  original?: Bounds | null;
   played: number;
   onInc: () => void;
   onDec: () => void;
@@ -32,6 +35,7 @@ const GameRow = ({
   selectedMax,
   individualMax,
   bounds,
+  original,
   played,
   onInc,
   onDec,
@@ -59,7 +63,7 @@ const GameRow = ({
         {bounds && (
           <div className="tray-row__meta">
             <span className="tray-meta">
-              {bounds.min}-{bounds.max}
+              <PlayerRange bounds={bounds} original={original} />
             </span>
           </div>
         )}

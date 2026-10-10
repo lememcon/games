@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { bggApi } from "@/lib/adminApi";
+import { bggApi, gamePlayersApi } from "@/lib/adminApi";
 import { ApiError } from "@/lib/api";
 
 const res = (body: unknown, status = 200) =>
@@ -78,5 +78,27 @@ describe("bggApi", () => {
     await expect(bggApi(empty502).getStatus()).rejects.toMatchObject({
       status: 502,
     });
+  });
+});
+
+describe("gamePlayersApi", () => {
+  it("lists, sets and clears overrides", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ games: [] }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const api = gamePlayersApi(fetchImpl);
+    expect(await api.list()).toEqual({ games: [] });
+    await api.set(7, { min: 4, max: 4 });
+    await api.clear(7);
+    const calls = fetchImpl.mock.calls;
+    expect(calls[0][0]).toBe("/api/admin/game-players");
+    expect(calls[1][0]).toBe("/api/admin/games/7/players");
+    expect(calls[1][1]).toMatchObject({
+      method: "PUT",
+      body: '{"min":4,"max":4}',
+    });
+    expect(calls[2][1]).toMatchObject({ method: "DELETE" });
   });
 });

@@ -4,13 +4,17 @@ import {
   avatarUrl,
   buildSelectedGames,
   computeMaxScores,
+  filterGamePlayers,
+  formatBounds,
   gameBounds,
+  originalBounds,
   partitions,
   realBounds,
   resolveImage,
   suggestSplits,
+  validateOverride,
 } from "@/lib/games";
-import type { Data, GamesData, PlayerGameScore } from "@/types";
+import type { Data, GamePlayersRow, GamesData, PlayerGameScore } from "@/types";
 
 const gameData: GamesData = {
   100: { players: { min: 2, max: 4 } },
@@ -62,6 +66,114 @@ describe("realBounds", () => {
     expect(
       gameBounds({ 5: { players: { min: null, max: null } } }, "5"),
     ).toEqual({ min: 0, max: 99 });
+  });
+});
+
+describe("player count overrides", () => {
+  const root = {
+    players: { min: 4, max: 4 },
+    bggPlayers: { min: 2, max: 6 },
+    overridden: true,
+  };
+
+  it("scores and filters by the effective range", () => {
+    expect(gameBounds({ 100: root }, "100")).toEqual({ min: 4, max: 4 });
+    const rows = (n: number): Record<string, PlayerGameScore[]> =>
+      Object.fromEntries(
+        Array.from({ length: n }, (_, i) => [
+          `p${i}`,
+          [
+            {
+              player: `p${i}`,
+              game: "Root",
+              rank: i + 1,
+              score: 5,
+              bgg_id: 100,
+            },
+          ],
+        ]),
+      );
+    const names = (n: number) =>
+      buildSelectedGames({
+        byPlayer: rows(n),
+        players: Object.keys(rows(n)),
+        gameData: { 100: root },
+        images: {},
+        hidePlayed: false,
+        getPlayedCount: noPlayed,
+      }).map((g) => g.name);
+    expect(names(3)).toEqual([]);
+    expect(names(4)).toEqual(["Root"]);
+    expect(names(5)).toEqual([]);
+  });
+
+  it("limits split groups to the effective range", () => {
+    const four = ["a", "b", "c", "d"];
+    const byPlayer: Record<string, PlayerGameScore[]> = Object.fromEntries(
+      four.map((p) => [
+        p,
+        ["X", "Y", "Z"].map((game, i) => ({
+          player: p,
+          game,
+          rank: 1,
+          score: 50 - i * 20,
+          bgg_id: i + 1,
+        })),
+      ]),
+    );
+    const picked = (meta: GamesData) =>
+      suggestSplits({
+        byPlayer,
+        players: four,
+        gameData: meta,
+        images: {},
+        hidePlayed: false,
+        getPlayedCount: noPlayed,
+      })
+        .flatMap((s) => s.groups)
+        .flatMap((g) => g.games.map((x) => x.name));
+    expect(picked({ 1: { players: { min: 2, max: 6 } } })).toContain("X");
+    // 4-4 only fits all four together, so X cannot serve a smaller group.
+    expect(picked({ 1: root })).not.toContain("X");
+  });
+
+  it("reads BGG's range only for an overridden game", () => {
+    expect(originalBounds({ 100: root }[100])).toEqual({ min: 2, max: 6 });
+    expect(originalBounds({ players: { min: 2, max: 6 } })).toBeNull();
+    expect(originalBounds({ overridden: true })).toBeNull();
+    expect(originalBounds(undefined)).toBeNull();
+  });
+
+  it("formats a fixed count as a single number", () => {
+    expect(formatBounds({ min: 4, max: 4 })).toBe("4");
+    expect(formatBounds({ min: 2, max: 6 })).toBe("2-6");
+  });
+
+  it("validates an override like the server", () => {
+    expect(validateOverride(4, 4)).toEqual({ range: { min: 4, max: 4 } });
+    expect(validateOverride(1, 99)).toEqual({ range: { min: 1, max: 99 } });
+    expect(validateOverride("", 4)).toEqual({ error: "Enter both counts" });
+    expect(validateOverride(4, "")).toEqual({ error: "Enter both counts" });
+    for (const [min, max] of [
+      [0, 4],
+      [1, 100],
+      [1.5, 4],
+      ["2", 4],
+    ] as const)
+      expect(validateOverride(min, max)).toEqual({
+        error: "Use whole numbers from 1 to 99",
+      });
+    expect(validateOverride(5, 4)).toEqual({ error: "Min can't exceed max" });
+  });
+
+  it("filters admin rows by name or id", () => {
+    const rows: GamePlayersRow[] = [
+      { bggId: 11, name: "Root", bgg: null, override: null },
+      { bggId: 22, name: "Wingspan", bgg: null, override: null },
+    ];
+    expect(filterGamePlayers(rows, "  ROO ")).toEqual([rows[0]]);
+    expect(filterGamePlayers(rows, "22")).toEqual([rows[1]]);
+    expect(filterGamePlayers(rows, "")).toBe(rows);
   });
 });
 

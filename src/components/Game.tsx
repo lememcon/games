@@ -1,7 +1,7 @@
 import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
-import { realBounds, resolveImage } from "@/lib/games";
+import { originalBounds, realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
 import type { Data, GamesData } from "@/types";
@@ -30,6 +30,7 @@ const Game = ({ data, gameData, id, year }: GameProps) => {
       <GameDetailHeader
         name={players[0].game}
         bounds={bounds}
+        original={originalBounds(meta)}
         id={id}
         image={image}
       />

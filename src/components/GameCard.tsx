@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 
 import PlayedCounter from "@/components/PlayedCounter";
+import PlayerRange from "@/components/PlayerRange";
 import ScorePopover from "@/components/ScorePopover";
 import { PALETTE, medalColor } from "@/lib/colors";
 import { gamePath } from "@/lib/routes";
@@ -13,6 +14,8 @@ interface GameCardProps {
   selectedMax: number;
   individualMax: number;
   bounds: Bounds | null;
+  // BGG's range when an admin restricted this game.
+  original?: Bounds | null;
   played: number;
   onInc: () => void;
   onDec: () => void;
@@ -28,6 +31,7 @@ const GameCard = ({
   selectedMax,
   individualMax,
   bounds,
+  original,
   played,
   onInc,
   onDec,
@@ -67,7 +71,7 @@ const GameCard = ({
         <div className="tray-card__foot">
           {bounds && (
             <span className="tray-meta">
-              {bounds.min}-{bounds.max}
+              <PlayerRange bounds={bounds} original={original} />
             </span>
           )}
           <div className="tray-card__played">

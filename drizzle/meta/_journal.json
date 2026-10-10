@@ -71,6 +71,13 @@
       "when": 1791587461378,
       "tag": "0009_lively_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791594337660,
+      "tag": "0010_curly_multiple_man",
+      "breakpoints": true
     }
   ]
 }

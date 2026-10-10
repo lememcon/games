@@ -1,17 +1,25 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 
+import { refuse } from "../result";
 import {
   collapseMemberScores,
   createNameResolver,
   toGamesMap,
   toLegacyRow,
 } from "../shape";
-import type { GamesMap, LegacyScoreRow } from "../types";
+import type {
+  GamePlayersRow,
+  GamesMap,
+  LegacyScoreRow,
+  MutationResult,
+  PlayerRange,
+} from "../types";
 import {
   account,
   appUser,
   game,
   gameMetadata,
+  gamePlayerOverride,
   player,
   score,
   user,
@@ -122,9 +130,91 @@ export async function getGames(db: StoreDb): Promise<GamesMap> {
       maxPlayers: gameMetadata.maxPlayers,
       imageUrl: gameMetadata.imageUrl,
       imageExt: gameMetadata.ext,
+      overrideMin: gamePlayerOverride.minPlayers,
+      overrideMax: gamePlayerOverride.maxPlayers,
     })
     .from(gameMetadata)
     .fullJoin(game, eq(game.bggId, gameMetadata.bggId))
+    .leftJoin(gamePlayerOverride, eq(gamePlayerOverride.bggId, bggId))
     .orderBy(asc(bggId));
   return toGamesMap(rows);
+}
+
+/** Named games, by name then id, with BGG's range and any override. */
+export async function listGamePlayers(db: StoreDb): Promise<GamePlayersRow[]> {
+  const rows = await db
+    .select({
+      bggId: game.bggId,
+      name: game.name,
+      minPlayers: gameMetadata.minPlayers,
+      maxPlayers: gameMetadata.maxPlayers,
+      overrideMin: gamePlayerOverride.minPlayers,
+      overrideMax: gamePlayerOverride.maxPlayers,
+    })
+    .from(game)
+    .leftJoin(gameMetadata, eq(gameMetadata.bggId, game.bggId))
+    .leftJoin(gamePlayerOverride, eq(gamePlayerOverride.bggId, game.bggId))
+    .where(isNotNull(game.name))
+    .orderBy(asc(sql`lower(${game.name})`), asc(game.bggId));
+  return rows.map((r) => ({
+    bggId: r.bggId,
+    name: r.name!,
+    bgg:
+      r.minPlayers !== null && r.maxPlayers !== null
+        ? { min: r.minPlayers, max: r.maxPlayers }
+        : null,
+    override:
+      r.overrideMin !== null && r.overrideMax !== null
+        ? { min: r.overrideMin, max: r.overrideMax }
+        : null,
+  }));
+}
+
+/**
+ * Stores or replaces the override; a range equal to BGG's deletes it. Refuses
+ * with 404 when the game has no `game` row.
+ */
+export async function setPlayerOverride(
+  db: StoreDb,
+  bggId: number,
+  range: PlayerRange,
+  updatedBy: string,
+): Promise<MutationResult<null>> {
+  return db.transaction(async (tx) => {
+    const [found] = await tx
+      .select({
+        minPlayers: gameMetadata.minPlayers,
+        maxPlayers: gameMetadata.maxPlayers,
+      })
+      .from(game)
+      .leftJoin(gameMetadata, eq(gameMetadata.bggId, game.bggId))
+      .where(eq(game.bggId, bggId));
+    if (!found) return refuse(404, "unknown_game");
+    if (found.minPlayers === range.min && found.maxPlayers === range.max) {
+      await tx
+        .delete(gamePlayerOverride)
+        .where(eq(gamePlayerOverride.bggId, bggId));
+      return { ok: true as const, value: null };
+    }
+    const values = {
+      minPlayers: range.min,
+      maxPlayers: range.max,
+      updatedAt: new Date(),
+      updatedBy,
+    };
+    await tx
+      .insert(gamePlayerOverride)
+      .values({ bggId, ...values })
+      .onConflictDoUpdate({ target: gamePlayerOverride.bggId, set: values });
+    return { ok: true as const, value: null };
+  });
+}
+
+export async function clearPlayerOverride(
+  db: StoreDb,
+  bggId: number,
+): Promise<void> {
+  await db
+    .delete(gamePlayerOverride)
+    .where(eq(gamePlayerOverride.bggId, bggId));
 }

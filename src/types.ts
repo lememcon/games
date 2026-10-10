@@ -18,7 +18,12 @@ export interface PlayerGameScore {
 // The value shape served by GET /api/games, keyed by BoardGameGeek id
 // (string). Custom or imageless games have a null image; bounds may be null.
 export interface GameMeta {
+  // The effective range: the admin override when there is one, else BGG's.
   players?: { min: number | null; max: number | null };
+  // BGG's own range; only sent for an overridden game.
+  bggPlayers?: { min: number; max: number };
+  // True when `players` is an override that differs from BGG's range.
+  overridden?: boolean;
   image?: string | null;
   ext?: string | null;
 }
@@ -155,6 +160,15 @@ export interface Profile {
 export interface DisplayNameResult {
   name: string;
   displayName: string | null;
+}
+
+// Player count overrides admin (GET /api/admin/game-players): BGG's range and
+// the admin override, each null when absent.
+export interface GamePlayersRow {
+  bggId: number;
+  name: string;
+  bgg: Bounds | null;
+  override: Bounds | null;
 }
 
 // Player links admin (GET /api/admin/player-links): which app member, if any,

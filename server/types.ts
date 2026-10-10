@@ -169,13 +169,40 @@ export interface GameRow {
   maxPlayers: number | null;
   imageUrl: string | null;
   imageExt: string | null;
+  /** Admin restriction of the player range; both set or both absent. */
+  overrideMin?: number | null;
+  overrideMax?: number | null;
+}
+
+/** An inclusive player count range. */
+export interface PlayerRange {
+  min: number;
+  max: number;
 }
 
 /** The games.json shape, keyed by bgg_id. */
 export type GamesMap = Record<
   string,
-  { players?: { min: number; max: number }; image?: string; ext?: string }
+  {
+    /** The effective range: the admin override when set, else BGG's. */
+    players?: PlayerRange;
+    /** BGG's range; present only when BGG lists both bounds. */
+    bggPlayers?: PlayerRange;
+    /** True when `players` is an override that differs from BGG's range. */
+    overridden?: boolean;
+    image?: string;
+    ext?: string;
+  }
 >;
+
+/** A game with its BGG player range and admin override, for the admin list. */
+export interface GamePlayersRow {
+  bggId: number;
+  name: string;
+  /** Null when BGG lacks a full range. */
+  bgg: PlayerRange | null;
+  override: PlayerRange | null;
+}
 
 export interface ImportSummary {
   year: number | null;
@@ -202,6 +229,19 @@ export interface DataStore {
     resolveNames?: boolean,
   ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;
+  /** Named games by name, with BGG range and override. */
+  listGamePlayers(): Promise<GamePlayersRow[]>;
+  /**
+   * Stores the override as `updatedBy`; a range equal to BGG's deletes it
+   * instead. Refuses with 404 `unknown_game` when the game has no row.
+   */
+  setPlayerOverride(
+    bggId: number,
+    range: PlayerRange,
+    updatedBy: string,
+  ): Promise<MutationResult<null>>;
+  /** Removes the override, restoring BGG's range; no error when absent. */
+  clearPlayerOverride(bggId: number): Promise<void>;
   /** One transaction; refuses with 409 when the year already exists. */
   importData(
     input: NormalizedImport,
