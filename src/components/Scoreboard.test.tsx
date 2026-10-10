@@ -42,6 +42,8 @@ const state = vi.hoisted(() => ({
   games: {} as { games: GamesData; loading: boolean; error: boolean },
   useData: vi.fn(),
   played: {} as Record<string, number>,
+  // The member's own counts as the hook returns them; null means not loaded.
+  own: {} as Record<string, number> | null,
   allPlayed: {} as Record<string, Record<string, number>>,
   useAllPlayedCounts: vi.fn(),
   incPlayed: vi.fn(),
@@ -62,7 +64,7 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
       (id: string) => state.played[id] ?? 0,
       state.incPlayed,
       vi.fn(),
-      state.played,
+      state.own,
     ];
   },
 }));
@@ -97,6 +99,7 @@ describe("Scoreboard", () => {
     state.years = { years: ["2025", "2026"], loading: false, error: false };
     state.games = { games: {}, loading: false, error: false };
     state.played = {};
+    state.own = {};
     state.allPlayed = {};
   });
   afterEach(() => {
@@ -274,10 +277,26 @@ describe("Scoreboard", () => {
           alice: linked.by_player.alice.map((r) => ({ ...r, discord_id: "1" })),
         },
       };
-      state.played = { 12: 1 };
+      state.own = { 12: 1 };
       const { getByText } = render();
 
       expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("unhides a game once the member's own plays drop to zero", () => {
+      state.allPlayed = { "1": { "11": 1 } };
+      state.data = {
+        ...linked,
+        by_player: {
+          ...linked.by_player,
+          alice: linked.by_player.alice.map((r) => ({ ...r, discord_id: "1" })),
+        },
+      };
+      state.own = {};
+      const { getByText, queryByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+      expect(queryByText("alice ×1")).toBeNull();
     });
 
     it("shows who played a game while it is visible", () => {

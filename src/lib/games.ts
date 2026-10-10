@@ -1,6 +1,7 @@
 import { descend, keys, prop, sort, values } from "ramda";
 
 import type {
+  AllPlayedCountsResponse,
   Bounds,
   Data,
   GameMeta,
@@ -117,7 +118,7 @@ export type PlayerCounts = Record<string, Record<string, number>>;
 // no entry.
 export const playerCountsByName = (
   byPlayer: Record<string, PlayerGameScore[]>,
-  counts: Record<string, Record<string, number>>,
+  counts: AllPlayedCountsResponse["counts"],
 ): PlayerCounts => {
   const result: PlayerCounts = {};
   for (const [player, rows] of Object.entries(byPlayer)) {

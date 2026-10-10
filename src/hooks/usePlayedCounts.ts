@@ -25,8 +25,6 @@ interface Session {
   inFlight: Set<string>;
 }
 
-const EMPTY: Counts = {};
-
 const withCount = (counts: Counts, id: string, count: number): Counts => {
   if (count > 0) return { ...counts, [id]: count };
   const { [id]: _removed, ...rest } = counts;
@@ -77,11 +75,11 @@ const usePlayedCounts = (
   (id: string) => number,
   (id: string) => void,
   (id: string) => void,
-  Counts,
+  Counts | null,
 ] => {
-  const [shown, setShown] = useState<{ year: string; counts: Counts }>({
+  const [shown, setShown] = useState<{ year: string; counts: Counts | null }>({
     year,
-    counts: EMPTY,
+    counts: null,
   });
   const session = useRef<Session | null>(null);
 
@@ -161,8 +159,12 @@ const usePlayedCounts = (
   const incPlayedCount = useCallback((id: string) => change(id, 1), [change]);
   const decPlayedCount = useCallback((id: string) => change(id, -1), [change]);
 
-  const counts = shown.year === year ? shown.counts : EMPTY;
-  const getPlayedCount = useCallback((id: string) => counts[id] || 0, [counts]);
+  // Null until the counts for this year are in; {} once loaded and empty.
+  const counts = shown.year === year ? shown.counts : null;
+  const getPlayedCount = useCallback(
+    (id: string) => counts?.[id] || 0,
+    [counts],
+  );
 
   return [getPlayedCount, incPlayedCount, decPlayedCount, counts];
 };

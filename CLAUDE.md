@@ -67,9 +67,10 @@ A separate `commitlint` job runs on pull requests only.
     `game_metadata` (`db/bggRepo.ts` `upsertMetadata`, shared with the import); the `game`
     table holds just `bgg_id` and a nullable name, and `/api/games` full-joins the two.
   - Played counts: `played.ts` (pure validation), `routes/played.ts` (`GET /api/me/played?year=`,
-    `PUT /api/me/played/:year/:bggId`, `POST /api/me/played/:year/import`, plus the approved-only bulk read `GET /api/played?year=` behind `useAllPlayedCounts`), `db/playedStore.ts`
-    (the `PlayedStore` behind `deps.played`; table `played_count`, one row per member, year and
-    game); `testing.ts` has `fakePlayed()`.
+    `PUT /api/me/played/:year/:bggId`, `POST /api/me/played/:year/import`, plus the
+    approved-only bulk read `GET /api/played?year=` behind `useAllPlayedCounts`),
+    `db/playedStore.ts` (the `PlayedStore` behind `deps.played`; table `played_count`, one
+    row per member, year and game); `testing.ts` has `fakePlayed()`.
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
 
 ## Conventions

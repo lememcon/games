@@ -80,9 +80,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     () =>
       playerCountsByName(
         data.by_player,
-        Object.keys(ownCounts).length > 0
-          ? { ...allCounts, [user.discordId]: ownCounts }
-          : allCounts,
+        ownCounts ? { ...allCounts, [user.discordId]: ownCounts } : allCounts,
       ),
     [data.by_player, allCounts, ownCounts, user.discordId],
   );
