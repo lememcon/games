@@ -5,8 +5,10 @@ import {
   buildSelectedGames,
   computeMaxScores,
   gameBounds,
+  partitions,
   realBounds,
   resolveImage,
+  suggestSplits,
 } from "@/lib/games";
 import type { Data, GamesData, PlayerGameScore } from "@/types";
 
@@ -336,5 +338,198 @@ describe("buildSelectedGames", () => {
     });
 
     expect(root.image).toBeUndefined();
+  });
+});
+
+describe("partitions", () => {
+  it.each([
+    [4, 3],
+    [5, 10],
+    [6, 40],
+  ])("splits %i players %i ways into groups of 2+", (n, count) => {
+    const items = Array.from({ length: n }, (_, i) => `p${i}`);
+    const result = partitions(items);
+    expect(result).toHaveLength(count);
+    for (const parts of result) {
+      expect(parts.length).toBeGreaterThan(1);
+      expect(parts.every((g) => g.length >= 2)).toBe(true);
+      expect(parts.flat().sort()).toEqual(items);
+    }
+  });
+});
+
+describe("suggestSplits", () => {
+  // table: game -> player -> score. bgg ids follow the game order.
+  const build = (table: Record<string, Record<string, number>>) => {
+    const out: Record<string, PlayerGameScore[]> = {};
+    Object.entries(table).forEach(([game, scores], i) => {
+      for (const [player, score] of Object.entries(scores)) {
+        (out[player] ??= []).push({
+          player,
+          game,
+          rank: 1,
+          score,
+          bgg_id: i + 1,
+        });
+      }
+    });
+    return out;
+  };
+  const four = ["Kelsin", "Waymost", "Lemem", "TJ"];
+  const run = (
+    table: Record<string, Record<string, number>>,
+    extra: Partial<Parameters<typeof suggestSplits>[0]> = {},
+  ) =>
+    suggestSplits({
+      byPlayer: build(table),
+      players: four,
+      gameData: {},
+      images: {},
+      hidePlayed: false,
+      getPlayedCount: noPlayed,
+      ...extra,
+    });
+  const all = (score: number) =>
+    Object.fromEntries(four.map((p) => [p, score]));
+
+  const issue = {
+    Agricola: all(20),
+    Go: { Kelsin: 45, Waymost: 45 },
+    Netrunner: { Lemem: 42, TJ: 43 },
+    Chess: { Kelsin: 15, Lemem: 15, Waymost: 5, TJ: 5 },
+    Root: { Kelsin: 5, Lemem: 5, Waymost: 15, TJ: 15 },
+  };
+
+  it("picks the best game per group and beats the all-together game", () => {
+    const [best] = run(issue);
+
+    expect(best.groups.map((g) => g.players)).toEqual([
+      ["Kelsin", "Waymost"],
+      ["Lemem", "TJ"],
+    ]);
+    expect(best.groups.map((g) => g.picked)).toEqual(["Go", "Netrunner"]);
+    // (90 + 85) / 4 players versus Agricola's 80 / 4.
+    expect(best.perPlayer).toBe(43.75);
+    expect(best.delta).toBe(23.75);
+  });
+
+  it("lists each group's games that every member scored, best first", () => {
+    const [best] = run(issue);
+    const [kw, lt] = best.groups;
+
+    expect(kw.games.map((g) => g.name)).toEqual([
+      "Go",
+      "Agricola",
+      "Chess",
+      "Root",
+    ]);
+    expect(lt.games.map((g) => g.name)[0]).toBe("Netrunner");
+    expect(lt.games.map((g) => g.name)).not.toContain("Go");
+    expect(kw.games.map((g) => g.name)).not.toContain("Netrunner");
+  });
+
+  it("ranks splits by score per player, best first", () => {
+    const splits = run(issue);
+
+    expect(splits.map((s) => s.perPlayer)).toEqual([43.75, 17.5, 15]);
+  });
+
+  it("limits each group to its top four games", () => {
+    const table: Record<string, Record<string, number>> = {};
+    for (const [i, g] of ["A", "B", "C", "D", "E", "F"].entries()) {
+      table[g] = all(10 + i);
+    }
+    const [best] = run(table);
+
+    expect(best.groups[0].games).toHaveLength(4);
+  });
+
+  it("never reuses a game across groups in the picked plan", () => {
+    const [best] = run({ X: all(50), Y: all(10) });
+
+    expect(best.groups.map((g) => g.picked).sort()).toEqual(["X", "Y"]);
+    // The lists still repeat games.
+    expect(best.groups[0].games[0].name).toBe("X");
+    expect(best.groups[1].games[0].name).toBe("X");
+  });
+
+  it("drops splits with no reuse-free pick", () => {
+    expect(run({ X: all(50) })).toEqual([]);
+  });
+
+  it("caps the result at three splits", () => {
+    const six = ["a", "b", "c", "d", "e", "f"];
+    const row = Object.fromEntries(six.map((p) => [p, 10]));
+    const splits = run({ X: row, Y: row, Z: row }, { players: six });
+
+    expect(splits).toHaveLength(3);
+  });
+
+  it("respects each game's player-count bounds per group", () => {
+    const splits = run(
+      { X: all(50), Y: all(10), Z: all(5) },
+      { gameData: { 1: { players: { min: 3, max: 4 } } } },
+    );
+
+    for (const group of splits.flatMap((s) => s.groups)) {
+      expect(group.games.map((g) => g.name)).not.toContain("X");
+    }
+  });
+
+  it("honors hidePlayed", () => {
+    const splits = run(
+      { X: all(50), Y: all(10), Z: all(5) },
+      { hidePlayed: true, getPlayedCount: (id) => (id === "1" ? 1 : 0) },
+    );
+
+    for (const group of splits.flatMap((s) => s.groups)) {
+      expect(group.games.map((g) => g.name)).not.toContain("X");
+    }
+  });
+
+  it("omits the difference when no game was scored by everyone", () => {
+    const splits = run({
+      Go: { Kelsin: 40, Waymost: 40 },
+      Netrunner: { Lemem: 40, TJ: 40 },
+    });
+
+    expect(splits).toHaveLength(1);
+    expect(splits[0].delta).toBeNull();
+  });
+
+  it("returns nothing for fewer than four or more than eight players", () => {
+    const row = (n: number) =>
+      Object.fromEntries(Array.from({ length: n }, (_, i) => [`p${i}`, 10]));
+
+    expect(run({ X: row(3) }, { players: ["p0", "p1", "p2"] })).toEqual([]);
+    expect(
+      run(
+        { X: row(9), Y: row(9) },
+        { players: Array.from({ length: 9 }, (_, i) => `p${i}`) },
+      ),
+    ).toEqual([]);
+  });
+
+  it("breaks ties by player names regardless of input order", () => {
+    const table = { X: all(10), Y: all(10) };
+    const forward = run(table);
+    const reversed = run(table, { players: [...four].reverse() });
+
+    expect(reversed).toEqual(forward);
+    expect(forward.map((s) => s.groups[0].players)).toEqual([
+      ["Kelsin", "Lemem"],
+      ["Kelsin", "TJ"],
+      ["Kelsin", "Waymost"],
+    ]);
+  });
+
+  it("breaks ties by picked game names before player names", () => {
+    const [best] = run({
+      A: { Kelsin: 10, Waymost: 10, Lemem: 5, TJ: 5 },
+      B: { Kelsin: 5, Waymost: 5, Lemem: 10, TJ: 10 },
+      C: { Kelsin: 10, Waymost: 10, Lemem: 10, TJ: 10 },
+    });
+
+    expect(best.groups.map((g) => g.picked)).toEqual(["A", "B"]);
   });
 });

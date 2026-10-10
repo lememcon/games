@@ -436,4 +436,69 @@ describe("Scoreboard", () => {
       expect(window.history.length).toBe(before + 1);
     });
   });
+
+  describe("suggested splits", () => {
+    const names = ["ann", "ben", "cat", "dan"];
+    const row = (player: string, game: string, id: number, score: number) => ({
+      game,
+      player,
+      rank: 1,
+      score,
+      bgg_id: id,
+    });
+    // Duo games are scored by one pair each; Party by everyone.
+    const splitData: Data = {
+      ...emptyData,
+      max: 100,
+      by_player: {
+        ann: [row("ann", "Duel", 1, 90), row("ann", "Party", 3, 20)],
+        ben: [row("ben", "Duel", 1, 90), row("ben", "Party", 3, 20)],
+        cat: [row("cat", "Joust", 2, 80), row("cat", "Party", 3, 20)],
+        dan: [row("dan", "Joust", 2, 80), row("dan", "Party", 3, 20)],
+      },
+    };
+
+    it("shows suggestions when four players are selected", () => {
+      at("/2026");
+      state.data = splitData;
+      localStorage.setItem("players", JSON.stringify(names));
+      const { getByText } = render();
+
+      expect(getByText("Suggested splits")).toBeInTheDocument();
+      expect(getByText(/picked: Duel \+ Joust/)).toBeInTheDocument();
+    });
+
+    it("hides them with fewer than four players or none selected", () => {
+      at("/2026");
+      state.data = splitData;
+      localStorage.setItem("players", JSON.stringify(names.slice(0, 3)));
+      const { queryByText, unmount } = render();
+      expect(queryByText("Suggested splits")).toBeNull();
+      unmount();
+
+      localStorage.setItem("players", JSON.stringify([]));
+      const again = render();
+      expect(again.queryByText("Suggested splits")).toBeNull();
+    });
+
+    it("still shows them when the main list is empty", () => {
+      at("/2026");
+      // Duo-only games are out of range for four players, so nothing ranks.
+      state.games = {
+        games: {
+          1: { players: { min: 2, max: 2 } },
+          2: { players: { min: 2, max: 2 } },
+          3: { players: { min: 2, max: 2 } },
+        },
+        loading: false,
+        error: false,
+      };
+      state.data = splitData;
+      localStorage.setItem("players", JSON.stringify(names));
+      const { getByText } = render();
+
+      expect(getByText("No games to rank")).toBeInTheDocument();
+      expect(getByText("Suggested splits")).toBeInTheDocument();
+    });
+  });
 });
