@@ -15,6 +15,7 @@ import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
+import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
 import {
@@ -85,6 +86,12 @@ function Scoreboard({ user }: ScoreboardProps) {
     [data.by_player, allCounts, ownCounts, user.discordId],
   );
 
+  const overrides = usePlayerOverrides();
+  const playerRanges = useMemo(
+    () => playerCountsByName(data.by_player, overrides.all),
+    [data.by_player, overrides.all],
+  );
+
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
   // the useLocalState setters change identity every render.
   useEffect(() => {
@@ -103,6 +110,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     images,
     hidePlayed,
     playerCounts,
+    playerRanges,
   });
   const splits = useMemo(
     () =>
@@ -113,8 +121,16 @@ function Scoreboard({ user }: ScoreboardProps) {
         images,
         hidePlayed,
         playerCounts,
+        playerRanges,
       }),
-    [data.by_player, players, game_data, hidePlayed, playerCounts],
+    [
+      data.by_player,
+      players,
+      game_data,
+      hidePlayed,
+      playerCounts,
+      playerRanges,
+    ],
   );
   const splitSuggestions = (
     <SplitSuggestions
@@ -203,6 +219,8 @@ function Scoreboard({ user }: ScoreboardProps) {
               gameData={game_data}
               id={route.gameId}
               year={year}
+              overrides={overrides}
+              discordId={user.discordId}
             />
           ) : (
             <>
@@ -220,8 +238,8 @@ function Scoreboard({ user }: ScoreboardProps) {
                   <Notice title="No games to rank">
                     {players.length > 0
                       ? hidePlayed
-                        ? "No ranked games are left that include everyone you picked and haven't been played by them."
-                        : "None of the ranked games include everyone you picked."
+                        ? "No ranked games are left that include everyone you picked, fit a group of that size and haven't been played by them."
+                        : "None of the ranked games include everyone you picked and fit a group of that size."
                       : hidePlayed
                         ? "Everyone has played every ranked game. Nice work."
                         : "Scores haven't been posted for this year yet."}

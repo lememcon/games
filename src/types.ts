@@ -286,3 +286,12 @@ export interface AllPlayedCountsResponse {
 export interface PlayedCountsResponse {
   counts: Record<string, number>;
 }
+
+// One member's own player count range for a game, narrowing the game's range.
+// Everyone's overrides come as a flat list in the body of GET /api/player-overrides.
+export interface PlayerOverride {
+  discordId: string;
+  bggId: number;
+  min: number;
+  max: number;
+}

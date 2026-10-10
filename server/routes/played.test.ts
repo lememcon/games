@@ -4,6 +4,7 @@ import { createApp } from "../app";
 import {
   fakeData,
   fakeLinks,
+  fakeMemberOverrides,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -41,6 +42,7 @@ function makeApp() {
     store: fakeStore().store,
     data: fakeData().data,
     links: fakeLinks().links,
+    memberOverrides: fakeMemberOverrides().memberOverrides,
     profiles: fakeProfiles().profiles,
     played: fake.played,
     resolveSession: async (headers) => {

@@ -6,6 +6,7 @@ import { PROTECTED_ADMIN_IDS } from "./roles";
 import {
   fakeData,
   fakeLinks,
+  fakeMemberOverrides,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -52,6 +53,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     store: fake.store,
     data: fakeData().data,
     links: fakeLinks().links,
+    memberOverrides: fakeMemberOverrides().memberOverrides,
     profiles: fakeProfiles().profiles,
     played: fakePlayed().played,
     resolveSession: async (headers) => {
@@ -187,6 +189,7 @@ describe("error handler", () => {
       store: fakeStore().store,
       data: fakeData().data,
       links: fakeLinks().links,
+      memberOverrides: fakeMemberOverrides().memberOverrides,
       profiles: fakeProfiles().profiles,
       played: fakePlayed().played,
       resolveSession: async () => {
@@ -278,6 +281,7 @@ describe("GET /api/me display names", () => {
       store: fakeStore().store,
       data: fakeData().data,
       links: fakeLinks().links,
+      memberOverrides: fakeMemberOverrides().memberOverrides,
       profiles: fakeProfiles().profiles,
       played: fakePlayed().played,
       resolveSession: async () => ({ user }),

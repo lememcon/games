@@ -12,6 +12,7 @@ import type {
   LegacyScoreRow,
   LinkStore,
   LinkableUser,
+  MemberOverrideStore,
   PlayedCounts,
   PlayedStore,
   PlayerLink,
@@ -318,4 +319,45 @@ export function fakePlayed(
     },
   };
   return { played, rows, calls };
+}
+
+/**
+ * In-memory MemberOverrideStore for tests. `linked` are the Discord ids with a
+ * linked player, `bases` the base range by bgg id (absent: unknown game, null:
+ * no range); it applies the same refusals as the SQL store.
+ */
+export function fakeMemberOverrides(
+  initial: {
+    linked?: string[];
+    bases?: Record<number, PlayerRange | null>;
+    overrides?: Record<string, Record<string, PlayerRange>>;
+  } = {},
+) {
+  const linked = new Set(initial.linked ?? []);
+  const bases = new Map(
+    Object.entries(initial.bases ?? {}).map(([id, r]) => [Number(id), r]),
+  );
+  const rows: Record<string, Record<string, PlayerRange>> = {
+    ...initial.overrides,
+  };
+  const calls: { discordId: string; bggId: number; range?: PlayerRange }[] = [];
+  const memberOverrides: MemberOverrideStore = {
+    getAll: async () => rows,
+    set: async (discordId, bggId, range) => {
+      calls.push({ discordId, bggId, range });
+      if (!linked.has(discordId)) return refuse(403, "not_linked");
+      const base = bases.get(bggId);
+      if (base === undefined) return refuse(404, "unknown_game");
+      if (base === null) return refuse(409, "no_player_range");
+      if (range.min < base.min || range.max > base.max)
+        return refuse(400, "out_of_range");
+      (rows[discordId] ??= {})[bggId] = range;
+      return { ok: true, value: null };
+    },
+    clear: async (discordId, bggId) => {
+      calls.push({ discordId, bggId });
+      if (rows[discordId]) delete rows[discordId][bggId];
+    },
+  };
+  return { memberOverrides, rows, calls };
 }

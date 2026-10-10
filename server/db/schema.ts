@@ -187,6 +187,31 @@ export const gamePlayerOverride = pgTable(
   ],
 );
 
+/**
+ * A member's own narrowing of a game's player range. Always inside the admin or
+ * BGG range when written; reads intersect it with the current range.
+ */
+export const memberPlayerOverride = pgTable(
+  "member_player_override",
+  {
+    discordId: text("discord_id")
+      .notNull()
+      .references(() => appUser.discordId, { onDelete: "cascade" }),
+    bggId: integer("bgg_id")
+      .notNull()
+      .references(() => game.bggId, { onDelete: "cascade" }),
+    minPlayers: integer("min_players").notNull(),
+    maxPlayers: integer("max_players").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.discordId, table.bggId] }),
+    check(
+      "member_player_override_range_check",
+      sql`${table.minPlayers} >= 1 and ${table.minPlayers} <= ${table.maxPlayers} and ${table.maxPlayers} <= 99`,
+    ),
+  ],
+);
+
 /** Players are the same person when names differ only by case. */
 export const player = pgTable(
   "player",

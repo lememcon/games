@@ -78,6 +78,13 @@
       "when": 1791594337660,
       "tag": "0010_curly_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791600239643,
+      "tag": "0011_left_amazoness",
+      "breakpoints": true
     }
   ]
 }

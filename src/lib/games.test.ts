@@ -10,10 +10,13 @@ import {
   originalBounds,
   partitions,
   playerCountsByName,
+  rangesByMember,
   realBounds,
   resolveImage,
   suggestSplits,
+  validateMemberOverride,
   validateOverride,
+  type PlayerRanges,
 } from "@/lib/games";
 import type { Data, GamePlayersRow, GamesData, PlayerGameScore } from "@/types";
 
@@ -523,6 +526,229 @@ describe("playerCountsByName", () => {
     expect(
       playerCountsByName(linked, { d1: { "100": 2 }, d2: { "100": 9 } }),
     ).toEqual({ alice: { "100": 2 } });
+  });
+});
+
+describe("playerCountsByName with other values", () => {
+  it("re-keys any per-member value, such as ranges", () => {
+    const linked: Record<string, PlayerGameScore[]> = {
+      alice: [
+        {
+          player: "alice",
+          game: "Root",
+          rank: 1,
+          score: 5,
+          bgg_id: 100,
+          discord_id: "d1",
+        },
+      ],
+    };
+    expect(
+      playerCountsByName(linked, { d1: { "100": { min: 3, max: 4 } } }),
+    ).toEqual({ alice: { "100": { min: 3, max: 4 } } });
+  });
+});
+
+describe("rangesByMember", () => {
+  it("groups the flat list by discord id then bgg id", () => {
+    expect(
+      rangesByMember([
+        { discordId: "d1", bggId: 1, min: 3, max: 4 },
+        { discordId: "d1", bggId: 2, min: 2, max: 2 },
+        { discordId: "d2", bggId: 1, min: 5, max: 6 },
+      ]),
+    ).toEqual({
+      d1: { "1": { min: 3, max: 4 }, "2": { min: 2, max: 2 } },
+      d2: { "1": { min: 5, max: 6 } },
+    });
+    expect(rangesByMember([])).toEqual({});
+  });
+});
+
+describe("validateMemberOverride", () => {
+  const allowed = { min: 2, max: 6 };
+
+  it("accepts a range inside, or equal to, the allowed range", () => {
+    expect(validateMemberOverride(3, 4, allowed)).toEqual({
+      range: { min: 3, max: 4 },
+    });
+    expect(validateMemberOverride(2, 6, allowed)).toEqual({
+      range: { min: 2, max: 6 },
+    });
+  });
+
+  it("builds on the admin checks", () => {
+    expect(validateMemberOverride("", 4, allowed)).toEqual({
+      error: "Enter both counts",
+    });
+    expect(validateMemberOverride(5, 3, allowed)).toEqual({
+      error: "Min can't exceed max",
+    });
+  });
+
+  it.each([
+    [1, 4],
+    [3, 7],
+  ])("refuses %i-%i as wider than the allowed range", (min, max) => {
+    expect(validateMemberOverride(min, max, allowed)).toEqual({
+      error: "Must stay within 2-6 (can't widen)",
+    });
+  });
+});
+
+describe("member player count ranges", () => {
+  // Root is 2-6 in BGG; Garret narrowed it to exactly 4.
+  const meta: GamesData = { 1: { players: { min: 2, max: 6 } } };
+  const row = (player: string, game = "Root", bgg_id = 1): PlayerGameScore => ({
+    player,
+    game,
+    rank: 1,
+    score: 10,
+    bgg_id,
+  });
+  const scores: Record<string, PlayerGameScore[]> = {
+    Garret: [row("Garret")],
+    Ann: [row("Ann")],
+    Bo: [row("Bo")],
+    Cy: [row("Cy")],
+    Di: [row("Di")],
+  };
+  const garret4 = { Garret: { "1": { min: 4, max: 4 } } };
+  const names = (players: string[], playerRanges: PlayerRanges = garret4) =>
+    buildSelectedGames({
+      byPlayer: scores,
+      players,
+      gameData: meta,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerRanges,
+    }).map((g) => g.name);
+
+  it("allows the group Garret is in when its size is in his range", () => {
+    expect(names(["Garret", "Ann", "Bo", "Cy"])).toEqual(["Root"]);
+  });
+
+  it("hides the game from a group of another size containing him", () => {
+    expect(names(["Garret", "Ann"])).toEqual([]);
+    expect(names(["Garret", "Ann", "Bo"])).toEqual([]);
+  });
+
+  it("leaves groups without him alone", () => {
+    expect(names(["Ann", "Bo"])).toEqual(["Root"]);
+  });
+
+  it("counts a group member who has no score for the game", () => {
+    const noRoot = { ...scores, Garret: [row("Garret", "Chess", 2)] };
+    const result = buildSelectedGames({
+      byPlayer: noRoot,
+      players: ["Garret", "Ann"],
+      gameData: meta,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerRanges: garret4,
+    }).map((g) => g.name);
+    expect(result).toEqual(["Chess"]);
+  });
+
+  it("ignores players that have no range and unlinked players", () => {
+    expect(
+      names(["Ann", "Bo", "Cy"], { Nobody: { "1": { min: 9, max: 9 } } }),
+    ).toEqual(["Root"]);
+  });
+
+  it("applies every member's range together", () => {
+    const both = { ...garret4, Ann: { "1": { min: 2, max: 3 } } };
+    expect(names(["Garret", "Ann", "Bo", "Cy"], both)).toEqual([]);
+    expect(names(["Garret", "Ann", "Bo"], both)).toEqual([]);
+  });
+
+  it("intersects with the game's own range", () => {
+    // Garret allows 4-4 but the game only goes to 3 for this group size.
+    const small: GamesData = { 1: { players: { min: 2, max: 3 } } };
+    expect(
+      buildSelectedGames({
+        byPlayer: scores,
+        players: ["Garret", "Ann", "Bo", "Cy"],
+        gameData: small,
+        images: {},
+        hidePlayed: false,
+        playerCounts: {},
+        playerRanges: garret4,
+      }),
+    ).toEqual([]);
+  });
+
+  it("excludes the game when ranges are disjoint with the group size", () => {
+    const disjoint = {
+      Garret: { "1": { min: 2, max: 2 } },
+      Ann: { "1": { min: 3, max: 3 } },
+    };
+    expect(names(["Garret", "Ann"], disjoint)).toEqual([]);
+    expect(names(["Garret", "Ann", "Bo"], disjoint)).toEqual([]);
+  });
+
+  it("ignores ranges with no or one player selected", () => {
+    expect(names([])).toEqual(["Root"]);
+    expect(names(["Garret"])).toEqual(["Root"]);
+  });
+
+  it("splits: returns no split when Root fits only one side", () => {
+    const groups = suggestSplits({
+      byPlayer: scores,
+      players: ["Garret", "Ann", "Bo", "Cy"],
+      gameData: meta,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerRanges: garret4,
+    });
+    // Root fits the other side only, but a split needs a game for each side.
+    expect(groups).toEqual([]);
+  });
+
+  it("splits: with a second game, Garret's side gets it and the other Root", () => {
+    const twoGames: Record<string, PlayerGameScore[]> = {
+      Garret: [row("Garret"), row("Garret", "Chess", 2)],
+      Ann: [row("Ann"), row("Ann", "Chess", 2)],
+      Bo: [row("Bo"), row("Bo", "Chess", 2)],
+      Cy: [row("Cy"), row("Cy", "Chess", 2)],
+    };
+    const [best] = suggestSplits({
+      byPlayer: twoGames,
+      players: ["Garret", "Ann", "Bo", "Cy"],
+      gameData: meta,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerRanges: garret4,
+    });
+    const withGarret = best.groups.find((g) => g.players.includes("Garret"))!;
+    const without = best.groups.find((g) => !g.players.includes("Garret"))!;
+    expect(withGarret.games.map((g) => g.name)).toEqual(["Chess"]);
+    expect(without.games.map((g) => g.name).sort()).toEqual(["Chess", "Root"]);
+  });
+
+  it("splits: with five players both sides containing Garret hide Root", () => {
+    const five = ["Garret", "Ann", "Bo", "Cy", "Di"];
+    const twoGames: Record<string, PlayerGameScore[]> = Object.fromEntries(
+      five.map((p) => [p, [row(p), row(p, "Chess", 2)]]),
+    );
+    const splits = suggestSplits({
+      byPlayer: twoGames,
+      players: five,
+      gameData: meta,
+      images: {},
+      hidePlayed: false,
+      playerCounts: {},
+      playerRanges: garret4,
+    });
+    expect(splits.length).toBeGreaterThan(0);
+    for (const split of splits)
+      for (const group of split.groups)
+        if (group.players.includes("Garret"))
+          expect(group.games.map((g) => g.name)).not.toContain("Root");
   });
 });
 

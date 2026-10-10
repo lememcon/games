@@ -10,7 +10,7 @@ const isCount = (v: unknown): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= MAX_PLAYERS;
 
 /** A body of exactly `{min, max}`: integers 1..99 with min <= max; else null. */
-function parseRange(body: unknown): PlayerRange | null {
+export function parseRange(body: unknown): PlayerRange | null {
   if (!isRecord(body)) return null;
   const keys = Object.keys(body).sort();
   if (keys.length !== 2 || keys[0] !== "max" || keys[1] !== "min") return null;

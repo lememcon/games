@@ -64,6 +64,8 @@ export interface AppDeps {
   data: DataStore;
   /** Links between players and app members (admin only). */
   links: LinkStore;
+  /** Each member's own player count ranges. */
+  memberOverrides: MemberOverrideStore;
 }
 
 export type AppEnv = { Variables: { user: AppUser | null } };
@@ -372,4 +374,26 @@ export interface PlayedStore {
     year: number,
     counts: Map<number, number>,
   ): Promise<MutationResult<PlayedCounts>>;
+}
+
+/** Every member's own player count ranges: discord id, then bgg id. */
+export type AllMemberOverrides = Record<string, Record<string, PlayerRange>>;
+
+/** All SQL for member player count overrides lives behind this interface (server/db/memberOverrideStore.ts). */
+export interface MemberOverrideStore {
+  getAll(): Promise<AllMemberOverrides>;
+  /**
+   * Stores the member's range for the game (always, even when equal to the
+   * base range). Refuses with 403 `not_linked` (no player is linked to the
+   * member), 404 `unknown_game`, 409 `no_player_range` (the game has no base
+   * range) and 400 `out_of_range` (the range is not inside the admin override,
+   * else BGG's range).
+   */
+  set(
+    discordId: string,
+    bggId: number,
+    range: PlayerRange,
+  ): Promise<MutationResult<null>>;
+  /** Removes the member's range; no error when absent. */
+  clear(discordId: string, bggId: number): Promise<void>;
 }

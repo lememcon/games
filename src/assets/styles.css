@@ -504,3 +504,8 @@ body {
 .player-range__bgg {
   color: var(--mantine-color-dimmed);
 }
+
+/* The member's own player count range form on the game page. */
+.my-range {
+  margin-top: 1.5em;
+}

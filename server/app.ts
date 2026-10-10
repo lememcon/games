@@ -11,6 +11,7 @@ import { dataRoutes } from "./routes/data";
 import { gamePlayerRoutes } from "./routes/gamePlayers";
 import { importRoutes } from "./routes/import";
 import { linkRoutes } from "./routes/links";
+import { memberOverrideRoutes } from "./routes/memberOverrides";
 import { playedRoutes } from "./routes/played";
 import { profileRoutes } from "./routes/profile";
 import type { AppDeps, AppEnv } from "./types";
@@ -100,6 +101,7 @@ export function createApp(deps: AppDeps) {
   api.route("/admin", gamePlayerRoutes(deps.data));
   api.route("/", profileRoutes(deps.profiles));
   api.route("/", playedRoutes(deps.played));
+  api.route("/", memberOverrideRoutes(deps.memberOverrides));
   api.route("/", dataRoutes(deps.data));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);

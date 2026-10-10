@@ -4,6 +4,7 @@ import { createApp } from "../app";
 import {
   fakeData,
   fakeLinks,
+  fakeMemberOverrides,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -60,6 +61,7 @@ function makeApp(user: AppUser | null = null) {
     store: fakeStore().store,
     data,
     links: fakeLinks().links,
+    memberOverrides: fakeMemberOverrides().memberOverrides,
     profiles: fakeProfiles().profiles,
     played: fakePlayed().played,
     resolveSession: async () => ({ user }),
@@ -173,6 +175,7 @@ describe("GET /api/games", () => {
       store: fakeStore().store,
       data,
       links: fakeLinks().links,
+      memberOverrides: fakeMemberOverrides().memberOverrides,
       profiles: fakeProfiles().profiles,
       played: fakePlayed().played,
       resolveSession: async () => ({ user: null }),
