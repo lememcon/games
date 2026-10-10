@@ -75,6 +75,16 @@ describe("buildFilterSearch", () => {
   });
 });
 
+describe("apostrophes in names", () => {
+  it("escapes ' as %27 and round-trips", () => {
+    const filters = { players: ["O'Brien"], hidePlayed: false };
+    const search = buildFilterSearch(filters);
+    expect(search).toContain("%27");
+    expect(search).not.toContain("'");
+    expect(parseFilterSearch(search)).toEqual(filters);
+  });
+});
+
 describe("parseFilterSearch", () => {
   it("round-trips awkward names", () => {
     const filters = { players: ["a,b", "c&d", "e f"], hidePlayed: true };

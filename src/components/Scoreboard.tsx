@@ -123,7 +123,9 @@ function Scoreboard({ user }: ScoreboardProps) {
     const shared = pending.current;
     if (shared === null || year === null || !dataReady) return;
     pending.current = null;
-    setPlayers(shared.players.filter((name) => name in data.by_player));
+    setPlayers(
+      shared.players.filter((name) => Object.hasOwn(data.by_player, name)),
+    );
     setHidePlayed(shared.hidePlayed);
   });
 

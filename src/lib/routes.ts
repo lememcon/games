@@ -43,6 +43,9 @@ export interface FilterState {
   hidePlayed: boolean;
 }
 
+const encodeName = (name: string): string =>
+  encodeURIComponent(name).replace(/'/g, "%27");
+
 // The query string ("?players=...&hidePlayed=1", or "" when no filter is on).
 // Names are encoded one by one and joined by literal commas, so a comma inside
 // a name stays distinguishable from the separator.
@@ -52,7 +55,7 @@ export const buildFilterSearch = ({
 }: FilterState): string => {
   const parts: string[] = [];
   if (players.length > 0) {
-    parts.push(`players=${players.map(encodeURIComponent).join(",")}`);
+    parts.push(`players=${players.map(encodeName).join(",")}`);
   }
   if (hidePlayed) parts.push("hidePlayed=1");
   return parts.length > 0 ? `?${parts.join("&")}` : "";

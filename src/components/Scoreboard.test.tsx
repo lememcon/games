@@ -244,6 +244,14 @@ describe("Scoreboard", () => {
       expect(search()).toBe("?players=alice");
     });
 
+    it("drops inherited object keys without crashing", () => {
+      at("/2026?players=constructor,alice");
+      render();
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(search()).toBe("?players=alice");
+    });
+
     it("keeps shared players when the year differs from the stored one", () => {
       at("/2026?players=alice");
       localStorage.setItem("year", JSON.stringify("2025"));
