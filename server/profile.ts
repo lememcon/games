@@ -1,5 +1,7 @@
 /** Pure validation for display names. */
 
+import { exactKeys } from "./validate";
+
 const MAX_LENGTH = 32;
 // Control, format (zero-width, bidi), surrogate, private-use, unassigned, line
 // and paragraph separators, and other invisible default-ignorable characters
@@ -17,15 +19,10 @@ export type ParsedName =
  * null clears it. Length is counted in code points.
  */
 export function parseDisplayName(body: unknown): ParsedName {
-  if (typeof body !== "object" || body === null || Array.isArray(body))
+  if (!exactKeys(body, "displayName"))
     return { ok: false, error: "invalid_body" };
-  const keys = Object.keys(body);
-  const raw = (body as { displayName?: unknown }).displayName;
-  if (
-    keys.length !== 1 ||
-    keys[0] !== "displayName" ||
-    (raw !== null && typeof raw !== "string")
-  )
+  const raw = body.displayName;
+  if (raw !== null && typeof raw !== "string")
     return { ok: false, error: "invalid_body" };
   if (raw === null) return { ok: true, value: null };
 

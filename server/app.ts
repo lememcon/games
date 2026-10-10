@@ -1,6 +1,9 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
+import { secureHeaders } from "hono/secure-headers";
 
 import { bggRoutes } from "./bgg/routes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
@@ -21,9 +24,32 @@ const isPublic = (path: string, method: string) =>
       path === "/api/games" ||
       /^\/api\/years\/[^/]+\/scores$/.test(path)));
 
+const MAX_BODY_BYTES = 256 * 1024;
+/** The admin import route enforces its own, larger limit. */
+const IMPORT_PATH = "/api/admin/import";
+
+const smallBodies = bodyLimit({
+  maxSize: MAX_BODY_BYTES,
+  onError: (c) => c.json({ error: "payload_too_large" }, 413),
+});
+
 export function createApp(deps: AppDeps) {
   const app = new Hono<AppEnv>();
 
+  app.use(
+    secureHeaders({
+      xFrameOptions: "DENY",
+      xContentTypeOptions: "nosniff",
+      referrerPolicy: "strict-origin-when-cross-origin",
+      strictTransportSecurity: "max-age=31536000; includeSubDomains",
+      permissionsPolicy: { camera: [], microphone: [], geolocation: [] },
+    }),
+  );
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) return err.getResponse();
+    console.error(err);
+    return c.json({ error: "internal_error" }, 500);
+  });
   app.use(compress());
   app.get("/healthz", (c) => c.json({ status: "ok" }));
 
@@ -36,6 +62,11 @@ export function createApp(deps: AppDeps) {
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowHeaders: ["content-type"],
     }),
+  );
+  app.use("/api/*", (c, next) =>
+    c.req.method === "POST" && c.req.path === IMPORT_PATH
+      ? next()
+      : smallBodies(c, next),
   );
   app.use("/api/*", csrf(deps.baseUrl, deps.webOrigin));
   app.on(["GET", "POST"], "/api/auth/*", (c) => deps.authHandler(c.req.raw));

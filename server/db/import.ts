@@ -1,6 +1,7 @@
 import { inArray, sql } from "drizzle-orm";
 
 import type { NormalizedImport } from "../import";
+import { refuse } from "../result";
 import { chunk, newPlayers, planGames, summarize, toMetadata } from "../shape";
 import type { ImportContext, ImportSummary, MutationResult } from "../types";
 import { upsertMetadata } from "./bggRepo";
@@ -134,10 +135,9 @@ export async function importData(
       };
     });
   } catch (error) {
-    if (error instanceof NameClash)
-      return { ok: false, status: 409, error: "name_taken" };
+    if (error instanceof NameClash) return refuse(409, "name_taken");
     if (input.year !== null && pgCode(error) === UNIQUE_VIOLATION)
-      return { ok: false, status: 409, error: "year_exists" };
+      return refuse(409, "year_exists");
     throw error;
   }
 }

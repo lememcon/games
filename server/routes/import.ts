@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
 import { cleanFilename, parseImport } from "../import";
+import { refusalResponse } from "../result";
 import type { AppEnv, DataStore } from "../types";
 
 export const MAX_BODY_BYTES = 5 * 1024 * 1024;
@@ -32,9 +33,7 @@ export function importRoutes(data: DataStore) {
         importedBy: c.get("user")!.discordId,
         sourceFilename: cleanFilename(c.req.query("filename")),
       });
-      return result.ok
-        ? c.json(result.value, 201)
-        : c.json({ error: result.error }, result.status);
+      return result.ok ? c.json(result.value, 201) : refusalResponse(c, result);
     },
   );
 

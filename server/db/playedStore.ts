@@ -1,14 +1,11 @@
 import { and, eq } from "drizzle-orm";
 
+import { refuse } from "../result";
 import type { PlayedCounts, PlayedStore } from "../types";
 import { playedCount, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
-const UNKNOWN_YEAR = {
-  ok: false as const,
-  status: 404 as const,
-  error: "unknown_year",
-};
+const UNKNOWN_YEAR = refuse(404, "unknown_year");
 
 export function createPlayedStore(db: StoreDb): PlayedStore {
   const yearExists = async (year: number) =>

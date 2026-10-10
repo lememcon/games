@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { etag } from "hono/etag";
 import { createMiddleware } from "hono/factory";
 
+import { privateNoCache } from "../result";
 import type { AppEnv, DataStore } from "../types";
 
 /** Public reads: years, one year's scores, and all games. */
@@ -14,7 +15,7 @@ export function dataRoutes(data: DataStore) {
   // attach a Set-Cookie to any response.
   const noCache = createMiddleware<AppEnv>(async (c, next) => {
     await next();
-    c.header("Cache-Control", "private, no-cache");
+    privateNoCache(c);
   });
   const read = [etag(), noCache] as const;
 

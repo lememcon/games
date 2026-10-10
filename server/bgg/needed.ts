@@ -45,21 +45,24 @@ interface YearScores {
 
 /**
  * Games the score feeds reference, unioned across every year from 2025 to now.
- * `fetch` and `now` are injected; results are cached for ~60 s so repeated
+ * `fetch`, `now` and `timeoutMs` are injected; results are cached for ~60 s so repeated
  * status requests do not hit data.lememcon.com.
  */
 export function createNeededIds(
-  deps: { fetch?: typeof fetch; now?: () => number } = {},
+  deps: { fetch?: typeof fetch; now?: () => number; timeoutMs?: number } = {},
 ): () => Promise<NeededGame[]> {
   const doFetch = deps.fetch ?? fetch;
   const now = deps.now ?? Date.now;
+  const timeoutMs = deps.timeoutMs ?? 15_000;
   let cached: { at: number; games: NeededGame[] } | null = null;
   let inflight: Promise<NeededGame[]> | null = null;
 
   const loadYear = async (year: number): Promise<YearScores> => {
     let res: Response;
     try {
-      res = await doFetch(`${DATA_URL}/${year}.json`);
+      res = await doFetch(`${DATA_URL}/${year}.json`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
     } catch {
       throw new ScoresUnavailableError();
     }

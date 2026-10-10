@@ -1,5 +1,6 @@
 import type { BggGame } from "./bgg/client";
 import type { NormalizedImport } from "./import";
+import { refuse } from "./result";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
 import type {
   BggRepo,
@@ -146,7 +147,7 @@ export function fakeData(
     getGames: async () => games,
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
-        return { ok: false, status: 409, error: "year_exists" };
+        return refuse(409, "year_exists");
       imports.push({ input, context });
       if (input.year !== null)
         years.set(
@@ -194,16 +195,16 @@ export function fakeLinks(
     setLink: async (playerId, discordId) => {
       calls.push({ playerId, discordId });
       const found = players.get(playerId);
-      if (!found) return { ok: false, status: 404, error: "unknown_player" };
+      if (!found) return refuse(404, "unknown_player");
       if (discordId !== null && !users.some((u) => u.discordId === discordId))
-        return { ok: false, status: 404, error: "unknown_user" };
+        return refuse(404, "unknown_user");
       const checked = discordId === null ? found.discordId : discordId;
       const clash = Object.entries(names).some(
         ([id, n]) =>
           n.toLowerCase() === found.name.toLowerCase() &&
           (discordId === null ? id === checked : id !== checked),
       );
-      if (clash) return { ok: false, status: 409, error: "name_taken" };
+      if (clash) return refuse(409, "name_taken");
       players.set(playerId, { ...found, discordId });
       return { ok: true, value: null };
     },
@@ -228,7 +229,7 @@ export function fakeProfiles(
         ([id, n]) =>
           id !== discordId && n.toLowerCase() === displayName?.toLowerCase(),
       );
-      if (taken) return { ok: false, status: 409, error: "name_taken" };
+      if (taken) return refuse(409, "name_taken");
       if (displayName === null) names.delete(discordId);
       else names.set(discordId, displayName);
       return { ok: true, value: { displayName } };
@@ -260,8 +261,7 @@ export function fakePlayed(
     },
     set: async (discordId, year, bggId, count) => {
       calls.push({ discordId, year, bggId });
-      if (!years.has(year))
-        return { ok: false, status: 404, error: "unknown_year" };
+      if (!years.has(year)) return refuse(404, "unknown_year");
       const counts = bucket(discordId, year);
       if (count === 0) delete counts[bggId];
       else counts[bggId] = count;
@@ -269,8 +269,7 @@ export function fakePlayed(
     },
     importCounts: async (discordId, year, incoming) => {
       calls.push({ discordId, year });
-      if (!years.has(year))
-        return { ok: false, status: 404, error: "unknown_year" };
+      if (!years.has(year)) return refuse(404, "unknown_year");
       const counts = bucket(discordId, year);
       for (const [id, count] of incoming) counts[id] ??= count;
       return { ok: true, value: { ...counts } };

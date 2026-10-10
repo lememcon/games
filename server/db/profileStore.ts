@@ -1,5 +1,6 @@
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
+import { refuse } from "../result";
 import { collapseMemberScores, toProfileStats } from "../shape";
 import type { ProfileStore } from "../types";
 import { lockDisplayNames, pgCode } from "./import";
@@ -36,8 +37,7 @@ export function createProfileStore(
             .from(appUser)
             .where(eq(appUser.discordId, discordId))
             .for("update");
-          if (!current)
-            return { ok: false as const, status: 404, error: "not_found" };
+          if (!current) return refuse(404, "not_found");
 
           if (displayName !== null) {
             const lowered = sql`lower(${displayName})`;
@@ -64,8 +64,7 @@ export function createProfileStore(
                 ),
               )
               .limit(1);
-            if (memberClash || playerClash)
-              return { ok: false as const, status: 409, error: "name_taken" };
+            if (memberClash || playerClash) return refuse(409, "name_taken");
           }
 
           await tx
@@ -78,7 +77,7 @@ export function createProfileStore(
       } catch (error) {
         // A concurrent change took the name between the check and the write.
         if (pgCode(error) === UNIQUE_VIOLATION)
-          return { ok: false, status: 409, error: "name_taken" };
+          return refuse(409, "name_taken");
         throw error;
       }
     },

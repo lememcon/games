@@ -1,3 +1,4 @@
+import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
@@ -69,6 +70,152 @@ function makeApp(webOrigin: string | undefined = WEB) {
 }
 
 const as = (who: keyof typeof users) => ({ headers: { cookie: `as=${who}` } });
+
+describe("security headers", () => {
+  const expectHeaders = (res: Response) => {
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("referrer-policy")).toBe(
+      "strict-origin-when-cross-origin",
+    );
+    expect(res.headers.get("strict-transport-security")).toBe(
+      "max-age=31536000; includeSubDomains",
+    );
+    expect(res.headers.get("permissions-policy")).toBe(
+      "camera=(), microphone=(), geolocation=()",
+    );
+  };
+
+  it("are set on /healthz", async () => {
+    expectHeaders(await makeApp().app.request("/healthz"));
+  });
+
+  it("are set on /api/auth/* responses", async () => {
+    expectHeaders(await makeApp().app.request("/api/auth/session"));
+  });
+
+  it("survive an auth handler that returns a redirect", async () => {
+    const { app, authHandler } = makeApp();
+    authHandler.mockResolvedValueOnce(
+      Response.redirect("https://games.lememcon.com/", 302),
+    );
+    const res = await app.request("/api/auth/callback/discord");
+    expect(res.status).toBe(302);
+    expectHeaders(res);
+  });
+});
+
+describe("body size limit", () => {
+  const same = { "sec-fetch-site": "same-origin" };
+  const big = "x".repeat(256 * 1024 + 1);
+  const chunked = (size: number) => {
+    let sent = false;
+    return new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent) controller.close();
+        else controller.enqueue(new Uint8Array(size).fill(120));
+        sent = true;
+      },
+    });
+  };
+
+  it.each(["/api/me", "/api/auth/sign-in"])(
+    "answers 413 for an oversized declared body on %s",
+    async (path) => {
+      const res = await makeApp().app.request(path, {
+        method: "POST",
+        headers: same,
+        body: big,
+      });
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ error: "payload_too_large" });
+    },
+  );
+
+  it.each(["/api/me", "/api/auth/sign-in"])(
+    "answers 413 for an oversized chunked body on %s",
+    async (path) => {
+      const res = await makeApp().app.request(path, {
+        method: "POST",
+        headers: same,
+        body: chunked(256 * 1024 + 1),
+        duplex: "half",
+      });
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ error: "payload_too_large" });
+    },
+  );
+
+  it("lets a body under the limit through", async () => {
+    const { app, authHandler } = makeApp();
+    const res = await app.request("/api/auth/sign-in", {
+      method: "POST",
+      headers: same,
+      body: "x".repeat(1024),
+    });
+    expect(res.status).toBe(200);
+    expect(authHandler).toHaveBeenCalled();
+  });
+
+  it("leaves the import route to its own larger limit", async () => {
+    const res = await makeApp().app.request("/api/admin/import", {
+      method: "POST",
+      headers: { ...same, ...as("admin").headers },
+      body: JSON.stringify({ pad: big }),
+    });
+    expect(res.status).not.toBe(413);
+  });
+
+  it.each(["PUT", "PATCH"])(
+    "applies the small limit to %s on the import route",
+    async (method) => {
+      const res = await makeApp().app.request("/api/admin/import", {
+        method,
+        headers: { ...same, ...as("admin").headers },
+        body: big,
+      });
+      expect(res.status).toBe(413);
+    },
+  );
+});
+
+describe("error handler", () => {
+  const throwing = (error: Error) =>
+    createApp({
+      baseUrl: BASE,
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data: fakeData().data,
+      links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
+      resolveSession: async () => {
+        throw error;
+      },
+    });
+
+  it("answers JSON 500 without a stack and logs the error", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("db password leaked");
+    const res = await throwing(err).request("/api/me");
+    expect(res.status).toBe(500);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toEqual({ error: "internal_error" });
+    expect(spy).toHaveBeenCalledWith(err);
+    spy.mockRestore();
+  });
+
+  it("passes an HTTPException response through unlogged", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await throwing(
+      new HTTPException(418, { res: new Response("teapot", { status: 418 }) }),
+    ).request("/api/me");
+    expect(res.status).toBe(418);
+    expect(await res.text()).toBe("teapot");
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
 
 describe("GET /healthz", () => {
   it("returns ok without a session", async () => {

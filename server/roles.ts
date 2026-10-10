@@ -1,4 +1,6 @@
+import { refuse } from "./result";
 import type { MutationResult, Role, UserRow } from "./types";
+import { isRecord } from "./validate";
 
 /** Kelsin and Waymost: always approved admins, whatever the database says. */
 export const PROTECTED_ADMIN_IDS: readonly string[] = [
@@ -23,12 +25,8 @@ export interface Change {
   role?: Role;
 }
 
-const refuse = (status: 400 | 403 | 404 | 409, error: string) =>
-  ({ ok: false, status, error }) as const;
-
 function parseChange(body: unknown): Change | null {
-  if (typeof body !== "object" || body === null || Array.isArray(body))
-    return null;
+  if (!isRecord(body)) return null;
   const entries = Object.entries(body);
   if (entries.length === 0) return null;
   const change: Change = {};

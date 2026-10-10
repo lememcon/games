@@ -75,6 +75,16 @@ describe("GET /api/years", () => {
     expect(res.headers.get("etag")).toBeTruthy();
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
   });
+
+  it("keeps the cache header on a 304 revalidation", async () => {
+    const app = makeApp();
+    const first = await app.request("/api/years");
+    const res = await app.request("/api/years", {
+      headers: { "If-None-Match": first.headers.get("etag")! },
+    });
+    expect(res.status).toBe(304);
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+  });
 });
 
 describe("GET /api/years/:year/scores", () => {

@@ -1,5 +1,6 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 
+import { refuse } from "../result";
 import type { LinkStore, PlayerLinks } from "../types";
 import { lockDisplayNames, pgCode } from "./import";
 import { account, appUser, player, score, user } from "./schema";
@@ -65,8 +66,7 @@ export function createLinkStore(db: StoreDb): LinkStore {
             .select({ name: player.name, discordId: player.discordId })
             .from(player)
             .where(eq(player.id, playerId));
-          if (!found)
-            return { ok: false as const, status: 404, error: "unknown_player" };
+          if (!found) return refuse(404, "unknown_player");
 
           // The shown name must not impersonate another member. Linking
           // exempts the new member; unlinking checks the member being
@@ -85,8 +85,7 @@ export function createLinkStore(db: StoreDb): LinkStore {
                 ),
               )
               .limit(1);
-            if (clash)
-              return { ok: false as const, status: 409, error: "name_taken" };
+            if (clash) return refuse(409, "name_taken");
           }
 
           await tx
@@ -97,8 +96,7 @@ export function createLinkStore(db: StoreDb): LinkStore {
         });
       } catch (error) {
         const code = pgCode(error);
-        if (code === FOREIGN_KEY_VIOLATION)
-          return { ok: false, status: 404, error: "unknown_user" };
+        if (code === FOREIGN_KEY_VIOLATION) return refuse(404, "unknown_user");
         throw error;
       }
     },
