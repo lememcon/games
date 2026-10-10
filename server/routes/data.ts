@@ -42,6 +42,12 @@ export function dataRoutes(data: DataStore) {
       : c.json({ error: "not_found" }, 404);
   });
 
+  // Approved members only (not in app.ts isPublic). A literal path, so no
+  // /games/:id route can shadow it.
+  routes.get("/games/unplayed", ...read, async (c) =>
+    c.json({ games: await data.listUnplayedGames() }),
+  );
+
   routes.get("/games", ...read, async (c) => c.json(await data.getGames()));
 
   return routes;

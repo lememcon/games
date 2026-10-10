@@ -307,3 +307,9 @@ export interface YearTotal {
   bgg_id: number;
   total: number;
 }
+
+// A named game with no scores in any imported year, from GET /api/games/unplayed.
+export interface UnplayedGame {
+  bgg_id: number;
+  name: string;
+}

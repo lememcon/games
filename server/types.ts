@@ -206,6 +206,12 @@ export interface ImportContext {
   sourceFilename: string | null;
 }
 
+/** A named game with no scores in any year. */
+export interface UnplayedGame {
+  bgg_id: number;
+  name: string;
+}
+
 /** One game's summed scores in one year. */
 export interface YearTotal {
   year: number;
@@ -226,6 +232,8 @@ export interface DataStore {
   getGames(): Promise<GamesMap>;
   /** Summed scores per game and year, ordered by year then game. */
   getYearTotals(): Promise<YearTotal[]>;
+  /** Named games with no score row in any year, by name. */
+  listUnplayedGames(): Promise<UnplayedGame[]>;
   /** One transaction; refuses with 409 when the year already exists. */
   importData(
     input: NormalizedImport,

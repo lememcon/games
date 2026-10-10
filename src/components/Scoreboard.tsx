@@ -10,6 +10,7 @@ import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
 import SplitSuggestions from "@/components/SplitSuggestions";
+import UnplayedShelf from "@/components/UnplayedShelf";
 import YearTrends from "@/components/YearTrends";
 import useAllPlayedCounts from "@/hooks/useAllPlayedCounts";
 import useData from "@/hooks/useData";
@@ -347,6 +348,7 @@ function Scoreboard({ user }: ScoreboardProps) {
                     year={Number(year)}
                     names={gameNames}
                   />
+                  <UnplayedShelf />
                 </>
               )}
             </>
