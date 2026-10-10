@@ -18,6 +18,7 @@ const defaults = {
   onHidePlayedChange: () => {},
   shown: 3,
   total: 12,
+  shareUrl: "https://games.example/2025?players=alice",
 };
 
 describe("Filters", () => {
@@ -67,5 +68,16 @@ describe("Filters", () => {
   it("shows how many games are in view of the total", () => {
     const { getByText } = renderWithMantine(<Filters {...defaults} />);
     expect(getByText("3 of 12 games")).toBeInTheDocument();
+  });
+
+  it("copies the share link and confirms", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+
+    expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
+    expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 
 import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
@@ -26,7 +26,14 @@ import {
 } from "@/lib/games";
 import images from "@/lib/images";
 import { PlayerColorProvider } from "@/lib/playerColors";
-import { gamePath, parseScoreboardPath, yearPath } from "@/lib/routes";
+import {
+  buildFilterSearch,
+  gamePath,
+  parseFilterSearch,
+  parseScoreboardPath,
+  sharePath,
+  yearPath,
+} from "@/lib/routes";
 import type { ApprovedUser } from "@/types";
 
 interface ScoreboardProps {
@@ -92,14 +99,45 @@ function Scoreboard({ user }: ScoreboardProps) {
     [data.by_player, overrides.all],
   );
 
+  // Filters from a shared link, read once. They wait here until the scores are
+  // loaded (so unknown names can be dropped), then replace the saved filters.
+  const pending = useRef(parseFilterSearch(window.location.search));
+  const isYearList = route.kind === "year" && route.gameId === undefined;
+  const dataReady = !data.loading && !data.error;
+
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
   // the useLocalState setters change identity every render.
   useEffect(() => {
     if (year === null || year === storedYear) return;
-    if (storedYear !== "") setPlayers([]);
+    if (storedYear !== "" && pending.current === null) setPlayers([]);
     setStoredYear(year);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setters are unstable
   }, [year]);
+
+  // A shared link only applies to the page it was opened on.
+  useEffect(() => {
+    if (!isYearList || (yearsKnown && year === null)) pending.current = null;
+  });
+
+  useEffect(() => {
+    const shared = pending.current;
+    if (shared === null || year === null || !dataReady) return;
+    pending.current = null;
+    setPlayers(
+      shared.players.filter((name) => Object.hasOwn(data.by_player, name)),
+    );
+    setHidePlayed(shared.hidePlayed);
+  });
+
+  // Keep the address bar in step with the filters, replacing the history entry.
+  useEffect(() => {
+    if (pending.current !== null || year === null || !isYearList || !dataReady)
+      return;
+    const query = buildFilterSearch({ players, hidePlayed });
+    if (query !== window.location.search) {
+      setLocation(location + query, { replace: true });
+    }
+  });
 
   const { individualMax, selectedMax } = computeMaxScores(data, players);
   const playerColors = buildPlayerColors(keys(data.by_player));
@@ -161,6 +199,7 @@ function Scoreboard({ user }: ScoreboardProps) {
 
   const handleYear = (year: string | null) => {
     if (year === null) return;
+    pending.current = null;
     setPlayers([]);
     setLocation(yearPath(year));
   };
@@ -232,6 +271,10 @@ function Scoreboard({ user }: ScoreboardProps) {
                 onHidePlayedChange={setHidePlayed}
                 shown={games.length}
                 total={keys(data.by_game).length}
+                shareUrl={
+                  window.location.origin +
+                  sharePath(year, { players, hidePlayed })
+                }
               />
               {games.length === 0 ? (
                 <>

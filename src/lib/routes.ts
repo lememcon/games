@@ -5,6 +5,9 @@
 //   /:year             a year's scoreboard
 //   /:year/games/:id   a game's scores in that year
 //   /games/:id         legacy game URL (redirects into the default year)
+//
+// A year's page may also carry its filters in the query, so a link can be
+// shared: /:year?players=Alice,Bob&hidePlayed=1 (see buildFilterSearch).
 
 export type ScoreboardRoute =
   | { kind: "home" }
@@ -34,3 +37,64 @@ export const parseScoreboardPath = (pathname: string): ScoreboardRoute => {
   }
   return { kind: "unknown" };
 };
+
+export interface FilterState {
+  players: string[];
+  hidePlayed: boolean;
+}
+
+const encodeName = (name: string): string =>
+  encodeURIComponent(name).replace(/'/g, "%27");
+
+// The query string ("?players=...&hidePlayed=1", or "" when no filter is on).
+// Names are encoded one by one and joined by literal commas, so a comma inside
+// a name stays distinguishable from the separator.
+export const buildFilterSearch = ({
+  players,
+  hidePlayed,
+}: FilterState): string => {
+  const parts: string[] = [];
+  if (players.length > 0) {
+    parts.push(`players=${players.map(encodeName).join(",")}`);
+  }
+  if (hidePlayed) parts.push("hidePlayed=1");
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+};
+
+const decodePiece = (piece: string): string => {
+  try {
+    return decodeURIComponent(piece).trim();
+  } catch {
+    return "";
+  }
+};
+
+// The inverse of buildFilterSearch. null when neither param is present, so the
+// caller falls back to its saved filters. Splits by hand: URLSearchParams would
+// decode the commas before they can be told apart from a separator.
+export const parseFilterSearch = (search: string): FilterState | null => {
+  let players: string[] | null = null;
+  let hidePlayed: boolean | null = null;
+  for (const pair of search.replace(/^\?/, "").split("&")) {
+    const at = pair.indexOf("=");
+    const key = at === -1 ? pair : pair.slice(0, at);
+    const value = at === -1 ? "" : pair.slice(at + 1);
+    if (key === "players") {
+      players = [
+        ...new Set(
+          value
+            .split(",")
+            .map(decodePiece)
+            .filter((n) => n !== ""),
+        ),
+      ];
+    } else if (key === "hidePlayed") {
+      hidePlayed = value === "1";
+    }
+  }
+  if (players === null && hidePlayed === null) return null;
+  return { players: players ?? [], hidePlayed: hidePlayed ?? false };
+};
+
+export const sharePath = (year: string | number, filters: FilterState) =>
+  `${yearPath(year)}${buildFilterSearch(filters)}`;

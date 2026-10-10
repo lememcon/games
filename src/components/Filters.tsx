@@ -1,4 +1,4 @@
-import { Checkbox, Group, Text } from "@mantine/core";
+import { Button, Checkbox, CopyButton, Group, Text } from "@mantine/core";
 
 import PlayerFilter from "@/components/PlayerFilter";
 
@@ -10,6 +10,7 @@ interface FiltersProps {
   onHidePlayedChange: (value: boolean) => void;
   shown: number;
   total: number;
+  shareUrl: string;
 }
 
 // The sticky filter bar: pick who's at the table, hide what they've played, and
@@ -22,6 +23,7 @@ const Filters = ({
   onHidePlayedChange,
   shown,
   total,
+  shareUrl,
 }: FiltersProps) => (
   <div className="tray-filters">
     <PlayerFilter
@@ -33,11 +35,20 @@ const Filters = ({
       <Text size="sm" c="dimmed" ff="monospace">
         {shown} of {total} games
       </Text>
-      <Checkbox
-        checked={hidePlayed}
-        onChange={(event) => onHidePlayedChange(event.currentTarget.checked)}
-        label="Hide games played by selected players"
-      />
+      <Group gap="sm" align="center">
+        <Checkbox
+          checked={hidePlayed}
+          onChange={(event) => onHidePlayedChange(event.currentTarget.checked)}
+          label="Hide games played by selected players"
+        />
+        <CopyButton value={shareUrl}>
+          {({ copied, copy }) => (
+            <Button variant="light" size="compact-sm" onClick={copy}>
+              {copied ? "Copied" : "Copy link"}
+            </Button>
+          )}
+        </CopyButton>
+      </Group>
     </Group>
   </div>
 );

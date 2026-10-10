@@ -42,6 +42,8 @@ A separate `commitlint` job runs on pull requests only.
 - `src/lib/profile.ts` — pure display-name validation and profile stat formatters;
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
   react-refresh).
+- `src/lib/routes.ts` — scoreboard URL scheme; also owns the shareable filter query
+  (`?players=A,B&hidePlayed=1`: `buildFilterSearch`, `parseFilterSearch`, `sharePath`).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
   state), `usePlayedCounts` (server-backed per-member counts via `/api/me/played`, with a
   import of the legacy `played_counts_<year>` localStorage key the first time that
