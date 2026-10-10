@@ -115,3 +115,7 @@ export const parseFilterSearch = (search: string): FilterState | null => {
 
 export const sharePath = (year: string | number, filters: FilterState) =>
   `${yearPath(year)}${buildFilterSearch(filters)}`;
+
+// A member's year in review.
+export const recapPath = (discordId: string, year: string | number): string =>
+  `/players/${encodeURIComponent(discordId)}/recap/${year}`;

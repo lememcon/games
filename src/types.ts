@@ -313,3 +313,39 @@ export interface UnplayedGame {
   bgg_id: number;
   name: string;
 }
+
+// The year in review page (src/lib/recap.ts). Score is a preference rating and
+// rank the member's ordering of games (1 = favourite), never a game result.
+export interface RecapGame {
+  bggId: number;
+  game: string;
+}
+
+export interface RecapRanked extends RecapGame {
+  // Position in the year's group top list.
+  rank: number;
+}
+
+export interface RecapFacts {
+  totalPlays: number;
+  // Null when no member played anything that year.
+  groupAvgPlays: number | null;
+  mostPlayed: (RecapGame & { plays: number }) | null;
+  // Games the member ranked first, best rated first; `games` holds at most 3.
+  topPicks: { total: number; games: TopGame[] };
+  highestRating: TopGame | null;
+  groupFavourite: (RecapGame & { plays: number; memberPlays: number }) | null;
+  // Games only the member played; `games` holds at most 5.
+  onlyYou: { total: number; games: RecapGame[] };
+  versusPrevious: { year: number; gamesPlayed: number; delta: number } | null;
+}
+
+export interface Recap {
+  // Games the member logged a play for that year.
+  playedGames: number;
+  // Group top games the member never played, in rank order.
+  unplayedTop: RecapRanked[];
+  // Games played that year and in no earlier year; null with no earlier data.
+  newPicks: RecapGame[] | null;
+  facts: RecapFacts;
+}

@@ -113,4 +113,25 @@ describe("PublicProfile", () => {
     expect(screen.getByText("total plays")).toBeInTheDocument();
     expect(screen.queryByText("years of data")).toBeNull();
   });
+
+  it("links to the year in review for each year", () => {
+    set({ status: "ready", profile: base });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(
+      screen.getByRole("link", { name: "2025 in review" }),
+    ).toHaveAttribute("href", "/players/5/recap/2025");
+  });
+
+  it("has no recap links without stats or years", () => {
+    set({ status: "ready", profile: { ...base, stats: null } });
+    const { unmount } = renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.queryByText(/in review/)).toBeNull();
+    unmount();
+    set({
+      status: "ready",
+      profile: { ...base, stats: { ...base.stats!, topByYear: [] } },
+    });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.queryByText(/in review/)).toBeNull();
+  });
 });

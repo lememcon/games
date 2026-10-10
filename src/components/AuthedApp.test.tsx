@@ -19,6 +19,13 @@ vi.mock("@/components/PublicProfile", () => ({
     <div>public profile {discordId}</div>
   ),
 }));
+vi.mock("@/components/YearRecap", () => ({
+  default: ({ discordId, year }: { discordId: string; year: string }) => (
+    <div>
+      recap {discordId} {year}
+    </div>
+  ),
+}));
 vi.mock("@/components/admin/AdminImport", () => ({
   default: () => <div>admin import</div>,
 }));
@@ -114,5 +121,12 @@ describe("AuthedApp", () => {
       screen.getByText("public profile 123456789012345"),
     ).toBeInTheDocument();
     expect(screen.queryByText("scoreboard")).toBeNull();
+  });
+
+  it("renders a member's year in review", () => {
+    at("/players/123/recap/2025", member);
+    expect(screen.getByText("recap 123 2025")).toBeInTheDocument();
+    expect(screen.queryByText("scoreboard")).toBeNull();
+    expect(screen.queryByText(/public profile/)).toBeNull();
   });
 });
