@@ -70,6 +70,11 @@ describe("MyPlayerRange", () => {
     expect(min(v)).toHaveValue("1");
     expect(max(v)).toHaveValue("9");
     expect(v.getByText("Your override")).toBeInTheDocument();
+    expect(
+      v.getByText("Must stay within 2-6 (can't widen)"),
+    ).toBeInTheDocument();
+    expect(v.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(v.getByRole("button", { name: "Reset" })).toBeEnabled();
     await user.click(v.getByRole("button", { name: "Reset" }));
     expect(v.onReset).toHaveBeenCalled();
   });

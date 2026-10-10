@@ -47,11 +47,7 @@ const games: SelectedGame[] = [
 
 const gameData: GamesData = {
   100: { players: { min: 2, max: 4 } },
-  400: {
-    players: { min: 4, max: 4 },
-    bggPlayers: { min: 2, max: 6 },
-    overridden: true,
-  },
+  400: { players: { min: 4, max: 4 } },
 };
 
 const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
@@ -70,12 +66,6 @@ const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
   );
 
 describe("GamesList", () => {
-  it("shows BGG's range struck through for a restricted game", () => {
-    const { container } = renderList();
-    expect(container.querySelectorAll("s")).toHaveLength(1);
-    expect(container.querySelector("s")).toHaveTextContent("2-6");
-  });
-
   it("links every game into the given year", () => {
     const { getAllByRole } = renderList();
     const hrefs = getAllByRole("link").map((l) => l.getAttribute("href"));

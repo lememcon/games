@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { gameOrder, mockApi, overriddenGames } from "./fixtures";
+import { gameOrder, mockApi } from "./fixtures";
 
 test("scoreboard ranks the newest year's games", async ({ page }) => {
   await mockApi(page);
@@ -57,21 +57,4 @@ test("played counter updates and saves to the server", async ({ page }) => {
   await expect(page.getByText("Played 1×")).toBeVisible();
   await expect(page.getByText("Not Played")).toHaveCount(3);
   expect((await put).postDataJSON()).toEqual({ count: 1 });
-});
-
-test("a restricted player count filters by the override and shows BGG's range", async ({
-  page,
-}) => {
-  await mockApi(page, { games: overriddenGames });
-  await page.goto("/");
-  await expect(page.getByText("4 of 4 games")).toBeVisible();
-
-  await expect(page.locator("s")).toHaveText("2-4");
-  await expect(page.getByText("(restricted from 2-4)")).toBeAttached();
-
-  // Alice and Bob make two players: Delta (now 4 only) drops out.
-  await page.getByRole("button", { name: "Alice" }).click();
-  await page.getByRole("button", { name: "Bob" }).click();
-  await expect(page.getByText("3 of 4 games")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Delta" })).toHaveCount(0);
 });

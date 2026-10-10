@@ -17,7 +17,6 @@ import {
 } from "@mantine/core";
 
 import BggDataPanel from "@/components/admin/BggDataPanel";
-import PlayerCountsPanel from "@/components/admin/PlayerCountsPanel";
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
 import { splitUsers, timeAgo } from "@/lib/users";
@@ -239,7 +238,6 @@ const AdminPage = ({ meId }: { meId: string }) => {
       </Modal>
 
       <PlayerLinksPanel />
-      <PlayerCountsPanel />
       <BggDataPanel />
     </Stack>
   );
