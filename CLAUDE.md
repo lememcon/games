@@ -17,6 +17,9 @@ Netlify serves the static SPA at games.lememcon.com (auto-builds `main`). The ba
 - `pnpm test:coverage` — coverage with the 90% gate enforced
 - `pnpm server:dev` / `server:build` / `server:start` — run, bundle (tsup to `dist-server/`),
   and start the server; `pnpm db:generate` / `db:migrate` for Drizzle migrations
+- `pnpm test:e2e` — Playwright smoke tests (`tests/e2e/`, API mocked, own Vite on :3100);
+  run `pnpm exec playwright install chromium` once first. Separate CI job `e2e`, not part
+  of `pnpm check`
 - `pnpm typecheck` — `tsc --noEmit` across the app and node configs
 - `pnpm fix` — Prettier then ESLint `--fix` (run this instead of hand-formatting)
 - `pnpm check` — local gate: lint → pretty → typecheck → test:run → build → server:build
@@ -110,8 +113,10 @@ A separate `commitlint` job runs on pull requests only.
   `server-db` project (`server/db/**`) runs the real migrations and SQL on in-process
   PGlite. No test needs an external Postgres or the network; running the app locally
   (`pnpm dev` proxies `/api` to `pnpm server:dev`) needs the server, Postgres and Discord keys.
-- **No integration or e2e tests yet.** Unit tests with injected deps cover the logic;
-  a real-Postgres or browser suite is deliberately deferred.
+- **E2E smoke tests are mocked.** `tests/e2e/` (Playwright, Chromium) drives the real SPA
+  against mocked `/api` routes (`fixtures.ts` `mockApi`); there is no real server or
+  Postgres in them, and a real-Postgres suite is deliberately deferred. They sit outside
+  Vitest and the coverage gate.
 
 ### Gotchas
 

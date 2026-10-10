@@ -10,5 +10,12 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "drizzle.config.ts", "tsup.config.ts", "server"]
+  "include": [
+    "vite.config.ts",
+    "drizzle.config.ts",
+    "tsup.config.ts",
+    "playwright.config.ts",
+    "server",
+    "tests"
+  ]
 }
