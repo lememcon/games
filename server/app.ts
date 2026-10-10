@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 
 import { bggRoutes } from "./bgg/routes";
@@ -44,6 +45,11 @@ export function createApp(deps: AppDeps) {
       permissionsPolicy: { camera: [], microphone: [], geolocation: [] },
     }),
   );
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) return err.getResponse();
+    console.error(err);
+    return c.json({ error: "internal_error" }, 500);
+  });
   app.use(compress());
   app.get("/healthz", (c) => c.json({ status: "ok" }));
 

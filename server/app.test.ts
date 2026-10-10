@@ -1,3 +1,4 @@
+import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
@@ -163,6 +164,44 @@ describe("body size limit", () => {
       body: JSON.stringify({ pad: big }),
     });
     expect(res.status).not.toBe(413);
+  });
+});
+
+describe("error handler", () => {
+  const throwing = (error: Error) =>
+    createApp({
+      baseUrl: BASE,
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data: fakeData().data,
+      links: fakeLinks().links,
+      profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
+      resolveSession: async () => {
+        throw error;
+      },
+    });
+
+  it("answers JSON 500 without a stack and logs the error", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("db password leaked");
+    const res = await throwing(err).request("/api/me");
+    expect(res.status).toBe(500);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toEqual({ error: "internal_error" });
+    expect(spy).toHaveBeenCalledWith(err);
+    spy.mockRestore();
+  });
+
+  it("passes an HTTPException response through unlogged", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await throwing(
+      new HTTPException(418, { res: new Response("teapot", { status: 418 }) }),
+    ).request("/api/me");
+    expect(res.status).toBe(418);
+    expect(await res.text()).toBe("teapot");
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 
