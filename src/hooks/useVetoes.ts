@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
@@ -33,6 +33,11 @@ const useVetoes = (year: string, fetchImpl: typeof fetch = fetch) => {
     error: string | null;
   }>({ year: "", saving: false, error: null });
 
+  const yearRef = useRef(year);
+  useEffect(() => {
+    yearRef.current = year;
+  }, [year]);
+
   useEffect(() => {
     if (year === "") return;
     let cancelled = false;
@@ -59,7 +64,8 @@ const useVetoes = (year: string, fetchImpl: typeof fetch = fetch) => {
       // Refetch either way so a stale view resyncs.
       try {
         const d = await vetoesApi(fetchImpl).listYear(year);
-        setLoaded({ year, all: vetoesByMember(d.vetoes) });
+        if (yearRef.current === year)
+          setLoaded({ year, all: vetoesByMember(d.vetoes) });
       } catch {
         error ??= GENERIC_ERROR;
       }

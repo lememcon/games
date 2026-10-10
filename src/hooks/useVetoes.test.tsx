@@ -114,4 +114,32 @@ describe("useVetoes", () => {
       ),
     );
   });
+
+  it("ignores a refetch that resolves after the year changed", async () => {
+    let finishOld!: (r: Response) => void;
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: mine }))
+      .mockResolvedValueOnce(none())
+      .mockReturnValueOnce(new Promise<Response>((r) => (finishOld = r)))
+      .mockResolvedValueOnce(res({ vetoes: [{ discordId: "d2", bggId: 9 }] }));
+    const hook = renderHook(({ year }) => useVetoes(year, fetchImpl), {
+      initialProps: { year: "2025" },
+    });
+    await waitFor(() => expect(hook.result.current.all).not.toEqual({}));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = hook.result.current.veto(2);
+    });
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(3));
+    hook.rerender({ year: "2026" });
+    await waitFor(() =>
+      expect(hook.result.current.all).toEqual({ d2: new Set(["9"]) }),
+    );
+    await act(async () => {
+      finishOld(res({ vetoes: [] }));
+      await pending;
+    });
+    expect(hook.result.current.all).toEqual({ d2: new Set(["9"]) });
+  });
 });
