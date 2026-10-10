@@ -373,18 +373,15 @@ export function fakeMemberOverrides(
 }
 
 /**
- * In-memory MemberVetoStore for tests. `years` are the known years, `games`
- * the known games by bgg id (name or null); it applies the same refusals as
- * the SQL store.
+ * In-memory MemberVetoStore for tests. `games` are the known games by bgg id
+ * (name or null); it applies the same refusals as the SQL store.
  */
 export function fakeMemberVetoes(
   initial: {
-    years?: number[];
     games?: Record<number, string | null>;
-    vetoes?: { discordId: string; year: number; bggId: number }[];
+    vetoes?: { discordId: string; bggId: number }[];
   } = {},
 ) {
-  const years = new Set(initial.years ?? [2025]);
   const games = new Map(
     Object.entries(initial.games ?? { 1: "Root" }).map(([id, n]) => [
       Number(id),
@@ -392,40 +389,28 @@ export function fakeMemberVetoes(
     ]),
   );
   const rows = [...(initial.vetoes ?? [])];
-  const calls: { discordId: string; year: number; bggId: number }[] = [];
+  const calls: { discordId: string; bggId: number }[] = [];
   const memberVetoes: MemberVetoStore = {
-    getAll: async (year) =>
-      years.has(year)
-        ? rows
-            .filter((r) => r.year === year)
-            .map(({ discordId, bggId }) => ({ discordId, bggId }))
-        : null,
+    getAll: async () =>
+      rows.map(({ discordId, bggId }) => ({ discordId, bggId })),
     listMine: async (discordId) =>
       rows
         .filter((r) => r.discordId === discordId)
-        .map(({ year, bggId }): MyVetoRow => ({
-          year,
+        .map(({ bggId }): MyVetoRow => ({
           bggId,
           name: games.get(bggId) ?? null,
         })),
-    set: async (discordId, year, bggId) => {
-      calls.push({ discordId, year, bggId });
-      if (!years.has(year)) return refuse(404, "unknown_year");
+    set: async (discordId, bggId) => {
+      calls.push({ discordId, bggId });
       if (!games.has(bggId)) return refuse(404, "unknown_game");
-      if (
-        !rows.some(
-          (r) =>
-            r.discordId === discordId && r.year === year && r.bggId === bggId,
-        )
-      )
-        rows.push({ discordId, year, bggId });
+      if (!rows.some((r) => r.discordId === discordId && r.bggId === bggId))
+        rows.push({ discordId, bggId });
       return { ok: true, value: null };
     },
-    clear: async (discordId, year, bggId) => {
-      calls.push({ discordId, year, bggId });
+    clear: async (discordId, bggId) => {
+      calls.push({ discordId, bggId });
       const i = rows.findIndex(
-        (r) =>
-          r.discordId === discordId && r.year === year && r.bggId === bggId,
+        (r) => r.discordId === discordId && r.bggId === bggId,
       );
       if (i >= 0) rows.splice(i, 1);
     },

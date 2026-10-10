@@ -124,7 +124,7 @@ export const rangesByMember = (
   return result;
 };
 
-// Games each player vetoed this year by player name, as bgg id strings.
+// Games each player vetoed by player name, as bgg id strings.
 export type PlayerVetoes = Record<string, ReadonlySet<string>>;
 
 // Groups the flat veto list by discord id, then bgg id.

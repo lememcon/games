@@ -51,7 +51,7 @@ const state = vi.hoisted(() => ({
   // Everyone's own player count ranges, by discord id then bgg id.
   ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
   savePlayerRange: vi.fn(),
-  // Everyone's vetoes for the year, by discord id then bgg id.
+  // Everyone's vetoes, by discord id then bgg id.
   vetoes: {} as Record<string, ReadonlySet<string>>,
   useVetoes: vi.fn(),
   unplayed: [] as { bgg_id: number; name: string }[],
@@ -93,8 +93,8 @@ vi.mock("@/hooks/usePlayerOverrides", () => ({
 }));
 
 vi.mock("@/hooks/useVetoes", () => ({
-  default: (year: string) => {
-    state.useVetoes(year);
+  default: (...args: unknown[]) => {
+    state.useVetoes(...args);
     return {
       all: state.vetoes,
       saving: false,
@@ -584,10 +584,10 @@ describe("Scoreboard", () => {
       expect(getByText("Belfort")).toBeInTheDocument();
     });
 
-    it("fetches the viewed year's vetoes", () => {
+    it("fetches vetoes without a year", () => {
       at("/2026");
       render();
-      expect(state.useVetoes).toHaveBeenCalledWith("2026");
+      expect(state.useVetoes).toHaveBeenCalledWith();
     });
 
     it("shows the member's veto switch on the game page", () => {

@@ -7,7 +7,7 @@ interface MyVetoProps {
   onChange: (vetoed: boolean) => void;
 }
 
-// Lets a member keep this game out of suggestions for this year in any group
+// Lets a member keep this game out of suggestions in every year for any group
 // that includes them. Their scores stay on the page and in the tables.
 const MyVeto = ({ vetoed, saving, error, onChange }: MyVetoProps) => (
   <section className="my-veto">
@@ -18,8 +18,8 @@ const MyVeto = ({ vetoed, saving, error, onChange }: MyVetoProps) => (
       onChange={(e) => onChange(e.currentTarget.checked)}
     />
     <Text size="sm" c="dimmed">
-      Leave this game out of suggestions this year for any group that includes
-      you. It only applies when your name is linked to your account.
+      Leave this game out of suggestions in every year for any group that
+      includes you. It only applies when your name is linked to your account.
     </Text>
     {error && (
       <Text size="xs" c="red" role="alert">

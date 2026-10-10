@@ -14,7 +14,7 @@ const hook = vi.hoisted(() => ({
 }));
 const vetoes = vi.hoisted(() => ({
   state: {
-    vetoes: [] as { year: number; bggId: number; name: string | null }[],
+    vetoes: [] as { bggId: number; name: string | null }[],
     loading: false,
     error: null as string | null,
     clear: vi.fn(),
@@ -156,24 +156,22 @@ describe("ProfilePage", () => {
       expect(screen.queryByText("You haven't vetoed any games.")).toBeNull();
     });
 
-    it("groups by year with links and undoes one", async () => {
+    it("lists each game once as plain text and undoes one", async () => {
       vetoes.state.vetoes = [
-        { year: 2026, bggId: 1, name: "Root" },
-        { year: 2026, bggId: 3, name: null },
-        { year: 2025, bggId: 2, name: "Azul" },
+        { bggId: 2, name: "Azul" },
+        { bggId: 1, name: "Root" },
+        { bggId: 3, name: null },
       ];
       renderPage();
-      expect(screen.getByText("2026")).toBeInTheDocument();
-      expect(screen.getByText("2025")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Root" })).toHaveAttribute(
-        "href",
-        "/2026/games/1",
-      );
-      expect(screen.getByRole("link", { name: "Game 3" })).toBeInTheDocument();
+      expect(screen.getByText("Azul")).toBeInTheDocument();
+      expect(screen.getByText("Root")).toBeInTheDocument();
+      expect(screen.getByText("Game 3")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Root" })).toBeNull();
+      expect(screen.queryByText("2025")).toBeNull();
       await userEvent.click(
-        screen.getByRole("button", { name: "Undo veto of Azul in 2025" }),
+        screen.getByRole("button", { name: "Undo veto of Azul" }),
       );
-      expect(vetoes.state.clear).toHaveBeenCalledWith(2025, 2);
+      expect(vetoes.state.clear).toHaveBeenCalledWith(2);
     });
 
     it("shows an error", () => {

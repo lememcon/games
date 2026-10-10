@@ -15,7 +15,6 @@ import {
 import useDisplayName from "@/hooks/useDisplayName";
 import useMyVetoes from "@/hooks/useMyVetoes";
 import { MAX_DISPLAY_NAME, displayNameError } from "@/lib/profile";
-import { gamePath } from "@/lib/routes";
 import type { ApprovedUser } from "@/types";
 
 interface ProfilePageProps {
@@ -30,7 +29,6 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
   const { save, saving, error } = useDisplayName(onSaved);
   const invalid = displayNameError(value);
   const myVetoes = useMyVetoes();
-  const years = [...new Set(myVetoes.vetoes.map((v) => v.year))];
 
   const submit = async (displayName: string | null) => {
     setSaved(false);
@@ -90,8 +88,8 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
       )}
       <Title order={3}>Games you&apos;ve vetoed</Title>
       <Text c="dimmed" size="sm">
-        These are left out of suggestions for any group that includes you, for
-        that year only.
+        These are left out of suggestions for any group that includes you, in
+        every year.
       </Text>
       {myVetoes.error && (
         <Alert color="red" role="alert">
@@ -101,28 +99,23 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
       {!myVetoes.loading && myVetoes.vetoes.length === 0 && (
         <Text size="sm">You haven&apos;t vetoed any games.</Text>
       )}
-      {years.map((year) => (
-        <Stack key={year} gap={4}>
-          <Text fw={600}>{year}</Text>
-          {myVetoes.vetoes
-            .filter((v) => v.year === year)
-            .map((v) => (
-              <Group key={v.bggId} justify="space-between" wrap="nowrap">
-                <Link href={gamePath(year, v.bggId)}>
-                  {v.name ?? `Game ${v.bggId}`}
-                </Link>
-                <Button
-                  size="xs"
-                  variant="default"
-                  aria-label={`Undo veto of ${v.name ?? `Game ${v.bggId}`} in ${year}`}
-                  onClick={() => myVetoes.clear(year, v.bggId)}
-                >
-                  Undo
-                </Button>
-              </Group>
-            ))}
+      {myVetoes.vetoes.length > 0 && (
+        <Stack gap={4}>
+          {myVetoes.vetoes.map((v) => (
+            <Group key={v.bggId} justify="space-between" wrap="nowrap">
+              <Text>{v.name ?? `Game ${v.bggId}`}</Text>
+              <Button
+                size="xs"
+                variant="default"
+                aria-label={`Undo veto of ${v.name ?? `Game ${v.bggId}`}`}
+                onClick={() => myVetoes.clear(v.bggId)}
+              >
+                Undo
+              </Button>
+            </Group>
+          ))}
         </Stack>
-      ))}
+      )}
     </Stack>
   );
 };
