@@ -66,6 +66,23 @@ export interface SelectedGame {
   image?: string;
 }
 
+// One subgroup of a suggested split: its members, their top games (every member
+// scored them) and the name of the game the headline plan picks for the group.
+export interface SplitGroup {
+  players: string[];
+  games: SelectedGame[];
+  picked: string;
+}
+
+// A suggested way to divide the selected players into smaller groups.
+// perPlayer is the picked games' summed score over the player count; delta is
+// perPlayer minus the best all-together game, or null when there is none.
+export interface GameSplit {
+  groups: SplitGroup[];
+  perPlayer: number;
+  delta: number | null;
+}
+
 // Account model served by the API (GET /api/me, GET /api/admin/users).
 export type Role = "member" | "admin";
 export type Status = "pending" | "approved";

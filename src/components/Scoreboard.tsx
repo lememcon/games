@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 
 import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
@@ -9,13 +9,18 @@ import Filters from "@/components/Filters";
 import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
+import SplitSuggestions from "@/components/SplitSuggestions";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
-import { buildSelectedGames, computeMaxScores } from "@/lib/games";
+import {
+  buildSelectedGames,
+  computeMaxScores,
+  suggestSplits,
+} from "@/lib/games";
 import images from "@/lib/images";
 import { PlayerColorProvider } from "@/lib/playerColors";
 import { gamePath, parseScoreboardPath, yearPath } from "@/lib/routes";
@@ -87,6 +92,25 @@ function Scoreboard({ user }: ScoreboardProps) {
     hidePlayed,
     getPlayedCount,
   });
+  const splits = useMemo(
+    () =>
+      suggestSplits({
+        byPlayer: data.by_player,
+        players,
+        gameData: game_data,
+        images,
+        hidePlayed,
+        getPlayedCount,
+      }),
+    [data.by_player, players, game_data, hidePlayed, getPlayedCount],
+  );
+  const splitSuggestions = (
+    <SplitSuggestions
+      splits={splits}
+      year={year ?? ""}
+      individualMax={individualMax}
+    />
+  );
 
   const skeleton = (
     <Stack gap="sm" mt="md">
@@ -180,24 +204,28 @@ function Scoreboard({ user }: ScoreboardProps) {
                 total={keys(data.by_game).length}
               />
               {games.length === 0 ? (
-                <Notice title="No games to rank">
-                  {players.length > 0
-                    ? "None of the ranked games include everyone you picked."
-                    : hidePlayed
-                      ? "You've played every ranked game. Nice work."
-                      : "Scores haven't been posted for this year yet."}
-                  {players.length > 0 && (
-                    <Button
-                      variant="light"
-                      mt="xs"
-                      onClick={() => setPlayers([])}
-                    >
-                      Clear players
-                    </Button>
-                  )}
-                </Notice>
+                <>
+                  <Notice title="No games to rank">
+                    {players.length > 0
+                      ? "None of the ranked games include everyone you picked."
+                      : hidePlayed
+                        ? "You've played every ranked game. Nice work."
+                        : "Scores haven't been posted for this year yet."}
+                    {players.length > 0 && (
+                      <Button
+                        variant="light"
+                        mt="xs"
+                        onClick={() => setPlayers([])}
+                      >
+                        Clear players
+                      </Button>
+                    )}
+                  </Notice>
+                  {splitSuggestions}
+                </>
               ) : (
                 <GamesList
+                  afterPodium={splitSuggestions}
                   games={games}
                   year={year}
                   selectedMax={selectedMax}

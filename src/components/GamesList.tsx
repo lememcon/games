@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
 import { realBounds } from "@/lib/games";
@@ -12,6 +14,8 @@ interface GamesListProps {
   getPlayedCount: (id: string) => number;
   onInc: (id: string) => void;
   onDec: (id: string) => void;
+  // Rendered between the podium and the remaining rows.
+  afterPodium?: ReactNode;
 }
 
 // Only show real bounds; games missing metadata leave the range blank rather
@@ -30,6 +34,7 @@ const GamesList = ({
   getPlayedCount,
   onInc,
   onDec,
+  afterPodium,
 }: GamesListProps) => {
   const podium = games.slice(0, 3);
   const rest = games.slice(3);
@@ -52,6 +57,8 @@ const GamesList = ({
           />
         ))}
       </div>
+
+      {afterPodium}
 
       {rest.length > 0 && (
         <div className="tray-rows">

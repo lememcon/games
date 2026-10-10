@@ -94,4 +94,21 @@ describe("GamesList", () => {
     expect(onInc).toHaveBeenCalledWith("400");
     expect(onDec).toHaveBeenCalledWith("400");
   });
+
+  it("renders the afterPodium slot between the podium and the rows", () => {
+    const { getByText, getByRole } = renderList({
+      afterPodium: <p>Slot content</p>,
+    });
+
+    const slot = getByText("Slot content");
+    const podiumGame = getByRole("link", { name: "Go" });
+    const rowGame = getByRole("link", { name: "Nim" });
+    expect(
+      podiumGame.compareDocumentPosition(slot) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      slot.compareDocumentPosition(rowGame) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
