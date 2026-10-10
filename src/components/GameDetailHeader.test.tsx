@@ -17,10 +17,12 @@ describe("GameDetailHeader", () => {
     expect(getByRole("heading", { name: "Root" })).toBeInTheDocument();
     expect(container.textContent).toContain("Players:");
     expect(container.textContent).toContain("2-4");
-    expect(getByRole("link", { name: "BGG Page" })).toHaveAttribute(
+    const link = getByRole("link", { name: "BGG Page" });
+    expect(link).toHaveAttribute(
       "href",
       "https://boardgamegeek.com/boardgame/237182/",
     );
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("omits the player range when bounds is null", () => {

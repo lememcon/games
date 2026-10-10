@@ -35,7 +35,7 @@ const GameDetailHeader = ({
           </>
         )}
       </p>
-      <a href={`${BGG_URL}${id}/`} target="_blank">
+      <a href={`${BGG_URL}${id}/`} target="_blank" rel="noopener noreferrer">
         BGG Page
       </a>
     </div>
