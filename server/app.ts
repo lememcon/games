@@ -8,6 +8,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { bggRoutes } from "./bgg/routes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { dataRoutes } from "./routes/data";
+import { gamePlayerRoutes } from "./routes/gamePlayers";
 import { importRoutes } from "./routes/import";
 import { linkRoutes } from "./routes/links";
 import { playedRoutes } from "./routes/played";
@@ -96,6 +97,7 @@ export function createApp(deps: AppDeps) {
   if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
   api.route("/admin", importRoutes(deps.data));
   api.route("/admin", linkRoutes(deps.links));
+  api.route("/admin", gamePlayerRoutes(deps.data));
   api.route("/", profileRoutes(deps.profiles));
   api.route("/", playedRoutes(deps.played));
   api.route("/", dataRoutes(deps.data));

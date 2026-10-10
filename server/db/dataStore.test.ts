@@ -441,3 +441,113 @@ describe("display names", () => {
     expect(result).toMatchObject({ ok: true, value: { players: { new: 0 } } });
   });
 });
+
+describe("player count overrides", () => {
+  const range = (min: number, max: number) => ({ min, max });
+  const ROOT = 237182;
+
+  it("replaces the range for scoring while keeping BGG's", async () => {
+    const before = (await store.getGames())[String(ROOT)];
+    expect(before.overridden).toBeUndefined();
+    const bgg = before.players!;
+    expect(await store.setPlayerOverride(ROOT, range(4, 4), "1")).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect((await store.getGames())[String(ROOT)]).toEqual({
+      ...before,
+      players: range(4, 4),
+      bggPlayers: bgg,
+      overridden: true,
+    });
+    await store.setPlayerOverride(ROOT, range(3, 5), "42");
+    const { rows } = await client.query(
+      "SELECT min_players, max_players, updated_by FROM game_player_override WHERE bgg_id = $1",
+      [ROOT],
+    );
+    expect(rows).toEqual([
+      { min_players: 3, max_players: 5, updated_by: "42" },
+    ]);
+  });
+
+  it("lists named games with BGG range and override", async () => {
+    const list = await store.listGamePlayers();
+    const root = list.find((g) => g.bggId === ROOT)!;
+    expect(root.override).toEqual(range(3, 5));
+    expect(root.bgg).toEqual(realGames[String(ROOT)].players);
+    expect(list.every((g) => g.name)).toBe(true);
+    const names = list.map((g) => g.name.toLowerCase());
+    expect(names).toEqual([...names].sort());
+  });
+
+  it("clears the override, restoring BGG's range", async () => {
+    await store.clearPlayerOverride(ROOT);
+    expect((await store.getGames())[String(ROOT)]).toEqual(
+      realGames[String(ROOT)],
+    );
+    await expect(store.clearPlayerOverride(ROOT)).resolves.toBeUndefined();
+  });
+
+  it("refuses a game with no game row", async () => {
+    expect(await store.setPlayerOverride(987654, range(1, 2), "1")).toEqual({
+      ok: false,
+      status: 404,
+      error: "unknown_game",
+    });
+  });
+
+  it("deletes the override when the range equals BGG's", async () => {
+    await store.setPlayerOverride(ROOT, range(4, 4), "1");
+    const bgg = realGames[String(ROOT)].players;
+    expect(await store.setPlayerOverride(ROOT, bgg, "1")).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(
+      (await client.query("SELECT 1 FROM game_player_override")).rows,
+    ).toEqual([]);
+  });
+
+  it("survives a BGG metadata refresh and masks the new range", async () => {
+    await store.setPlayerOverride(ROOT, range(4, 4), "1");
+    await client.query(
+      "UPDATE game_metadata SET min_players = 1, max_players = 8 WHERE bgg_id = $1",
+      [ROOT],
+    );
+    expect((await store.getGames())[String(ROOT)]).toMatchObject({
+      players: range(4, 4),
+      bggPlayers: range(1, 8),
+      overridden: true,
+    });
+    await store.clearPlayerOverride(ROOT);
+  });
+
+  it("applies to a game with a game row and no metadata", async () => {
+    await client.query(
+      "INSERT INTO game (bgg_id, name) VALUES (777001, 'Bare')",
+    );
+    expect(
+      await store.setPlayerOverride(777001, range(2, 3), "1"),
+    ).toMatchObject({ ok: true });
+    expect((await store.getGames())["777001"]).toEqual({
+      players: range(2, 3),
+      overridden: true,
+    });
+    expect(
+      (await store.listGamePlayers()).find((g) => g.bggId === 777001),
+    ).toEqual({
+      bggId: 777001,
+      name: "Bare",
+      bgg: null,
+      override: range(2, 3),
+    });
+  });
+
+  it("enforces the range check in the database", async () => {
+    await expect(
+      client.query(
+        "INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (777001, 5, 4)",
+      ),
+    ).rejects.toThrow();
+  });
+});

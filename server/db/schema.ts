@@ -163,6 +163,30 @@ export const game = pgTable("game", {
   name: text("name"),
 });
 
+/**
+ * An admin restriction of a game's player range. The BGG range stays in
+ * `game_metadata`; reads prefer this row. Stored only when it differs from BGG.
+ */
+export const gamePlayerOverride = pgTable(
+  "game_player_override",
+  {
+    bggId: integer("bgg_id")
+      .primaryKey()
+      .references(() => game.bggId),
+    minPlayers: integer("min_players").notNull(),
+    maxPlayers: integer("max_players").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    /** Discord id of the admin who last changed it. */
+    updatedBy: text("updated_by"),
+  },
+  (table) => [
+    check(
+      "game_player_override_range_check",
+      sql`${table.minPlayers} >= 1 and ${table.minPlayers} <= ${table.maxPlayers} and ${table.maxPlayers} <= 99`,
+    ),
+  ],
+);
+
 /** Players are the same person when names differ only by case. */
 export const player = pgTable(
   "player",
