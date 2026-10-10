@@ -16,6 +16,8 @@ const defaults = {
   onPlayersChange: () => {},
   hidePlayed: false,
   onHidePlayedChange: () => {},
+  sortMode: "total" as const,
+  onSortModeChange: () => {},
   shown: 3,
   total: 12,
   shareUrl: "https://games.example/2025?players=alice",
@@ -63,6 +65,31 @@ describe("Filters", () => {
 
     await user.click(alice);
     expect(onPlayersChange).toHaveBeenCalledWith(["alice"]);
+  });
+
+  it("offers the sort modes with the current one selected", () => {
+    const { getByRole } = renderWithMantine(
+      <Filters {...defaults} sortMode="even" />,
+    );
+
+    expect(
+      getByRole("radiogroup", { name: "Sort games by" }),
+    ).toBeInTheDocument();
+    expect(getByRole("radio", { name: "Most even" })).toBeChecked();
+    expect(getByRole("radio", { name: "Total" })).not.toBeChecked();
+    expect(getByRole("radio", { name: "Lowest rank" })).toBeInTheDocument();
+  });
+
+  it("reports a picked sort mode", async () => {
+    const user = userEvent.setup();
+    const onSortModeChange = vi.fn();
+    const { getByText } = renderWithMantine(
+      <Filters {...defaults} onSortModeChange={onSortModeChange} />,
+    );
+
+    await user.click(getByText("Lowest rank"));
+
+    expect(onSortModeChange).toHaveBeenCalledWith("lowest");
   });
 
   it("shows how many games are in view of the total", () => {

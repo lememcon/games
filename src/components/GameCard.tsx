@@ -2,6 +2,7 @@ import { Link } from "wouter";
 
 import PlayedByList from "@/components/PlayedByList";
 import PlayedCounter from "@/components/PlayedCounter";
+import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
 import { PALETTE, medalColor } from "@/lib/colors";
 import { formatBounds } from "@/lib/games";
@@ -18,6 +19,8 @@ interface GameCardProps {
   played: number;
   onInc: () => void;
   onDec: () => void;
+  // Name of the least happy scorer, shown on the top result only.
+  leastHappy?: string | null;
 }
 
 // The podium unit: a full box-card with cover art, a corner rank chip, and the
@@ -33,6 +36,7 @@ const GameCard = ({
   played,
   onInc,
   onDec,
+  leastHappy,
 }: GameCardProps) => {
   const chip = medalColor(rank) ?? PALETTE[(rank - 1) % PALETTE.length];
 
@@ -65,6 +69,17 @@ const GameCard = ({
           selectedMax={selectedMax}
           individualMax={individualMax}
         />
+
+        {leastHappy && (
+          <div className="tray-meta">
+            least happy:{" "}
+            <PlayerName
+              name={leastHappy}
+              discordId={game.players[leastHappy]?.discordId}
+              image={game.players[leastHappy]?.discordImage}
+            />
+          </div>
+        )}
 
         <PlayedByList playedBy={game.playedBy} />
 

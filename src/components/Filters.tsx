@@ -1,6 +1,15 @@
-import { Button, Checkbox, CopyButton, Group, Text } from "@mantine/core";
+import {
+  Button,
+  Checkbox,
+  CopyButton,
+  Group,
+  SegmentedControl,
+  Text,
+} from "@mantine/core";
 
 import PlayerFilter from "@/components/PlayerFilter";
+import { SORT_MODES, parseSortMode } from "@/lib/games";
+import type { SortMode } from "@/types";
 
 interface FiltersProps {
   players: string[];
@@ -8,6 +17,8 @@ interface FiltersProps {
   onPlayersChange: (value: string[]) => void;
   hidePlayed: boolean;
   onHidePlayedChange: (value: boolean) => void;
+  sortMode: SortMode;
+  onSortModeChange: (value: SortMode) => void;
   shown: number;
   total: number;
   shareUrl: string;
@@ -21,6 +32,8 @@ const Filters = ({
   onPlayersChange,
   hidePlayed,
   onHidePlayedChange,
+  sortMode,
+  onSortModeChange,
   shown,
   total,
   shareUrl,
@@ -36,6 +49,13 @@ const Filters = ({
         {shown} of {total} games
       </Text>
       <Group gap="sm" align="center">
+        <SegmentedControl
+          size="xs"
+          aria-label="Sort games by"
+          data={SORT_MODES}
+          value={sortMode}
+          onChange={(value) => onSortModeChange(parseSortMode(value))}
+        />
         <Checkbox
           checked={hidePlayed}
           onChange={(event) => onHidePlayedChange(event.currentTarget.checked)}

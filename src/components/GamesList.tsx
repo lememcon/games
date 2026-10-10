@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
-import { realBounds } from "@/lib/games";
+import { leastHappyPlayer, realBounds } from "@/lib/games";
 import type { GamesData, SelectedGame } from "@/types";
 
 interface GamesListProps {
@@ -38,6 +38,7 @@ const GamesList = ({
 }: GamesListProps) => {
   const podium = games.slice(0, 3);
   const rest = games.slice(3);
+  const leastHappy = games.length > 0 ? leastHappyPlayer(games[0]) : null;
 
   return (
     <div className="tray-list">
@@ -54,6 +55,7 @@ const GamesList = ({
             played={getPlayedCount(game.id)}
             onInc={() => onInc(game.id)}
             onDec={() => onDec(game.id)}
+            leastHappy={i === 0 ? leastHappy : null}
           />
         ))}
       </div>
