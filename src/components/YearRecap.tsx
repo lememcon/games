@@ -95,8 +95,15 @@ const Row = ({ label, children }: { label: string; children: string }) => (
   </Group>
 );
 
-const Loaded = ({ discordId, year }: { discordId: string; year: string }) => {
-  const { years } = useYears();
+const Loaded = ({
+  discordId,
+  year,
+  years,
+}: {
+  discordId: string;
+  year: string;
+  years: string[];
+}) => {
   const earlierYears = years.filter((y) => y < year);
   const data = useData(year);
   const { games, loading: gamesLoading, error: gamesError } = useGames();
@@ -261,7 +268,7 @@ const YearRecap = ({
       </Alert>
     );
   }
-  return <Loaded discordId={discordId} year={year} />;
+  return <Loaded discordId={discordId} year={year} years={years} />;
 };
 
 export default YearRecap;

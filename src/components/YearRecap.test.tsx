@@ -13,11 +13,17 @@ const h = vi.hoisted(() => ({
   games: { games: {}, loading: false, error: false },
   profile: { status: "loading" } as unknown,
   played: { status: "loading" } as unknown,
+  useYears: vi.fn(),
   useData: vi.fn(),
   useMemberPlayed: vi.fn(),
   useProfile: vi.fn(),
 }));
-vi.mock("@/hooks/useYears", () => ({ default: () => h.years }));
+vi.mock("@/hooks/useYears", () => ({
+  default: () => {
+    h.useYears();
+    return h.years;
+  },
+}));
 vi.mock("@/hooks/useGames", () => ({ default: () => h.games }));
 vi.mock("@/hooks/useData", () => ({
   default: (y: string) => {
@@ -156,10 +162,16 @@ describe("YearRecap", () => {
     show();
     expect(h.useData).toHaveBeenCalledWith("2025");
     expect(h.useProfile).toHaveBeenCalledWith("me");
-    expect(h.useMemberPlayed).toHaveBeenCalledWith("me", "2025", [
+    expect(h.useMemberPlayed).toHaveBeenCalledTimes(1);
+    expect(h.useMemberPlayed).toHaveBeenNthCalledWith(1, "me", "2025", [
       "2023",
       "2024",
     ]);
+  });
+
+  it("loads the years once, in the outer component only", () => {
+    show();
+    expect(h.useYears).toHaveBeenCalledTimes(1);
   });
 
   it("says so when the year has no scores", () => {
