@@ -347,8 +347,13 @@ export interface ProfileStore {
 /** A member's play counts for one year, by bgg id; absent means zero. */
 export type PlayedCounts = Record<string, number>;
 
+/** Every member's play counts for one year: discord id, then bgg id. */
+export type AllPlayedCounts = Record<string, PlayedCounts>;
+
 /** All SQL for played counts lives behind this interface (server/db/playedStore.ts). */
 export interface PlayedStore {
+  /** Members with at least one play; null when the year is unknown. */
+  getAll(year: number): Promise<AllPlayedCounts | null>;
   /** Null when the year is unknown. */
   get(discordId: string, year: number): Promise<PlayedCounts | null>;
   /** Sets the count; 0 deletes the row. Refuses with 404 `unknown_year`. */

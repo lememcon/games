@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 
+import PlayedByList from "@/components/PlayedByList";
 import PlayedCounter from "@/components/PlayedCounter";
 import PlayerRange from "@/components/PlayerRange";
 import ScorePopover from "@/components/ScorePopover";
@@ -67,6 +68,8 @@ const GameCard = ({
           selectedMax={selectedMax}
           individualMax={individualMax}
         />
+
+        <PlayedByList playedBy={game.playedBy} />
 
         <div className="tray-card__foot">
           {bounds && (

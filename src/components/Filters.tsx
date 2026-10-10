@@ -12,7 +12,7 @@ interface FiltersProps {
   total: number;
 }
 
-// The sticky filter bar: pick who's at the table, hide what you've played, and
+// The sticky filter bar: pick who's at the table, hide what they've played, and
 // keep a live count of how many games survive the filters in view.
 const Filters = ({
   players,
@@ -36,7 +36,7 @@ const Filters = ({
       <Checkbox
         checked={hidePlayed}
         onChange={(event) => onHidePlayedChange(event.currentTarget.checked)}
-        label="Hide played games"
+        label="Hide games played by selected players"
       />
     </Group>
   </div>

@@ -5,9 +5,18 @@ import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, PlayedStore } from "../types";
 import { readJson } from "../validate";
 
-/** The signed-in member's own played counts; all need an approved user (checked in app.ts). */
+/** Played counts: everyone's (`/played`) and the signed-in member's own (`/me/played`); all need an approved user (checked in app.ts). */
 export function playedRoutes(played: PlayedStore) {
   const routes = new Hono<AppEnv>();
+
+  routes.get("/played", async (c) => {
+    const year = parseYear(c.req.query("year"));
+    if (year === null) return c.json({ error: "invalid_year" }, 400);
+    const counts = await played.getAll(year);
+    if (!counts) return c.json({ error: "unknown_year" }, 404);
+    privateNoCache(c);
+    return c.json({ counts });
+  });
 
   routes.get("/me/played", async (c) => {
     const year = parseYear(c.req.query("year"));

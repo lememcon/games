@@ -2,6 +2,7 @@ import { Link } from "wouter";
 
 import { useMantineTheme } from "@mantine/core";
 
+import PlayedByList from "@/components/PlayedByList";
 import PlayedCounter from "@/components/PlayedCounter";
 import PlayerRange from "@/components/PlayerRange";
 import ScorePopover from "@/components/ScorePopover";
@@ -67,6 +68,7 @@ const GameRow = ({
             </span>
           </div>
         )}
+        <PlayedByList playedBy={game.playedBy} />
       </div>
 
       <div className="tray-row__score">

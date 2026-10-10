@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
-import type { PlayedCounts, PlayedStore } from "../types";
+import type { AllPlayedCounts, PlayedCounts, PlayedStore } from "../types";
 import { playedCount, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
@@ -29,6 +29,22 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
   };
 
   return {
+    async getAll(year) {
+      if (!(await yearExists(year))) return null;
+      const rows = await db
+        .select({
+          discordId: playedCount.discordId,
+          bggId: playedCount.bggId,
+          count: playedCount.count,
+        })
+        .from(playedCount)
+        .where(eq(playedCount.year, year));
+      const all: AllPlayedCounts = {};
+      for (const { discordId, bggId, count } of rows)
+        (all[discordId] ??= {})[bggId] = count;
+      return all;
+    },
+
     async get(discordId, year) {
       return (await yearExists(year)) ? read(discordId, year) : null;
     },

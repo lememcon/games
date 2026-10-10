@@ -9,6 +9,7 @@ import {
   gameBounds,
   originalBounds,
   partitions,
+  playerCountsByName,
   realBounds,
   resolveImage,
   suggestSplits,
@@ -28,8 +29,6 @@ const byPlayer: Record<string, PlayerGameScore[]> = {
   ],
   bob: [{ player: "bob", game: "Root", rank: 3, score: 40, bgg_id: 100 }],
 };
-
-const noPlayed = () => 0;
 
 describe("gameBounds", () => {
   it("reads min/max from metadata", () => {
@@ -100,7 +99,7 @@ describe("player count overrides", () => {
         gameData: { 100: root },
         images: {},
         hidePlayed: false,
-        getPlayedCount: noPlayed,
+        playerCounts: {},
       }).map((g) => g.name);
     expect(names(3)).toEqual([]);
     expect(names(4)).toEqual(["Root"]);
@@ -128,7 +127,7 @@ describe("player count overrides", () => {
         gameData: meta,
         images: {},
         hidePlayed: false,
-        getPlayedCount: noPlayed,
+        playerCounts: {},
       })
         .flatMap((s) => s.groups)
         .flatMap((g) => g.games.map((x) => x.name));
@@ -274,7 +273,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(games.map((g) => [g.name, g.score])).toEqual([
@@ -290,7 +289,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.players).toEqual({
@@ -317,7 +316,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.players.alice.discordId).toBe("7");
@@ -342,7 +341,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.players.alice.discordImage).toBe("https://cdn.example/a.png");
@@ -356,7 +355,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(games).toEqual([]);
@@ -369,24 +368,65 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(games.map((g) => g.name)).toEqual(["Root"]);
     expect(games[0].score).toBe(40);
   });
 
-  it("hides games that have been played when hidePlayed is set", () => {
-    const games = buildSelectedGames({
-      byPlayer,
-      players: [],
-      gameData,
-      images: {},
-      hidePlayed: true,
-      getPlayedCount: (id) => (id === "100" ? 1 : 0),
+  describe("hidePlayed", () => {
+    const run = (
+      players: string[],
+      playerCounts: Record<string, Record<string, number>>,
+      hidePlayed = true,
+    ) =>
+      buildSelectedGames({
+        byPlayer,
+        players,
+        gameData,
+        images: {},
+        hidePlayed,
+        playerCounts,
+      });
+
+    it("hides a game any selected player has played", () => {
+      const games = run(["alice", "bob"], { bob: { "100": 1 } });
+      expect(games.map((g) => g.name)).toEqual(["Chess"]);
+      expect(
+        run(["alice"], { alice: { "100": 1 } }).map((g) => g.name),
+      ).toEqual(["Chess"]);
     });
 
-    expect(games.map((g) => g.name)).toEqual(["Chess"]);
+    it("ignores plays by players who are not selected", () => {
+      const games = run(["alice"], { bob: { "100": 4 } });
+      expect(games.map((g) => g.name)).toEqual(["Root", "Chess"]);
+      expect(games[0].playedBy).toEqual({});
+    });
+
+    it("counts every player when none are selected", () => {
+      const games = run([], { bob: { "100": 1 } });
+      expect(games.map((g) => g.name)).toEqual(["Chess"]);
+    });
+
+    it("never hides for players without counts", () => {
+      expect(run([], {}).map((g) => g.name)).toEqual(["Root", "Chess"]);
+    });
+
+    it("keeps played games when hidePlayed is off", () => {
+      const games = run([], { bob: { "100": 1 } }, false);
+      expect(games.map((g) => g.name)).toEqual(["Root", "Chess"]);
+    });
+
+    it("lists who played each game, with counts above zero", () => {
+      const games = run(
+        [],
+        { alice: { "100": 3, "200": 0 }, bob: { "100": 1 } },
+        false,
+      );
+      expect(games[0].playedBy).toEqual({ alice: 3, bob: 1 });
+      expect(games[1].playedBy).toEqual({});
+    });
   });
 
   it("filters games that cannot fit the selected player count", () => {
@@ -402,7 +442,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(games).toEqual([]);
@@ -418,7 +458,7 @@ describe("buildSelectedGames", () => {
       },
       images,
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.image).toBe("root.jpg");
@@ -433,7 +473,7 @@ describe("buildSelectedGames", () => {
       },
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.image).toBe("https://example.com/root.jpg");
@@ -446,10 +486,43 @@ describe("buildSelectedGames", () => {
       gameData: { 100: { image: "custom", ext: ".jpg" } },
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
     });
 
     expect(root.image).toBeUndefined();
+  });
+});
+
+describe("playerCountsByName", () => {
+  it("re-keys member counts to player names through the score rows", () => {
+    const linked: Record<string, PlayerGameScore[]> = {
+      alice: [
+        { player: "alice", game: "Root", rank: 1, score: 5, bgg_id: 100 },
+        {
+          player: "alice",
+          game: "Chess",
+          rank: 1,
+          score: 5,
+          bgg_id: 200,
+          discord_id: "d1",
+        },
+      ],
+      bob: [{ player: "bob", game: "Root", rank: 2, score: 4, bgg_id: 100 }],
+      cy: [
+        {
+          player: "cy",
+          game: "Root",
+          rank: 3,
+          score: 3,
+          bgg_id: 100,
+          discord_id: "d3",
+        },
+      ],
+    };
+
+    expect(
+      playerCountsByName(linked, { d1: { "100": 2 }, d2: { "100": 9 } }),
+    ).toEqual({ alice: { "100": 2 } });
   });
 });
 
@@ -498,7 +571,7 @@ describe("suggestSplits", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      getPlayedCount: noPlayed,
+      playerCounts: {},
       ...extra,
     });
   const all = (score: number) =>
@@ -588,15 +661,23 @@ describe("suggestSplits", () => {
     }
   });
 
-  it("honors hidePlayed", () => {
+  it("hides a played game only in the groups holding a player who played it", () => {
     const splits = run(
       { X: all(50), Y: all(10), Z: all(5) },
-      { hidePlayed: true, getPlayedCount: (id) => (id === "1" ? 1 : 0) },
+      { hidePlayed: true, playerCounts: { Kelsin: { "1": 1 } } },
     );
+    const groups = splits.flatMap((s) => s.groups);
+    const names = (g: (typeof groups)[number]) => g.games.map((x) => x.name);
 
-    for (const group of splits.flatMap((s) => s.groups)) {
-      expect(group.games.map((g) => g.name)).not.toContain("X");
+    for (const group of groups) {
+      if (group.players.includes("Kelsin"))
+        expect(names(group)).not.toContain("X");
     }
+    expect(
+      groups.some(
+        (g) => !g.players.includes("Kelsin") && names(g).includes("X"),
+      ),
+    ).toBe(true);
   });
 
   it("omits the difference when no game was scored by everyone", () => {
