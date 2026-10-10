@@ -289,8 +289,9 @@ describe("Scoreboard", () => {
     it("does not navigate while the years load", () => {
       state.years = { years: [], loading: true, error: false };
       at("/games/11");
-      render();
+      const first = render();
       expect(path()).toBe("/games/11");
+      first.unmount();
       at("/abc");
       render();
       expect(path()).toBe("/abc");
@@ -387,11 +388,35 @@ describe("Scoreboard", () => {
       expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
     });
 
-    it("does not clear the players on the first load", () => {
+    it("does not clear the players when the URL year matches the stored one", () => {
+      localStorage.setItem("year", JSON.stringify("2026"));
       localStorage.setItem("players", JSON.stringify(["alice"]));
       at("/2026");
       render();
       expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+    });
+
+    it("does not clear the players when no year is stored yet", () => {
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+      expect(JSON.parse(localStorage.getItem("year")!)).toBe("2026");
+    });
+
+    it("clears the players when a link opens a different year than stored", () => {
+      localStorage.setItem("year", JSON.stringify("2025"));
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      at("/2026");
+      render();
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+      expect(JSON.parse(localStorage.getItem("year")!)).toBe("2026");
+    });
+
+    it("sends a legacy /games/:id to the newest year when none is stored", () => {
+      at("/games/11");
+      render();
+      expect(path()).toBe("/2026/games/11");
     });
 
     it("shows the empty state for a year URL when there are no years", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 
 import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
@@ -67,15 +67,13 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [getPlayedCount, incPlayedCount, decPlayedCount] = usePlayedCounts(
     year ?? "",
   );
-  const prevYear = useRef<string | null>(null);
 
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
   // the useLocalState setters change identity every render.
   useEffect(() => {
-    if (year === null) return;
-    if (prevYear.current !== null && prevYear.current !== year) setPlayers([]);
-    prevYear.current = year;
-    if (year !== storedYear) setStoredYear(year);
+    if (year === null || year === storedYear) return;
+    if (storedYear !== "") setPlayers([]);
+    setStoredYear(year);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setters are unstable
   }, [year]);
 
