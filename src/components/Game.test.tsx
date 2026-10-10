@@ -172,7 +172,7 @@ describe("Game", () => {
       ...extra,
     });
 
-    it("shows the member's stored range and saves for this game", async () => {
+    it("shows the stored range and resets for this game", async () => {
       const state = overrides({ d1: { "11": { min: 3, max: 4 } } });
       const { getByText, getByRole } = renderWithMantine(
         <Game

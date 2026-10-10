@@ -148,12 +148,13 @@ export const rangesByMember = (
 // no entry.
 export const playerCountsByName = <T>(
   byPlayer: Record<string, PlayerGameScore[]>,
-  values: Record<string, T>,
+  byDiscordId: Record<string, T>,
 ): Record<string, T> => {
   const result: Record<string, T> = {};
   for (const [player, rows] of Object.entries(byPlayer)) {
     const discordId = rows.find((r) => r.discord_id)?.discord_id;
-    if (discordId && values[discordId]) result[player] = values[discordId];
+    if (discordId && byDiscordId[discordId])
+      result[player] = byDiscordId[discordId];
   }
   return result;
 };

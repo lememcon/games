@@ -694,7 +694,7 @@ describe("member player count ranges", () => {
     expect(names(["Garret"])).toEqual(["Root"]);
   });
 
-  it("splits: Garret's two-player side drops Root, the other keeps it", () => {
+  it("splits: returns no split when Root fits only one side", () => {
     const groups = suggestSplits({
       byPlayer: scores,
       players: ["Garret", "Ann", "Bo", "Cy"],

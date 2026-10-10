@@ -1,6 +1,8 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { MantineProvider } from "@mantine/core";
+
 import MyPlayerRange from "@/components/MyPlayerRange";
 import { renderWithMantine } from "@/test/utils";
 import type { Bounds } from "@/types";
@@ -70,6 +72,26 @@ describe("MyPlayerRange", () => {
     expect(v.getByText("Your override")).toBeInTheDocument();
     await user.click(v.getByRole("button", { name: "Reset" }));
     expect(v.onReset).toHaveBeenCalled();
+  });
+
+  it("shows the new stored range when it changes", () => {
+    const v = setup({ stored: { min: 3, max: 4 } });
+    expect(min(v)).toHaveValue("3");
+    v.rerender(
+      <MantineProvider>
+        <MyPlayerRange
+          key="5-6"
+          allowed={{ min: 2, max: 6 }}
+          stored={{ min: 5, max: 6 }}
+          saving={false}
+          error={null}
+          onSave={v.onSave}
+          onReset={v.onReset}
+        />
+      </MantineProvider>,
+    );
+    expect(min(v)).toHaveValue("5");
+    expect(max(v)).toHaveValue("6");
   });
 
   it("shows a server error", () => {
