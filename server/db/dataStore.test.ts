@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { parseImport } from "../import";
 import type { ImportContext } from "../types";
+import { upsertMetadata } from "./bggRepo";
 import { createDataStore } from "./dataStore";
 import { addLogin, createTestDb } from "./testDb";
 
@@ -510,9 +511,18 @@ describe("player count overrides", () => {
 
   it("survives a BGG metadata refresh and masks the new range", async () => {
     await store.setPlayerOverride(ROOT, range(4, 4), "1");
-    await client.query(
-      "UPDATE game_metadata SET min_players = 1, max_players = 8 WHERE bgg_id = $1",
-      [ROOT],
+    await upsertMetadata(
+      db,
+      [
+        {
+          bggId: ROOT,
+          minPlayers: 1,
+          maxPlayers: 8,
+          imageUrl: null,
+          ext: null,
+        },
+      ],
+      new Date(),
     );
     expect((await store.getGames())[String(ROOT)]).toMatchObject({
       players: range(4, 4),
@@ -544,10 +554,13 @@ describe("player count overrides", () => {
   });
 
   it("enforces the range check in the database", async () => {
+    await client.query(
+      "INSERT INTO game (bgg_id, name) VALUES (777002, 'Checked')",
+    );
     await expect(
       client.query(
-        "INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (777001, 5, 4)",
+        "INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (777002, 5, 4)",
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/game_player_override_range_check/);
   });
 });
