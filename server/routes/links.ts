@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 
 import type { AppEnv, LinkStore } from "../types";
+import { exactKeys, parseId32, readJson } from "../validate";
 
-const MAX_PLAYER_ID = 2147483647;
 const MAX_DISCORD_ID_LENGTH = 32;
 
 /** Admin player links, mounted at /api/admin behind requireAdmin. */
@@ -12,18 +12,13 @@ export function linkRoutes(links: LinkStore) {
   routes.get("/player-links", async (c) => c.json(await links.list()));
 
   routes.patch("/players/:id", async (c) => {
-    const raw = c.req.param("id");
-    const id = /^[1-9]\d{0,9}$/.test(raw) ? Number(raw) : NaN;
-    if (!(id <= MAX_PLAYER_ID)) return c.json({ error: "invalid_id" }, 400);
+    const id = parseId32(c.req.param("id"));
+    if (id === null) return c.json({ error: "invalid_id" }, 400);
 
-    const body = (await c.req.json().catch(() => null)) as {
-      discordId?: unknown;
-    } | null;
-    const keys = body && typeof body === "object" ? Object.keys(body) : [];
-    const discordId = body?.discordId;
+    const body = await readJson(c);
+    const discordId = exactKeys(body, "discordId") ? body.discordId : undefined;
     const valid =
-      keys.length === 1 &&
-      keys[0] === "discordId" &&
+      exactKeys(body, "discordId") &&
       (discordId === null ||
         (typeof discordId === "string" &&
           discordId.length <= MAX_DISCORD_ID_LENGTH &&

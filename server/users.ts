@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { effectiveUser, isProtected } from "./roles";
 import type { AdminUser, AppEnv, StoredUser, UserStore } from "./types";
+import { readJson } from "./validate";
 
 function toAdminUser(stored: StoredUser): AdminUser {
   return {
@@ -32,7 +33,7 @@ export function adminRoutes(store: UserStore) {
   );
 
   routes.patch("/users/:discordId", async (c) => {
-    const body = await c.req.json().catch(() => null);
+    const body = await readJson(c);
     const result = await store.update(
       c.get("user")!.discordId,
       c.req.param("discordId"),

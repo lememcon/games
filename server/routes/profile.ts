@@ -2,13 +2,14 @@ import { Hono } from "hono";
 
 import { parseDisplayName } from "../profile";
 import type { AppEnv, ProfileStore } from "../types";
+import { readJson } from "../validate";
 
 /** Own display name and public profiles; both need an approved user (checked in app.ts). */
 export function profileRoutes(profiles: ProfileStore) {
   const routes = new Hono<AppEnv>();
 
   routes.put("/me/display-name", async (c) => {
-    const parsed = parseDisplayName(await c.req.json().catch(() => null));
+    const parsed = parseDisplayName(await readJson(c));
     if (!parsed.ok) return c.json({ error: parsed.error }, 400);
 
     const user = c.get("user")!;

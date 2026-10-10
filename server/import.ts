@@ -6,6 +6,8 @@
  *   only upserts game metadata
  */
 
+import { isRecord } from "./validate";
+
 export const MAX_ROWS = 20_000;
 export const MAX_ERRORS = 50;
 const MAX_STRING = 200;
@@ -62,8 +64,6 @@ interface Row {
 
 type Obj = Record<string, unknown>;
 
-const isObject = (v: unknown): v is Obj =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
 const isInt = (v: unknown): v is number =>
   typeof v === "number" && Number.isInteger(v) && Math.abs(v) <= INT_MAX;
 /** games.json uses 0 for a player count BoardGameGeek does not know. */
@@ -131,7 +131,7 @@ function validateRows(value: unknown, issues: Issues): Row[] {
   const seen = new Set<string>();
   value.forEach((raw: unknown, i) => {
     const path = `player_game_scores[${i}]`;
-    if (!isObject(raw)) return issues.add(path, "must be an object");
+    if (!isRecord(raw)) return issues.add(path, "must be an object");
     const before = issues.count;
     if (!isPositiveInt(raw.bgg_id))
       issues.add(`${path}.bgg_id`, "must be a positive integer");
@@ -198,7 +198,7 @@ function parseImage(value: unknown): ImageResult {
 type Meta = Omit<NormalizedGame, "bggId" | "name">;
 
 function validateMeta(raw: unknown, path: string, issues: Issues) {
-  if (!isObject(raw)) return void issues.add(path, "must be an object");
+  if (!isRecord(raw)) return void issues.add(path, "must be an object");
   const meta: Meta = {
     minPlayers: null,
     maxPlayers: null,
@@ -207,7 +207,7 @@ function validateMeta(raw: unknown, path: string, issues: Issues) {
   };
   const { players, image, ext } = raw;
   if (players !== undefined) {
-    if (!isObject(players) || !isCount(players.min) || !isCount(players.max))
+    if (!isRecord(players) || !isCount(players.min) || !isCount(players.max))
       issues.add(
         `${path}.players`,
         "min and max must be non-negative integers",
@@ -234,7 +234,7 @@ function validateMeta(raw: unknown, path: string, issues: Issues) {
 
 function validateGames(value: unknown, issues: Issues) {
   const games = new Map<number, Meta>();
-  if (!isObject(value)) {
+  if (!isRecord(value)) {
     issues.add("games", "must be an object keyed by bgg_id");
     return games;
   }
@@ -305,7 +305,7 @@ function normalize(
 /** Validates an uploaded JSON value, collecting every problem (capped). */
 export function parseImport(raw: unknown): ParseResult {
   const issues = new Issues();
-  if (!isObject(raw)) {
+  if (!isRecord(raw)) {
     issues.add("", "upload must be a JSON object");
     return { ok: false, errors: issues.list };
   }
