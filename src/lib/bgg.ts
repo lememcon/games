@@ -1,12 +1,12 @@
 import { ApiError } from "@/lib/api";
+import { ADMIN_LOST, GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
 import type { BggGameRow, BggJob } from "@/types";
 
 // Maps an API failure to a message for the admin. Server messages are never
 // shown verbatim: only the status and a short error code are used.
 export const describeBggError = (e: unknown): string => {
-  if (!(e instanceof ApiError)) return "Something went wrong. Try again.";
-  if (e.status === 401 || e.status === 403)
-    return "You no longer have admin access.";
+  if (!(e instanceof ApiError)) return GENERIC_ERROR;
+  if (isAuthError(e)) return ADMIN_LOST;
   if (e.status === 429) return "Wait a few seconds before testing again.";
   if (e.status === 409 && e.message === "key_not_set")
     return "Set and verify an API key to enable downloads.";
@@ -17,7 +17,7 @@ export const describeBggError = (e: unknown): string => {
   if (e.status === 400) return "The request was rejected.";
   if (e.status === 502)
     return "The score data couldn't be loaded. Try again shortly.";
-  return "Something went wrong. Try again.";
+  return GENERIC_ERROR;
 };
 
 export const isRunning = (job: BggJob | undefined): boolean =>

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { ADMIN_LOST, GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
 import type { AdminUser, Role } from "@/types";
 
 const describe = (e: unknown): string =>
-  e instanceof ApiError && (e.status === 401 || e.status === 403)
-    ? "You no longer have admin access."
+  isAuthError(e)
+    ? ADMIN_LOST
     : e instanceof ApiError && e.status === 409
       ? "Built-in admins can't be changed."
       : e instanceof ApiError && e.status === 400
         ? `The change was rejected: ${e.message}`
-        : "Something went wrong. Try again.";
+        : GENERIC_ERROR;
 
 // Admin user list plus mutations. Mutations are not optimistic: the list only
 // changes with what the server returns, and a failure leaves it untouched.

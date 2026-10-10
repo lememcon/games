@@ -1,18 +1,16 @@
 import { useCallback, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
 import type { DisplayNameResult } from "@/types";
 
-const GENERIC = "Something went wrong. Try again.";
-
 const describe = (e: unknown): string => {
-  if (!(e instanceof ApiError)) return GENERIC;
+  if (!(e instanceof ApiError)) return GENERIC_ERROR;
   if (e.status === 409) return "That name is already taken.";
   if (e.message === "invalid_name")
     return "That name isn't allowed. Use 1 to 32 visible characters.";
-  if (e.status === 401 || e.status === 403)
-    return "You need to be signed in as an approved member.";
-  return GENERIC;
+  if (isAuthError(e)) return "You need to be signed in as an approved member.";
+  return GENERIC_ERROR;
 };
 
 // Sets (or, with null, clears) the signed-in member's display name. `onSaved`

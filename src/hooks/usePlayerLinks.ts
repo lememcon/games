@@ -1,21 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { ADMIN_LOST, GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
 import { groupByMember } from "@/lib/playerLinks";
 import type { PlayerLinks } from "@/types";
 
-const GENERIC = "Something went wrong. Try again.";
-
 const describe = (e: unknown): string => {
-  if (!(e instanceof ApiError)) return GENERIC;
-  if (e.status === 401 || e.status === 403)
-    return "You no longer have admin access.";
+  if (!(e instanceof ApiError)) return GENERIC_ERROR;
+  if (isAuthError(e)) return ADMIN_LOST;
   if (e.message === "unknown_player") return "That player no longer exists.";
   if (e.message === "unknown_user") return "That member no longer exists.";
   if (e.message === "name_taken")
     return "That name matches another member's display name.";
   if (e.status === 400) return `The change was rejected: ${e.message}`;
-  return GENERIC;
+  return GENERIC_ERROR;
 };
 
 // Player/member links plus link and unlink. Mutations are not optimistic: the
@@ -55,7 +53,7 @@ const usePlayerLinks = (fetchImpl: typeof fetch = fetch) => {
           await apiFetch<PlayerLinks>("/admin/player-links", {}, fetchImpl),
         );
       } catch {
-        setActionError((prev) => prev ?? GENERIC);
+        setActionError((prev) => prev ?? GENERIC_ERROR);
       }
     },
     [fetchImpl],
