@@ -88,12 +88,12 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [getPlayedCount, incPlayedCount, decPlayedCount, ownCounts] =
     usePlayedCounts(year ?? "");
   const allCounts = useAllPlayedCounts(year ?? "");
-  // The member's own edits show at once, so they replace their fetched entry
-  // (the fetched counts are only refreshed when the year changes).
   const gameNames = useMemo(
     () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
     [data.scores],
   );
+  // The member's own edits show at once, so they replace their fetched entry
+  // (the fetched counts are only refreshed when the year changes).
   const playerCounts = useMemo(
     () =>
       playerCountsByName(
