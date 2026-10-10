@@ -33,6 +33,14 @@ describe("Filters", () => {
     expect(onHidePlayedChange).toHaveBeenCalledWith(true);
   });
 
+  it("labels the toggle by selected players", () => {
+    const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+    expect(
+      getByRole("checkbox", { name: "Hide games played by selected players" }),
+    ).toBeInTheDocument();
+  });
+
   it("reflects the checked state", () => {
     const { getByRole } = renderWithMantine(
       <Filters {...defaults} hidePlayed={true} />,

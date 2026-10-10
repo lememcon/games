@@ -7,10 +7,42 @@ import { renderWithMantine } from "@/test/utils";
 import type { GamesData, SelectedGame } from "@/types";
 
 const games: SelectedGame[] = [
-  { name: "Root", id: "100", score: 90, min: 0, max: 99, players: {} },
-  { name: "Chess", id: "200", score: 80, min: 0, max: 99, players: {} },
-  { name: "Go", id: "300", score: 70, min: 0, max: 99, players: {} },
-  { name: "Nim", id: "400", score: 60, min: 0, max: 99, players: {} },
+  {
+    name: "Root",
+    id: "100",
+    score: 90,
+    min: 0,
+    max: 99,
+    players: {},
+    playedBy: {},
+  },
+  {
+    name: "Chess",
+    id: "200",
+    score: 80,
+    min: 0,
+    max: 99,
+    players: {},
+    playedBy: {},
+  },
+  {
+    name: "Go",
+    id: "300",
+    score: 70,
+    min: 0,
+    max: 99,
+    players: {},
+    playedBy: {},
+  },
+  {
+    name: "Nim",
+    id: "400",
+    score: 60,
+    min: 0,
+    max: 99,
+    players: {},
+    playedBy: {},
+  },
 ];
 
 const gameData: GamesData = {

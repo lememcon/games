@@ -42,6 +42,10 @@ const state = vi.hoisted(() => ({
   games: {} as { games: GamesData; loading: boolean; error: boolean },
   useData: vi.fn(),
   played: {} as Record<string, number>,
+  // The member's own counts as the hook returns them; null means not loaded.
+  own: {} as Record<string, number> | null,
+  allPlayed: {} as Record<string, Record<string, number>>,
+  useAllPlayedCounts: vi.fn(),
   incPlayed: vi.fn(),
   usePlayedCounts: vi.fn(),
 }));
@@ -60,8 +64,15 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
       (id: string) => state.played[id] ?? 0,
       state.incPlayed,
       vi.fn(),
-      state.played,
+      state.own,
     ];
+  },
+}));
+
+vi.mock("@/hooks/useAllPlayedCounts", () => ({
+  default: (year: string) => {
+    state.useAllPlayedCounts(year);
+    return state.allPlayed;
   },
 }));
 
@@ -88,6 +99,8 @@ describe("Scoreboard", () => {
     state.years = { years: ["2025", "2026"], loading: false, error: false };
     state.games = { games: {}, loading: false, error: false };
     state.played = {};
+    state.own = {};
+    state.allPlayed = {};
   });
   afterEach(() => {
     // Unmount before resetting the URL, or a mounted Scoreboard redirects.
@@ -208,13 +221,91 @@ describe("Scoreboard", () => {
     expect(queryByRole("button", { name: "Clear players" })).toBeNull();
   });
 
-  it("congratulates when every ranked game is hidden as played", () => {
-    at("/2026");
-    localStorage.setItem("hide_played", "true");
-    state.played = { 11: 1 };
-    const { getByText } = render();
+  describe("hiding played games", () => {
+    const linked: Data = {
+      ...loadedData,
+      by_player: {
+        alice: [
+          {
+            game: "Belfort",
+            player: "alice",
+            rank: 1,
+            score: 50,
+            bgg_id: 11,
+            discord_id: "d-alice",
+          },
+        ],
+        bob: [
+          { game: "Belfort", player: "bob", rank: 2, score: 30, bgg_id: 11 },
+        ],
+      },
+    };
 
-    expect(getByText(/played every ranked game/)).toBeInTheDocument();
+    beforeEach(() => {
+      at("/2026");
+      state.data = linked;
+      localStorage.setItem("hide_played", "true");
+    });
+
+    it("fetches everyone's counts for the viewed year", () => {
+      render();
+      expect(state.useAllPlayedCounts).toHaveBeenLastCalledWith("2026");
+    });
+
+    it("hides a game another selected player has played", () => {
+      state.allPlayed = { "d-alice": { "11": 1 } };
+      const { getByText, queryByText } = render();
+
+      expect(getByText(/played every ranked game/)).toBeInTheDocument();
+      expect(queryByText("Belfort")).toBeNull();
+    });
+
+    it("ignores plays by players who are not selected", () => {
+      state.allPlayed = { "d-alice": { "11": 1 } };
+      localStorage.setItem("players", JSON.stringify(["bob"]));
+      const { getByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("lets the member's own edits override their fetched counts", () => {
+      state.allPlayed = { "1": { "11": 1 } };
+      state.data = {
+        ...linked,
+        by_player: {
+          ...linked.by_player,
+          alice: linked.by_player.alice.map((r) => ({ ...r, discord_id: "1" })),
+        },
+      };
+      state.own = { 12: 1 };
+      const { getByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("unhides a game once the member's own plays drop to zero", () => {
+      state.allPlayed = { "1": { "11": 1 } };
+      state.data = {
+        ...linked,
+        by_player: {
+          ...linked.by_player,
+          alice: linked.by_player.alice.map((r) => ({ ...r, discord_id: "1" })),
+        },
+      };
+      state.own = {};
+      const { getByText, queryByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+      expect(queryByText("alice ×1")).toBeNull();
+    });
+
+    it("shows who played a game while it is visible", () => {
+      localStorage.setItem("hide_played", "false");
+      state.allPlayed = { "d-alice": { "11": 3 } };
+      const { getByText } = render();
+
+      expect(getByText("alice ×3")).toBeInTheDocument();
+    });
   });
 
   it("fetches no scores until the years are known", () => {

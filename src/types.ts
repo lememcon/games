@@ -68,6 +68,9 @@ export interface SelectedGame {
   min: number;
   max: number;
   players: Record<string, SelectedGamePlayer>;
+  // Selected players (or all, when none are selected) who played this game
+  // this year, by name; only counts above zero.
+  playedBy: Record<string, number>;
   image?: string;
 }
 
@@ -270,6 +273,12 @@ export interface ImportResult {
 export interface ImportProblem {
   path: string;
   message: string;
+}
+
+// Every member's play counts for a year: discord id, then bgg id. Body of
+// GET /api/played.
+export interface AllPlayedCountsResponse {
+  counts: Record<string, Record<string, number>>;
 }
 
 // The signed-in member's play counts for a year, by bgg id; absent means zero.

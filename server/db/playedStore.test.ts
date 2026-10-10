@@ -41,6 +41,27 @@ describe("get", () => {
   });
 });
 
+describe("getAll", () => {
+  it("groups every member's counts for the year, leaving out games reset to zero", async () => {
+    await store.set(ALEX, 2025, 11, 2);
+    await store.set(ALEX, 2025, 12, 1);
+    await store.set(JO, 2025, 11, 4);
+    await store.set(JO, 2026, 13, 7);
+    await store.set(JO, 2025, 99, 3);
+    await store.set(JO, 2025, 99, 0);
+    expect(await store.getAll(2025)).toEqual({
+      [ALEX]: { "11": 2, "12": 1 },
+      [JO]: { "11": 4 },
+    });
+    expect(await store.getAll(2026)).toEqual({ [JO]: { "13": 7 } });
+  });
+
+  it("is empty for a year with no plays and null for an unknown year", async () => {
+    expect(await store.getAll(2025)).toEqual({});
+    expect(await store.getAll(1999)).toBeNull();
+  });
+});
+
 describe("set", () => {
   it("inserts, updates and deletes at zero", async () => {
     expect(await store.set(ALEX, 2025, 11, 2)).toEqual({

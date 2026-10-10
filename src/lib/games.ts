@@ -1,6 +1,7 @@
 import { descend, keys, prop, sort, values } from "ramda";
 
 import type {
+  AllPlayedCountsResponse,
   Bounds,
   Data,
   GameMeta,
@@ -108,8 +109,27 @@ export const computeMaxScores = (
   return { individualMax, selectedMax };
 };
 
+// Play counts by player name, then bgg id; absent means zero.
+export type PlayerCounts = Record<string, Record<string, number>>;
+
+// Re-keys the members' counts (by discord id) to the score data's player names.
+// The name -> discord id link comes from every score row, so it still resolves
+// when all of a player's games are hidden. Players without a linked member get
+// no entry.
+export const playerCountsByName = (
+  byPlayer: Record<string, PlayerGameScore[]>,
+  counts: AllPlayedCountsResponse["counts"],
+): PlayerCounts => {
+  const result: PlayerCounts = {};
+  for (const [player, rows] of Object.entries(byPlayer)) {
+    const discordId = rows.find((r) => r.discord_id)?.discord_id;
+    if (discordId && counts[discordId]) result[player] = counts[discordId];
+  }
+  return result;
+};
+
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
-// (images/gameData/getPlayedCount injected) so it can be tested without Vite or
+// (images/gameData/playerCounts injected) so it can be tested without Vite or
 // a rendered tree.
 interface BuildSelectedGamesArgs {
   byPlayer: Record<string, PlayerGameScore[]>;
@@ -117,7 +137,7 @@ interface BuildSelectedGamesArgs {
   gameData: GamesData;
   images: Record<string, string>;
   hidePlayed: boolean;
-  getPlayedCount: (id: string) => number;
+  playerCounts: PlayerCounts;
 }
 
 export const buildSelectedGames = ({
@@ -126,19 +146,33 @@ export const buildSelectedGames = ({
   gameData,
   images,
   hidePlayed,
-  getPlayedCount,
+  playerCounts,
 }: BuildSelectedGamesArgs): SelectedGame[] => {
   const numPlayers = players.length;
   const selectedGames: Record<string, SelectedGame> = {};
 
+  const selectedPlayers = players.length > 0 ? players : keys(byPlayer);
+
+  // Who among the selected players has played a game this year, with counts.
+  const playedByFor = (id: string): Record<string, number> => {
+    const playedBy: Record<string, number> = {};
+    for (const player of selectedPlayers) {
+      const count = playerCounts[player]?.[id] ?? 0;
+      if (count > 0) playedBy[player] = count;
+    }
+    return playedBy;
+  };
+
   // Whether a not-yet-seen game should be left out of the list entirely.
-  const isExcluded = (id: string, min: number, max: number): boolean => {
-    if (hidePlayed && getPlayedCount(id) > 0) return true;
+  const isExcluded = (
+    playedBy: Record<string, number>,
+    min: number,
+    max: number,
+  ): boolean => {
+    if (hidePlayed && Object.keys(playedBy).length > 0) return true;
     if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) return true;
     return false;
   };
-
-  const selectedPlayers = players.length > 0 ? players : keys(byPlayer);
 
   for (const player of selectedPlayers) {
     for (const item of byPlayer[player] || []) {
@@ -147,7 +181,8 @@ export const buildSelectedGames = ({
         const meta = gameData[id];
         const { min, max } = gameBounds(gameData, id);
 
-        if (isExcluded(id, min, max)) continue;
+        const playedBy = playedByFor(id);
+        if (isExcluded(playedBy, min, max)) continue;
 
         selectedGames[item.game] = {
           name: item.game,
@@ -156,6 +191,7 @@ export const buildSelectedGames = ({
           min,
           max,
           players: {},
+          playedBy,
         };
         const image = resolveImage(id, meta, images);
         if (image) selectedGames[item.game].image = image;

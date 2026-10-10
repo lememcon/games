@@ -10,6 +10,7 @@ import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
 import SplitSuggestions from "@/components/SplitSuggestions";
+import useAllPlayedCounts from "@/hooks/useAllPlayedCounts";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
@@ -19,6 +20,7 @@ import { buildPlayerColors } from "@/lib/colors";
 import {
   buildSelectedGames,
   computeMaxScores,
+  playerCountsByName,
   suggestSplits,
 } from "@/lib/games";
 import images from "@/lib/images";
@@ -69,8 +71,18 @@ function Scoreboard({ user }: ScoreboardProps) {
   const data = useData(year);
   const [players, setPlayers] = useLocalState<string[]>("players", []);
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
-  const [getPlayedCount, incPlayedCount, decPlayedCount] = usePlayedCounts(
-    year ?? "",
+  const [getPlayedCount, incPlayedCount, decPlayedCount, ownCounts] =
+    usePlayedCounts(year ?? "");
+  const allCounts = useAllPlayedCounts(year ?? "");
+  // The member's own edits show at once, so they replace their fetched entry
+  // (the fetched counts are only refreshed when the year changes).
+  const playerCounts = useMemo(
+    () =>
+      playerCountsByName(
+        data.by_player,
+        ownCounts ? { ...allCounts, [user.discordId]: ownCounts } : allCounts,
+      ),
+    [data.by_player, allCounts, ownCounts, user.discordId],
   );
 
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
@@ -90,7 +102,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     gameData: game_data,
     images,
     hidePlayed,
-    getPlayedCount,
+    playerCounts,
   });
   const splits = useMemo(
     () =>
@@ -100,9 +112,9 @@ function Scoreboard({ user }: ScoreboardProps) {
         gameData: game_data,
         images,
         hidePlayed,
-        getPlayedCount,
+        playerCounts,
       }),
-    [data.by_player, players, game_data, hidePlayed, getPlayedCount],
+    [data.by_player, players, game_data, hidePlayed, playerCounts],
   );
   const splitSuggestions = (
     <SplitSuggestions
@@ -207,9 +219,11 @@ function Scoreboard({ user }: ScoreboardProps) {
                 <>
                   <Notice title="No games to rank">
                     {players.length > 0
-                      ? "None of the ranked games include everyone you picked."
+                      ? hidePlayed
+                        ? "No ranked games are left that include everyone you picked and haven't been played by them."
+                        : "None of the ranked games include everyone you picked."
                       : hidePlayed
-                        ? "You've played every ranked game. Nice work."
+                        ? "Everyone has played every ranked game. Nice work."
                         : "Scores haven't been posted for this year yet."}
                     {players.length > 0 && (
                       <Button

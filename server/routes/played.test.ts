@@ -66,6 +66,56 @@ const send =
 const put = send("PUT");
 const post = send("POST");
 
+describe("GET /api/played", () => {
+  it("401s anonymous and 403s pending users, so it is not public", async () => {
+    const { app, calls } = makeApp();
+    expect((await app.request("/api/played?year=2025")).status).toBe(401);
+    expect(
+      (await app.request("/api/played?year=2025", { headers: as("pending") }))
+        .status,
+    ).toBe(403);
+    expect(calls).toEqual([]);
+  });
+
+  it("returns every member's counts for the year, uncached", async () => {
+    const { app, rows } = makeApp();
+    rows.set(`${KEL}:2025`, { "11": 2, "12": 0 });
+    rows.set(`${KEL}:2026`, { "13": 1 });
+    const res = await app.request("/api/played?year=2025", {
+      headers: as("member"),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(await res.json()).toEqual({
+      counts: { [KEL]: { "11": 2 }, [PAT]: { "11": 9 } },
+    });
+  });
+
+  it("returns empty counts for a year with none", async () => {
+    const { app } = makeApp();
+    const res = await app.request("/api/played?year=2026", {
+      headers: as("member"),
+    });
+    expect(await res.json()).toEqual({ counts: {} });
+  });
+
+  it("400s a missing or malformed year and 404s an unknown one", async () => {
+    const { app } = makeApp();
+    for (const q of ["", "?year=abc", "?year=25"]) {
+      const res = await app.request(`/api/played${q}`, {
+        headers: as("member"),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "invalid_year" });
+    }
+    const res = await app.request("/api/played?year=2000", {
+      headers: as("member"),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_year" });
+  });
+});
+
 describe("GET /api/me/played", () => {
   it("401s anonymous and 403s pending users", async () => {
     const { app, calls } = makeApp();

@@ -19,6 +19,7 @@ const game: SelectedGame = {
     alice: { name: "alice", rank: 1, score: 60 },
     bob: { name: "bob", rank: 2, score: 34 },
   },
+  playedBy: {},
 };
 
 const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
@@ -38,6 +39,20 @@ const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
   );
 
 describe("GameCard", () => {
+  it("shows who has played the game", () => {
+    const { getByText } = renderCard({
+      game: { ...game, playedBy: { alice: 3, bob: 1 } },
+    });
+
+    expect(getByText("alice ×3")).toBeInTheDocument();
+    expect(getByText("bob ×1")).toBeInTheDocument();
+  });
+
+  it("shows no played-by list when nobody has played", () => {
+    const { queryByLabelText } = renderCard();
+    expect(queryByLabelText("Played by")).toBeNull();
+  });
+
   it("links the cover and name to the detail route", () => {
     const { getByRole } = renderCard();
 

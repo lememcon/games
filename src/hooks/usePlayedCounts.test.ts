@@ -72,6 +72,18 @@ describe("usePlayedCounts", () => {
     expect(result.current[3]).toEqual({ "100": 2 });
   });
 
+  it("returns null until loaded, then {} once the last count is removed", async () => {
+    const f = makeFetch();
+    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    expect(result.current[3]).toBeNull();
+
+    await answer(f.calls[0], 200, { counts: { "100": 1 } });
+    await waitFor(() => expect(result.current[3]).toEqual({ "100": 1 }));
+
+    dec(result, "100");
+    expect(result.current[3]).toEqual({});
+  });
+
   it("does not fetch for an empty year", () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("", f.fetchImpl));
@@ -291,7 +303,7 @@ describe("usePlayedCounts", () => {
     await waitFor(() => expect(getCount(result)("100")).toBe(1));
   });
 
-  it("shows empty counts and takes no edits when not signed in", async () => {
+  it("shows no counts and takes no edits when not signed in", async () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
     localStorage.setItem("played_counts_2025", JSON.stringify({ "100": 2 }));
@@ -299,7 +311,7 @@ describe("usePlayedCounts", () => {
     await answer(f.calls[0], 401, { error: "unauthorized" });
     inc(result, "100");
 
-    expect(result.current[3]).toEqual({});
+    expect(result.current[3]).toBeNull();
     expect(f.calls).toHaveLength(1);
     expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
   });

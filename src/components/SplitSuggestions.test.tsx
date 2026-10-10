@@ -17,6 +17,7 @@ const game = (
   min: 0,
   max: 99,
   players: {},
+  playedBy: {},
 });
 
 const split = (delta: number | null, perPlayer = 43.75): GameSplit => ({

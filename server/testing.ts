@@ -283,6 +283,20 @@ export function fakePlayed(
     return rows.get(key)!;
   };
   const played: PlayedStore = {
+    getAll: async (year) => {
+      calls.push({ discordId: "*", year });
+      if (!years.has(year)) return null;
+      const all: Record<string, PlayedCounts> = {};
+      for (const [key, counts] of rows) {
+        const [discordId, y] = key.split(":");
+        const present = Object.fromEntries(
+          Object.entries(counts).filter(([, n]) => n > 0),
+        );
+        if (Number(y) === year && Object.keys(present).length > 0)
+          all[discordId] = present;
+      }
+      return all;
+    },
     get: async (discordId, year) => {
       calls.push({ discordId, year });
       return years.has(year) ? { ...bucket(discordId, year) } : null;
