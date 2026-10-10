@@ -57,8 +57,20 @@ export const games: GamesData = {
   "104": { players: { min: 2, max: 4 }, image: null },
 };
 
+// Delta's BGG range of 2-4 restricted to exactly 4 by an admin.
+export const overriddenGames: GamesData = {
+  ...games,
+  "104": {
+    players: { min: 4, max: 4 },
+    bggPlayers: { min: 2, max: 4 },
+    overridden: true,
+    image: null,
+  },
+};
+
 interface MockOptions {
   me?: Me;
+  games?: GamesData;
   played?: Record<string, number>;
 }
 
@@ -70,7 +82,7 @@ const pathOf = (url: URL | string) => new URL(url).pathname;
 // Mocks the whole API. Playwright tries the most recently registered route
 // first, so the catch-all goes in first and the specific routes override it.
 export async function mockApi(page: Page, opts: MockOptions = {}) {
-  const { me = approvedMe, played = {} } = opts;
+  const { me = approvedMe, played = {}, games: gamesData = games } = opts;
 
   await page.route(
     (url) => pathOf(url).startsWith("/api/"),
@@ -86,7 +98,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => pathOf(url) === "/api/games",
-    (route) => json(route, games),
+    (route) => json(route, gamesData),
   );
   await page.route(
     (url) => /^\/api\/years\/\d+\/scores$/.test(pathOf(url)),
