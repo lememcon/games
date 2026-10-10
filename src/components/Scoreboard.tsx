@@ -17,8 +17,8 @@ import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
 import usePlayedCounts from "@/hooks/usePlayedCounts";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
-import useYearTotals from "@/hooks/useYearTotals";
 import useVetoes from "@/hooks/useVetoes";
+import useYearTotals from "@/hooks/useYearTotals";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors } from "@/lib/colors";
 import {
