@@ -15,7 +15,7 @@ const PlayerRange = ({ bounds, original }: PlayerRangeProps) => {
   if (!original) return <>{formatBounds(bounds)}</>;
   const was = formatBounds(original);
   return (
-    <span className="player-range" title={`Restricted from ${was}`}>
+    <span className="player-range">
       <span className="player-range__now">{formatBounds(bounds)}</span>
       <s className="player-range__was" aria-hidden>
         {was}

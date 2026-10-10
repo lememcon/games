@@ -26,11 +26,13 @@ describe("PlayerRange", () => {
   });
 
   it("strikes through the original and explains it", () => {
-    const { container, getByTitle, getByText } = renderWithMantine(
+    const { container, getByText } = renderWithMantine(
       <PlayerRange bounds={{ min: 4, max: 4 }} original={{ min: 2, max: 6 }} />,
     );
     expect(container.querySelector("s")).toHaveTextContent("2-6");
-    expect(getByTitle("Restricted from 2-6")).toHaveTextContent("4");
+    expect(container.querySelector(".player-range")).not.toHaveAttribute(
+      "title",
+    );
     expect(getByText("(restricted from 2-6)")).toBeInTheDocument();
   });
 });

@@ -463,14 +463,14 @@ body {
 }
 
 .player-range__now {
-  color: var(--mantine-color-orange-7);
+  color: var(--mantine-color-orange-9);
   font-weight: 700;
 }
 
 .player-range__was {
   margin-left: 0.3em;
   font-weight: 400;
-  opacity: 0.7;
+  color: var(--mantine-color-dimmed);
 }
 
 .player-range__bgg {
