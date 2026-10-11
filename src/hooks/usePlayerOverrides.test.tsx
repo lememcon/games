@@ -27,6 +27,20 @@ describe("usePlayerOverrides", () => {
     expect(hook.result.current.error).toBeNull();
   });
 
+  it("is loading until the first fetch settles", async () => {
+    const ok = renderHook(() =>
+      usePlayerOverrides(vi.fn().mockResolvedValue(res({ overrides: mine }))),
+    );
+    expect(ok.result.current.loading).toBe(true);
+    await waitFor(() => expect(ok.result.current.loading).toBe(false));
+
+    const bad = renderHook(() =>
+      usePlayerOverrides(vi.fn().mockResolvedValue(res({}, 500))),
+    );
+    expect(bad.result.current.loading).toBe(true);
+    await waitFor(() => expect(bad.result.current.loading).toBe(false));
+  });
+
   it("stays empty when the load fails", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(res({}, 500));
     const hook = renderHook(() => usePlayerOverrides(fetchImpl));

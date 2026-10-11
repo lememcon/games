@@ -12,8 +12,9 @@ import {
   Title,
 } from "@mantine/core";
 
+import ProfileOverrides from "@/components/ProfileOverrides";
+import ProfileVetoes from "@/components/ProfileVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
-import useMyVetoes from "@/hooks/useMyVetoes";
 import { MAX_DISPLAY_NAME, displayNameError } from "@/lib/profile";
 import type { ApprovedUser } from "@/types";
 
@@ -28,7 +29,6 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
   const [saved, setSaved] = useState(false);
   const { save, saving, error } = useDisplayName(onSaved);
   const invalid = displayNameError(value);
-  const myVetoes = useMyVetoes();
 
   const submit = async (displayName: string | null) => {
     setSaved(false);
@@ -86,36 +86,8 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
           {error}
         </Alert>
       )}
-      <Title order={3}>Games you&apos;ve vetoed</Title>
-      <Text c="dimmed" size="sm">
-        These are left out of suggestions for any group that includes you, in
-        every year.
-      </Text>
-      {myVetoes.error && (
-        <Alert color="red" role="alert">
-          {myVetoes.error}
-        </Alert>
-      )}
-      {!myVetoes.loading && myVetoes.vetoes.length === 0 && (
-        <Text size="sm">You haven&apos;t vetoed any games.</Text>
-      )}
-      {myVetoes.vetoes.length > 0 && (
-        <Stack gap={4}>
-          {myVetoes.vetoes.map((v) => (
-            <Group key={v.bggId} justify="space-between" wrap="nowrap">
-              <Text>{v.name ?? `Game ${v.bggId}`}</Text>
-              <Button
-                size="xs"
-                variant="default"
-                aria-label={`Undo veto of ${v.name ?? `Game ${v.bggId}`}`}
-                onClick={() => myVetoes.clear(v.bggId)}
-              >
-                Undo
-              </Button>
-            </Group>
-          ))}
-        </Stack>
-      )}
+      <ProfileOverrides discordId={user.discordId} />
+      <ProfileVetoes />
     </Stack>
   );
 };

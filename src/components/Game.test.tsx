@@ -172,6 +172,7 @@ describe("Game", () => {
   describe("player count range form", () => {
     const overrides = (all = {}, extra = {}) => ({
       all,
+      loading: false,
       saving: false,
       error: null,
       save: vi.fn(),

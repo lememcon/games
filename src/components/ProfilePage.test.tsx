@@ -12,15 +12,14 @@ const hook = vi.hoisted(() => ({
   saving: false,
   onSaved: undefined as (() => void) | undefined,
 }));
-const vetoes = vi.hoisted(() => ({
-  state: {
-    vetoes: [] as { bggId: number; name: string | null }[],
-    loading: false,
-    error: null as string | null,
-    clear: vi.fn(),
-  },
+vi.mock("@/components/ProfileOverrides", () => ({
+  default: ({ discordId }: { discordId: string }) => (
+    <div>overrides for {discordId}</div>
+  ),
 }));
-vi.mock("@/hooks/useMyVetoes", () => ({ default: () => vetoes.state }));
+vi.mock("@/components/ProfileVetoes", () => ({
+  default: () => <div>vetoes section</div>,
+}));
 vi.mock("@/hooks/useDisplayName", () => ({
   default: (onSaved: () => void) => {
     hook.onSaved = onSaved;
@@ -47,10 +46,6 @@ describe("ProfilePage", () => {
     hook.save.mockReset();
     hook.error = null;
     hook.saving = false;
-    vetoes.state.vetoes = [];
-    vetoes.state.loading = false;
-    vetoes.state.error = null;
-    vetoes.state.clear.mockReset();
   });
 
   it("shows the Discord name, a blank input and the public profile link", () => {
@@ -141,43 +136,9 @@ describe("ProfilePage", () => {
     expect(screen.queryByText("Saved.")).toBeNull();
   });
 
-  describe("vetoed games", () => {
-    it("shows an empty state", () => {
-      renderPage();
-      expect(screen.getByText("Games you've vetoed")).toBeInTheDocument();
-      expect(
-        screen.getByText("You haven't vetoed any games."),
-      ).toBeInTheDocument();
-    });
-
-    it("hides the empty state while loading", () => {
-      vetoes.state.loading = true;
-      renderPage();
-      expect(screen.queryByText("You haven't vetoed any games.")).toBeNull();
-    });
-
-    it("lists each game once as plain text and undoes one", async () => {
-      vetoes.state.vetoes = [
-        { bggId: 2, name: "Azul" },
-        { bggId: 1, name: "Root" },
-        { bggId: 3, name: null },
-      ];
-      renderPage();
-      expect(screen.getByText("Azul")).toBeInTheDocument();
-      expect(screen.getByText("Root")).toBeInTheDocument();
-      expect(screen.getByText("Game 3")).toBeInTheDocument();
-      expect(screen.queryByRole("link", { name: "Root" })).toBeNull();
-      expect(screen.queryByText("2025")).toBeNull();
-      await userEvent.click(
-        screen.getByRole("button", { name: "Undo veto of Azul" }),
-      );
-      expect(vetoes.state.clear).toHaveBeenCalledWith(2);
-    });
-
-    it("shows an error", () => {
-      vetoes.state.error = "Boom";
-      renderPage();
-      expect(screen.getByRole("alert")).toHaveTextContent("Boom");
-    });
+  it("composes the overrides and vetoes sections", () => {
+    renderPage();
+    expect(screen.getByText("overrides for 9")).toBeInTheDocument();
+    expect(screen.getByText("vetoes section")).toBeInTheDocument();
   });
 });

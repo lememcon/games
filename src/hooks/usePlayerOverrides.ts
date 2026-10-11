@@ -25,6 +25,7 @@ const EMPTY: Record<string, Record<string, Bounds>> = {};
 // each one.
 const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
   const [all, setAll] = useState(EMPTY);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +34,8 @@ const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
     playerOverridesApi(fetchImpl)
       .list()
       .then((d) => !cancelled && setAll(rangesByMember(d.overrides)))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
@@ -65,6 +67,7 @@ const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
 
   return {
     all,
+    loading,
     saving,
     error,
     save: (bggId: number, range: Bounds) =>

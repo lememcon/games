@@ -1,15 +1,25 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
 import { vetoesApi } from "@/lib/vetoesApi";
 import type { MyVeto } from "@/types";
 
-// The signed-in member's vetoes, which apply to every year, with undo. Not optimistic:
-// the list is refetched after each clear.
+const MESSAGES: Record<string, string> = {
+  unknown_game: "That game no longer exists.",
+};
+
+const describe = (e: unknown): string =>
+  (e instanceof ApiError && MESSAGES[e.message]) || GENERIC_ERROR;
+
+// The signed-in member's vetoes, which apply to every year, with add and undo. Not
+// optimistic: the list is refetched after each change.
 const useMyVetoes = (fetchImpl: typeof fetch = fetch) => {
   const [vetoes, setVetoes] = useState<MyVeto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,20 +33,30 @@ const useMyVetoes = (fetchImpl: typeof fetch = fetch) => {
     };
   }, [fetchImpl]);
 
-  const clear = useCallback(
-    async (bggId: number) => {
+  // Runs one mutation then refetches; a second call while one runs is ignored.
+  const mutate = useCallback(
+    async (run: () => Promise<void>) => {
+      if (busy.current) return;
+      busy.current = true;
+      setSaving(true);
       setError(null);
       try {
-        await vetoesApi(fetchImpl).clear(bggId);
+        await run();
         setVetoes((await vetoesApi(fetchImpl).listMine()).vetoes);
-      } catch {
-        setError(GENERIC_ERROR);
+      } catch (e) {
+        setError(describe(e));
       }
+      busy.current = false;
+      setSaving(false);
     },
     [fetchImpl],
   );
 
-  return { vetoes, loading, error, clear };
+  const add = (bggId: number) => mutate(() => vetoesApi(fetchImpl).set(bggId));
+  const clear = (bggId: number) =>
+    mutate(() => vetoesApi(fetchImpl).clear(bggId));
+
+  return { vetoes, loading, saving, error, add, clear };
 };
 
 export type MyVetoesState = ReturnType<typeof useMyVetoes>;

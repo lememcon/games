@@ -18,6 +18,8 @@ export interface PlayerGameScore {
 // The value shape served by GET /api/games, keyed by BoardGameGeek id
 // (string). Custom or imageless games have a null image; bounds may be null.
 export interface GameMeta {
+  // Omitted when the game has no name.
+  name?: string;
   // BGG's range.
   players?: { min: number | null; max: number | null };
   image?: string | null;

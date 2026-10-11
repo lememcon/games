@@ -44,6 +44,7 @@ function makeApp(user: AppUser | null = null) {
     },
     games: {
       "1": {
+        name: "Root",
         players: { min: 2, max: 4 },
         image: "https://x/a.jpg",
         ext: ".jpg",
@@ -170,6 +171,7 @@ describe("GET /api/games", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       "1": {
+        name: "Root",
         players: { min: 2, max: 4 },
         image: "https://x/a.jpg",
         ext: ".jpg",
