@@ -17,6 +17,11 @@ vi.mock("@/components/ProfileOverrides", () => ({
     <div>overrides for {discordId}</div>
   ),
 }));
+vi.mock("@/components/ColorPicker", () => ({
+  default: ({ color }: { color: string | null }) => (
+    <div>color picker {String(color)}</div>
+  ),
+}));
 vi.mock("@/components/ProfileVetoes", () => ({
   default: () => <div>vetoes section</div>,
 }));
@@ -134,6 +139,16 @@ describe("ProfilePage", () => {
     await screen.findByText("Saved.");
     await userEvent.type(screen.getByLabelText("Display name"), "x");
     expect(screen.queryByText("Saved.")).toBeNull();
+  });
+
+  it("renders the color picker with the member's current color", () => {
+    renderPage({ color: "#2F6BB8" });
+    expect(screen.getByText("color picker #2F6BB8")).toBeInTheDocument();
+  });
+
+  it("passes null to the color picker when no color is set", () => {
+    renderPage();
+    expect(screen.getByText("color picker null")).toBeInTheDocument();
   });
 
   it("composes the overrides and vetoes sections", () => {

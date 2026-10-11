@@ -70,6 +70,7 @@ export async function getScores(
       discordName: user.name,
       discordId: resolveNames ? appUser.discordId : sql<null>`null`,
       discordImage: resolveNames ? user.image : sql<null>`null`,
+      color: resolveNames ? appUser.color : sql<null>`null`,
       score: score.score,
       rank: score.rank,
     })

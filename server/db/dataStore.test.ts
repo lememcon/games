@@ -337,10 +337,21 @@ describe("display names", () => {
     for (const r of (await store.getScores(2098))!)
       expect(r).not.toHaveProperty("discord_image");
 
+    expect(withImage[0]).not.toHaveProperty("color");
+    await client.query(`UPDATE app_user SET color = $1 WHERE discord_id = $2`, [
+      "#2F6BB8",
+      MEMBER,
+    ]);
+    expect((await store.getScores(2098, true))![0].color).toBe("#2F6BB8");
+    expect((await store.getScores(2098, true))![1]).not.toHaveProperty("color");
+    for (const r of (await store.getScores(2098))!)
+      expect(r).not.toHaveProperty("color");
+
     await client.query(
       `UPDATE app_user SET status = 'pending', display_name = 'Dee' WHERE discord_id = $1`,
       [MEMBER],
     );
+    expect((await store.getScores(2098, true))![0]).not.toHaveProperty("color");
     expect((await store.getScores(2098, true))![0]).not.toHaveProperty(
       "discord_id",
     );

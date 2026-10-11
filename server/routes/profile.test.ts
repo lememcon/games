@@ -48,10 +48,11 @@ const profile: Profile = {
   totalPlays: 12,
 };
 
-function makeApp() {
+function makeApp(members: string[] = [KEL]) {
   const fake = fakeProfiles({
     profiles: [profile],
     names: { [PAT]: "Pat" },
+    members,
   });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
@@ -168,6 +169,59 @@ describe("PUT /api/me/display-name", () => {
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: "forbidden_origin" });
     expect(calls).toEqual([]);
+  });
+});
+
+describe("PUT /api/me/color", () => {
+  const PICK = "#2F6BB8";
+
+  it("401s anonymous and 403s pending users", async () => {
+    const { app, colorCalls } = makeApp();
+    const body = { color: PICK };
+    expect((await app.request("/api/me/color", put(body))).status).toBe(401);
+    expect(
+      (await app.request("/api/me/color", put(body, as("pending")))).status,
+    ).toBe(403);
+    expect(colorCalls).toEqual([]);
+  });
+
+  it("sets and clears the color", async () => {
+    const { app, colorCalls } = makeApp();
+    for (const color of [PICK, null]) {
+      const res = await app.request(
+        "/api/me/color",
+        put({ color }, as("member")),
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ color });
+    }
+    expect(colorCalls).toEqual([
+      { discordId: KEL, color: PICK },
+      { discordId: KEL, color: null },
+    ]);
+  });
+
+  it.each([
+    [{ color: 5 }, "invalid_body"],
+    [{ color: PICK, extra: 1 }, "invalid_body"],
+    [{ color: "#000000" }, "invalid_color"],
+    [{ color: PICK.toLowerCase() }, "invalid_color"],
+  ])("400s %j", async (body, error) => {
+    const { app, colorCalls } = makeApp();
+    const res = await app.request("/api/me/color", put(body, as("member")));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error });
+    expect(colorCalls).toEqual([]);
+  });
+
+  it("404s a member that does not exist", async () => {
+    const { app } = makeApp([]);
+    const res = await app.request(
+      "/api/me/color",
+      put({ color: PICK }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
   });
 });
 

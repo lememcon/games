@@ -37,6 +37,7 @@ function makeApp(user: AppUser | null = null) {
           ...rows[1],
           discord_id: "222222222222222222",
           discord_image: "https://cdn.example/a.png",
+          color: "#2F6BB8",
         },
         { ...rows[0], player: "orphan", discord_image: "https://x/o.png" },
       ],
@@ -134,11 +135,23 @@ describe("GET /api/years/:year/scores", () => {
           ...rows[1],
           discord_id: MEMBER.discordId,
           discord_image: "https://cdn.example/a.png",
+          color: "#2F6BB8",
         },
         { ...rows[0], player: "orphan" },
       ],
     });
     expect(app.scoreCalls).toEqual([{ year: 2025, resolveNames: true }]);
+  });
+
+  it("sends no color to anonymous or pending sessions", async () => {
+    for (const user of [null, PENDING]) {
+      const res = await makeApp(user).request("/api/years/2025/scores");
+      const body = (await res.json()) as {
+        player_game_scores: Record<string, unknown>[];
+      };
+      for (const r of body.player_game_scores)
+        expect(r).not.toHaveProperty("color");
+    }
   });
 
   it("treats pending sessions like anonymous ones", async () => {

@@ -488,6 +488,28 @@ describe("Scoreboard", () => {
     });
   });
 
+  describe("picked colors", () => {
+    it("colors a player's filter chip with the color on their rows", () => {
+      at("/2026");
+      state.data = {
+        ...loadedData,
+        by_player: {
+          alice: [{ ...loadedData.by_player.alice[0], color: "#6D48B0" }],
+          bob: loadedData.by_player.bob,
+        },
+      };
+      const { getByRole } = render();
+
+      expect(getByRole("button", { name: "alice" })).toHaveStyle({
+        color: "rgb(109, 72, 176)",
+      });
+      // bob keeps his place in the sorted list of all names.
+      expect(getByRole("button", { name: "bob" })).toHaveStyle({
+        color: "rgb(47, 107, 184)",
+      });
+    });
+  });
+
   describe("member player count ranges", () => {
     const linked: Data = {
       ...loadedData,

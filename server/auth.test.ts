@@ -128,6 +128,7 @@ describe("createSessionResolver", () => {
       discordId: ALEX,
       name: "Pat",
       displayName: null,
+      color: null,
       discordName: "Pat",
       image: "pat.png",
       role: "member",
@@ -147,6 +148,13 @@ describe("createSessionResolver", () => {
       displayName: "Kel",
       discordName: "Pat",
     });
+  });
+
+  it("carries the picked color", async () => {
+    const fake = setup([ALEX], {
+      [ALEX]: { role: "member", status: "approved", color: "#2F6BB8" },
+    });
+    expect((await resolve(fake)).user).toMatchObject({ color: "#2F6BB8" });
   });
 
   it("applies the stored role and status on the next request", async () => {

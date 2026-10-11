@@ -1,4 +1,7 @@
+import { useContext } from "react";
+
 import { PALETTE } from "@/lib/colors";
+import { PlayerColorContext } from "@/lib/playerColors";
 
 interface PlayerFilterProps {
   players: string[];
@@ -7,7 +10,8 @@ interface PlayerFilterProps {
 }
 
 // A wall of toggle chips, one per player. Selecting a player fills their chip
-// with their own palette color; unselected chips wear the name in that color on
+// with their own color (from the player color context, else their place in the
+// palette); unselected chips wear the name in that color on
 // white. Each chip is a real aria-pressed button so the state reads without
 // relying on color alone.
 const PlayerFilter = ({
@@ -15,6 +19,7 @@ const PlayerFilter = ({
   playerOptions,
   onPlayersChange,
 }: PlayerFilterProps) => {
+  const colors = useContext(PlayerColorContext);
   const toggle = (name: string) =>
     onPlayersChange(
       players.includes(name)
@@ -46,7 +51,7 @@ const PlayerFilter = ({
       </div>
       <div className="player-filter__chips">
         {sorted.map((name, i) => {
-          const color = PALETTE[i % PALETTE.length];
+          const color = colors[name] ?? PALETTE[i % PALETTE.length];
           const selected = players.includes(name);
           return (
             <button

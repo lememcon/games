@@ -107,6 +107,8 @@ export const appUser = pgTable(
     status: text("status").notNull().default("pending"),
     /** Name the member chose; replaces their Discord name in the app. */
     displayName: text("display_name"),
+    /** Name color the member picked from the palette; null means automatic. */
+    color: text("color"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

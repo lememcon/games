@@ -77,6 +77,41 @@ beforeEach(async () => {
   );
 });
 
+describe("setColor", () => {
+  const colorOf = async (id: string) =>
+    (
+      await client.query<{ color: string | null }>(
+        "SELECT color FROM app_user WHERE discord_id = $1",
+        [id],
+      )
+    ).rows[0].color;
+
+  it("sets, replaces and clears the color", async () => {
+    expect(await store.setColor(ALEX, "#2F6BB8")).toEqual({
+      ok: true,
+      value: { color: "#2F6BB8" },
+    });
+    expect(await colorOf(ALEX)).toBe("#2F6BB8");
+    await store.setColor(ALEX, "#C4402C");
+    expect(await colorOf(ALEX)).toBe("#C4402C");
+    expect((await store.setColor(ALEX, null)).ok).toBe(true);
+    expect(await colorOf(ALEX)).toBeNull();
+  });
+
+  it("allows two members the same color", async () => {
+    await store.setColor(ALEX, "#2F6BB8");
+    expect((await store.setColor(JO, "#2F6BB8")).ok).toBe(true);
+  });
+
+  it("404s a member that does not exist", async () => {
+    expect(await store.setColor("424242", "#2F6BB8")).toEqual({
+      ok: false,
+      status: 404,
+      error: "not_found",
+    });
+  });
+});
+
 describe("setDisplayName", () => {
   it("sets, replaces and clears the name, logging each change", async () => {
     expect(await store.setDisplayName(ALEX, "Kel")).toEqual({

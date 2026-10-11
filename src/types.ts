@@ -13,6 +13,8 @@ export interface PlayerGameScore {
   discord_id?: string;
   // Discord avatar URL; sent with discord_id.
   discord_image?: string;
+  // The linked member's picked name color; sent with discord_id.
+  color?: string;
 }
 
 // The value shape served by GET /api/games, keyed by BoardGameGeek id
@@ -106,6 +108,8 @@ export interface MeUser {
 // `name` is the resolved name (display name, else the Discord name).
 export interface ApprovedUser extends MeUser {
   displayName: string | null;
+  // The name color the member picked from the palette; absent means automatic.
+  color?: string | null;
   discordName: string;
   role: Role;
 }
@@ -160,6 +164,10 @@ export interface Profile {
   stats: ProfileStats | null;
   // Recorded plays (sum of played_count) across all members and years.
   totalPlays: number;
+}
+
+export interface ColorResult {
+  color: string | null;
 }
 
 export interface DisplayNameResult {
