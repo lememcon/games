@@ -24,6 +24,30 @@ export const realBounds = (meta: GameMeta | undefined): Bounds | null => {
   return null;
 };
 
+// A game's name, or "Game <id>" when it has none.
+export const gameLabel = (games: GamesData, id: number | string): string =>
+  games[String(id)]?.name ?? `Game ${id}`;
+
+// Select options (value is the bgg id as a string) for the named games,
+// sorted by name. `exclude` drops ids already listed; `requireBounds` keeps
+// only games with a known BGG player range. Nameless games are not offered.
+export const gameOptions = (
+  games: GamesData,
+  exclude: Iterable<number | string> = [],
+  requireBounds = false,
+): { value: string; label: string }[] => {
+  const skip = new Set([...exclude].map(String));
+  return Object.entries(games)
+    .filter(
+      ([id, meta]) =>
+        meta.name && !skip.has(id) && (!requireBounds || realBounds(meta)),
+    )
+    .map(([id, meta]) => ({ value: id, label: meta.name! }))
+    .sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+    );
+};
+
 // Player-count bounds for a game, defaulting to 0/99 when they are unknown.
 export const gameBounds = (gameData: GamesData, id: string): Bounds =>
   realBounds(gameData[id]) ?? { min: 0, max: 99 };

@@ -7,6 +7,8 @@ import {
   computeMaxScores,
   formatBounds,
   gameBounds,
+  gameLabel,
+  gameOptions,
   leastHappyPlayer,
   parseSortMode,
   partitions,
@@ -55,6 +57,40 @@ describe("gameBounds", () => {
 
   it("defaults when metadata exists but has no players", () => {
     expect(gameBounds({ 5: { image: "x" } }, "5")).toEqual({ min: 0, max: 99 });
+  });
+});
+
+describe("gameOptions and gameLabel", () => {
+  const games: GamesData = {
+    "1": { name: "root", players: { min: 2, max: 4 } },
+    "2": { name: "Azul", players: { min: null, max: null } },
+    "3": { players: { min: 1, max: 2 } },
+    "10": { name: "Catan", players: { min: 3, max: 4 } },
+  };
+
+  it("sorts by name case-insensitively and skips nameless games", () => {
+    expect(gameOptions(games)).toEqual([
+      { value: "2", label: "Azul" },
+      { value: "10", label: "Catan" },
+      { value: "1", label: "root" },
+    ]);
+  });
+
+  it("excludes listed ids, numeric or string", () => {
+    expect(gameOptions(games, [1, "10"]).map((o) => o.value)).toEqual(["2"]);
+  });
+
+  it("can require a known player range", () => {
+    expect(gameOptions(games, [], true).map((o) => o.value)).toEqual([
+      "10",
+      "1",
+    ]);
+  });
+
+  it("labels with the name, else a fallback", () => {
+    expect(gameLabel(games, 10)).toBe("Catan");
+    expect(gameLabel(games, "3")).toBe("Game 3");
+    expect(gameLabel(games, 99)).toBe("Game 99");
   });
 });
 

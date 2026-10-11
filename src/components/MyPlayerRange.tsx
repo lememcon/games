@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Badge, Button, Group, NumberInput, Text } from "@mantine/core";
 
@@ -14,6 +14,10 @@ interface MyPlayerRangeProps {
   error: string | null;
   onSave: (range: Bounds) => void;
   onReset: () => void;
+  // Hides the heading and long help, for use in a list row.
+  compact?: boolean;
+  // Names the game in the input labels, for pages with several ranges.
+  gameName?: string;
 }
 
 // Lets a member narrow the group sizes this game is suggested for when they are
@@ -25,6 +29,8 @@ const MyPlayerRange = ({
   error,
   onSave,
   onReset,
+  compact = false,
+  gameName,
 }: MyPlayerRangeProps) => {
   const [min, setMin] = useState<number | string>((stored ?? allowed).min);
   const [max, setMax] = useState<number | string>((stored ?? allowed).max);
@@ -34,7 +40,8 @@ const MyPlayerRange = ({
   const current = stored ?? allowed;
   const changed =
     range !== null && (range.min !== current.min || range.max !== current.max);
-  const messageId = "my-range-error";
+  const messageId = useId();
+  const suffix = gameName ? ` for ${gameName}` : "";
   // withAria: false hands aria-describedby back to us.
   const ariaProps = {
     withAria: false,
@@ -44,14 +51,18 @@ const MyPlayerRange = ({
 
   return (
     <section className="my-range">
-      <Text fw={600}>Your player count</Text>
-      <Text size="sm" c="dimmed">
-        Only suggest this game in groups that include you when the group has
-        this many players. You can narrow the range, not widen it.
-      </Text>
+      {!compact && (
+        <>
+          <Text fw={600}>Your player count</Text>
+          <Text size="sm" c="dimmed">
+            Only suggest this game in groups that include you when the group has
+            this many players. You can narrow the range, not widen it.
+          </Text>
+        </>
+      )}
       <Group gap="xs" mt="xs" wrap="nowrap">
         <NumberInput
-          aria-label="Minimum players"
+          aria-label={`Minimum players${suffix}`}
           size="xs"
           w={70}
           min={1}
@@ -66,7 +77,7 @@ const MyPlayerRange = ({
         />
         <Text span>-</Text>
         <NumberInput
-          aria-label="Maximum players"
+          aria-label={`Maximum players${suffix}`}
           size="xs"
           w={70}
           min={1}
