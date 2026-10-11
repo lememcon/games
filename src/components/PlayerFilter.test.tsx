@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import PlayerFilter from "@/components/PlayerFilter";
 import { PALETTE } from "@/lib/colors";
+import { PlayerColorProvider } from "@/lib/playerColors";
 import { renderWithMantine } from "@/test/utils";
 
 const options = ["alice", "bob", "carol"];
@@ -104,5 +105,24 @@ describe("PlayerFilter", () => {
     );
     const names = getAllByRole("button").map((b) => b.textContent);
     expect(names).toEqual(["Alice", "bob", "carol"]);
+  });
+
+  it("reads chip colors from the player color context", () => {
+    const { getByRole } = renderWithMantine(
+      <PlayerColorProvider value={{ alice: PALETTE[4] }}>
+        <PlayerFilter
+          players={[]}
+          playerOptions={options}
+          onPlayersChange={() => {}}
+        />
+      </PlayerColorProvider>,
+    );
+    expect(getByRole("button", { name: "alice" })).toHaveStyle({
+      color: rgb(PALETTE[4]),
+    });
+    // Not in the context: falls back to its place in the palette.
+    expect(getByRole("button", { name: "bob" })).toHaveStyle({
+      color: rgb(PALETTE[1]),
+    });
   });
 });

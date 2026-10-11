@@ -7,6 +7,7 @@ import {
   SILVER,
   buildPlayerColors,
   medalColor,
+  pickedColors,
 } from "@/lib/colors";
 
 describe("buildPlayerColors", () => {
@@ -29,6 +30,42 @@ describe("buildPlayerColors", () => {
     const names = ["carol", "Alice", "bob"];
     buildPlayerColors(names);
     expect(names).toEqual(["carol", "Alice", "bob"]);
+  });
+});
+
+describe("buildPlayerColors with picks", () => {
+  const names = ["alice", "bob", "carol", "dave"];
+  const base = buildPlayerColors(names);
+
+  it("equals the old output when nothing is picked", () => {
+    expect(buildPlayerColors(names, {})).toEqual(base);
+  });
+
+  it("keeps a pick and changes no one else's color", () => {
+    const colors = buildPlayerColors(names, { bob: PALETTE[4] });
+    expect(colors.bob).toBe(PALETTE[4]);
+    expect({ ...colors, bob: base.bob }).toEqual(base);
+  });
+
+  it("allows duplicate colors", () => {
+    const colors = buildPlayerColors(names, { bob: base.alice });
+    expect(colors.bob).toBe(colors.alice);
+  });
+
+  it("ignores picks for names that are not in the list", () => {
+    expect(buildPlayerColors(names, { zed: PALETTE[1] })).toEqual(base);
+  });
+});
+
+describe("pickedColors", () => {
+  it("maps each player to the color on their rows", () => {
+    expect(
+      pickedColors({
+        alice: [{}, { color: "#2F6BB8" }],
+        bob: [{}],
+        carol: [],
+      }),
+    ).toEqual({ alice: "#2F6BB8" });
   });
 });
 

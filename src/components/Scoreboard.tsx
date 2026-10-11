@@ -21,7 +21,7 @@ import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useVetoes from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
 import useYears from "@/hooks/useYears";
-import { buildPlayerColors } from "@/lib/colors";
+import { buildPlayerColors, pickedColors } from "@/lib/colors";
 import {
   buildSelectedGames,
   computeMaxScores,
@@ -163,7 +163,10 @@ function Scoreboard({ user }: ScoreboardProps) {
   });
 
   const { individualMax, selectedMax } = computeMaxScores(data, players);
-  const playerColors = buildPlayerColors(keys(data.by_player));
+  const playerColors = buildPlayerColors(
+    keys(data.by_player),
+    pickedColors(data.by_player),
+  );
   const games = buildSelectedGames({
     byPlayer: data.by_player,
     players,

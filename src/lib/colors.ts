@@ -19,15 +19,33 @@ export const BRONZE = "#B87A48";
 // Assign palette colors to players in a pleasing, stable order: sort the names
 // case-insensitively and hand out the palette by position (wrapping with mod),
 // so the filter reads as a rainbow down the list and every player keeps one
-// color across the app. Returns a name -> color lookup.
-export const buildPlayerColors = (names: string[]): Record<string, string> => {
+// color across the app. A name in `picked` (name -> color) wears its pick
+// instead; the others keep their position in the list of all names, so a pick
+// never recolors anyone else. Returns a name -> color lookup.
+export const buildPlayerColors = (
+  names: string[],
+  picked: Record<string, string> = {},
+): Record<string, string> => {
   const colors: Record<string, string> = {};
   [...names]
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
     .forEach((name, i) => {
-      colors[name] = PALETTE[i % PALETTE.length];
+      colors[name] = picked[name] ?? PALETTE[i % PALETTE.length];
     });
   return colors;
+};
+
+// The picked colors carried on score rows: name -> color for each player whose
+// rows have one.
+export const pickedColors = (
+  byPlayer: Record<string, { color?: string }[]>,
+): Record<string, string> => {
+  const picked: Record<string, string> = {};
+  for (const [name, rows] of Object.entries(byPlayer)) {
+    const color = rows.find((r) => r.color)?.color;
+    if (color) picked[name] = color;
+  }
+  return picked;
 };
 
 // Medal color for the top three ranks; undefined below the podium.

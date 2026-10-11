@@ -12,6 +12,7 @@ import {
   Title,
 } from "@mantine/core";
 
+import ColorPicker from "@/components/ColorPicker";
 import ProfileOverrides from "@/components/ProfileOverrides";
 import ProfileVetoes from "@/components/ProfileVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
@@ -80,6 +81,7 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
           </Group>
         </Stack>
       </form>
+      <ColorPicker color={user.color ?? null} onSaved={onSaved} />
       {saved && <Alert color="green">Saved.</Alert>}
       {error && (
         <Alert color="red" role="alert">
