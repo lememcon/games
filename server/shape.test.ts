@@ -279,6 +279,15 @@ describe("toGamesMap", () => {
     });
   });
 
+  it("includes the name when known and omits the key when null", () => {
+    const map = toGamesMap([
+      row({ bggId: 1, name: "Root" }),
+      row({ bggId: 2, name: null }),
+    ]);
+    expect(map["1"]).toEqual({ name: "Root" });
+    expect(map["2"]).not.toHaveProperty("name");
+  });
+
   it("omits null columns so gameBounds sees undefined", () => {
     const map = toGamesMap([
       row({ bggId: 1 }),

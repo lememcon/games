@@ -170,6 +170,7 @@ export function toGamesMap(rows: readonly GameRow[]): GamesMap {
   const map: GamesMap = {};
   for (const r of rows) {
     map[String(r.bggId)] = {
+      ...(r.name !== null ? { name: r.name } : {}),
       ...(r.minPlayers !== null && r.maxPlayers !== null
         ? { players: { min: r.minPlayers, max: r.maxPlayers } }
         : {}),

@@ -185,6 +185,8 @@ export interface PlayerRange {
 export type GamesMap = Record<
   string,
   {
+    /** The game's name; omitted when unknown. */
+    name?: string;
     /** BGG's range; present only when BGG lists both bounds. */
     players?: PlayerRange;
     image?: string;

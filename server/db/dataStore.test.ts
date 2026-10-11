@@ -183,8 +183,10 @@ describe("data store metadata", () => {
     );
     await client.query("INSERT INTO game (bgg_id, name) VALUES (900101, 'N')");
     const games = await store.getGames();
+    // An unnamed game omits the key; a named one carries it.
     expect(games["900100"]).toEqual({ players: { min: 1, max: 3 } });
-    expect(games["900101"]).toEqual({});
+    expect(games["900100"]).not.toHaveProperty("name");
+    expect(games["900101"]).toEqual({ name: "N" });
   });
 
   it("lists named games with no scores in any year, sorted by name", async () => {
@@ -258,7 +260,10 @@ describe("data store metadata", () => {
     );
     const games = await store.getGames();
     expect(games["900100"]).toEqual({ players: { min: 2, max: 2 } });
-    expect(games["900101"]).toEqual({ players: { min: 4, max: 6 } });
+    expect(games["900101"]).toEqual({
+      name: "N",
+      players: { min: 4, max: 6 },
+    });
     expect(
       (await client.query("SELECT 1 FROM game_metadata WHERE bgg_id = 900102"))
         .rows,
