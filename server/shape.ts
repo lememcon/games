@@ -28,6 +28,7 @@ export const toLegacyRow = (r: ScoreRow): LegacyScoreRow => ({
   rank: r.rank,
   ...(r.discordId ? { discord_id: r.discordId } : {}),
   ...(r.discordImage ? { discord_image: r.discordImage } : {}),
+  ...(r.color ? { color: r.color } : {}),
 });
 
 export interface NameParts {

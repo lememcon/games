@@ -235,6 +235,23 @@ describe("toLegacyRow", () => {
     expect(toLegacyRow(base)).not.toHaveProperty("discord_image");
   });
 
+  it("includes color only when set", () => {
+    const base: ScoreRow = {
+      bggId: 1,
+      gameName: "Root",
+      playerName: "a",
+      score: 1,
+      rank: 1,
+      discordId: "7",
+    };
+    expect(toLegacyRow({ ...base, color: "#2F6BB8" })).toMatchObject({
+      discord_id: "7",
+      color: "#2F6BB8",
+    });
+    expect(toLegacyRow({ ...base, color: null })).not.toHaveProperty("color");
+    expect(toLegacyRow(base)).not.toHaveProperty("color");
+  });
+
   it("never emits a null game name", () => {
     expect(
       toLegacyRow({

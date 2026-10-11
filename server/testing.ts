@@ -41,6 +41,7 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     image: null,
     username: null,
     displayName: null,
+    color: null,
     createdAt: new Date(0),
     ...u,
   });
@@ -51,7 +52,7 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     getOrCreate: async (discordId) => {
       if (!users.has(discordId))
         users.set(discordId, { role: "member", status: "pending" });
-      return { displayName: null, ...users.get(discordId)! };
+      return { displayName: null, color: null, ...users.get(discordId)! };
     },
     repairProtected: async (discordId) => {
       repaired.push(discordId);
@@ -146,12 +147,13 @@ export function fakeData(
       // Like the SQL store, only approved callers get `discord_id`, and
       // `discord_image` only with it.
       return rows
-        ? rows.map(({ discord_id, discord_image, ...rest }) =>
+        ? rows.map(({ discord_id, discord_image, color, ...rest }) =>
             resolveNames && discord_id
               ? {
                   ...rest,
                   discord_id,
                   ...(discord_image ? { discord_image } : {}),
+                  ...(color ? { color } : {}),
                 }
               : rest,
           )
@@ -253,7 +255,12 @@ export function fakeLinks(
 
 /** In-memory ProfileStore for tests; enforces unique names like the SQL store. */
 export function fakeProfiles(
-  initial: { profiles?: Profile[]; names?: Record<string, string> } = {},
+  initial: {
+    profiles?: Profile[];
+    names?: Record<string, string>;
+    /** Discord ids that exist as members, for `setColor`. */
+    members?: string[];
+  } = {},
 ) {
   const profiles = new Map<string, Profile>(
     (initial.profiles ?? []).map((p) => [p.discordId, p]),
@@ -261,7 +268,18 @@ export function fakeProfiles(
   /** Display names in use by other members or players, by Discord id. */
   const names = new Map<string, string>(Object.entries(initial.names ?? {}));
   const calls: { discordId: string; displayName: string | null }[] = [];
+  /** Picked colors by Discord id; `setColor` refuses ids not in `members`. */
+  const colors = new Map<string, string>();
+  const colorCalls: { discordId: string; color: string | null }[] = [];
+  const members = new Set(initial.members ?? []);
   const store: ProfileStore = {
+    setColor: async (discordId, color) => {
+      colorCalls.push({ discordId, color });
+      if (!members.has(discordId)) return refuse(404, "not_found");
+      if (color === null) colors.delete(discordId);
+      else colors.set(discordId, color);
+      return { ok: true, value: { color } };
+    },
     setDisplayName: async (discordId, displayName) => {
       calls.push({ discordId, displayName });
       const taken = [...names].some(
@@ -275,7 +293,7 @@ export function fakeProfiles(
     },
     getProfile: async (discordId) => profiles.get(discordId) ?? null,
   };
-  return { profiles: store, calls, names };
+  return { profiles: store, calls, names, colors, colorCalls };
 }
 
 /** In-memory PlayedStore for tests; refuses years that were not given. */

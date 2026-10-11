@@ -13,6 +13,8 @@ export interface AppUser {
   name: string;
   /** The name the member chose, if any. */
   displayName: string | null;
+  /** Name color the member picked, if any. */
+  color?: string | null;
   /** Name from the Discord profile. */
   discordName: string;
   image: string | null;
@@ -80,6 +82,7 @@ export interface UserRow {
 /** A user row with the name the member chose, if any. */
 export interface UserRecord extends UserRow {
   displayName: string | null;
+  color: string | null;
 }
 
 /** Why a change was refused; `status` is the HTTP status to answer with. */
@@ -153,6 +156,8 @@ export interface LegacyScoreRow {
   discord_id?: string;
   /** Linked member's Discord avatar; approved sessions only, with `discord_id`. */
   discord_image?: string;
+  /** Linked member's picked name color; approved sessions only, with `discord_id`. */
+  color?: string;
 }
 
 /** A score joined with its game and player names, as read from the database. */
@@ -164,6 +169,7 @@ export interface ScoreRow {
   rank: number;
   discordId?: string | null;
   discordImage?: string | null;
+  color?: string | null;
 }
 
 export interface GameRow {
@@ -334,6 +340,11 @@ export interface ProfileStore {
     discordId: string,
     displayName: string | null,
   ): Promise<MutationResult<{ displayName: string | null }>>;
+  /** Null clears. Refuses with 404 `not_found` when there is no such member. */
+  setColor(
+    discordId: string,
+    color: string | null,
+  ): Promise<MutationResult<{ color: string | null }>>;
   /** Null unless the id is an approved member. */
   getProfile(discordId: string): Promise<Profile | null>;
 }

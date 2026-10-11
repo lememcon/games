@@ -82,6 +82,17 @@ export function createProfileStore(
       }
     },
 
+    async setColor(discordId, color) {
+      const updated = await db
+        .update(appUser)
+        .set({ color })
+        .where(eq(appUser.discordId, discordId))
+        .returning({ discordId: appUser.discordId });
+      return updated.length
+        ? { ok: true, value: { color } }
+        : refuse(404, "not_found");
+    },
+
     async getProfile(discordId) {
       const [member] = await db
         .select({

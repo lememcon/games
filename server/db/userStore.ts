@@ -32,7 +32,12 @@ const toRecord = (r: {
   role: string;
   status: string;
   displayName: string | null;
-}): UserRecord => ({ ...toRow(r), displayName: r.displayName });
+  color: string | null;
+}): UserRecord => ({
+  ...toRow(r),
+  displayName: r.displayName,
+  color: r.color,
+});
 
 function selectUsers(db: StoreDb | Tx, discordId?: string) {
   const query = db
@@ -41,6 +46,7 @@ function selectUsers(db: StoreDb | Tx, discordId?: string) {
       role: appUser.role,
       status: appUser.status,
       displayName: appUser.displayName,
+      color: appUser.color,
       createdAt: appUser.createdAt,
       name: user.name,
       image: user.image,

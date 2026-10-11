@@ -271,6 +271,44 @@ describe("GET /api/me", () => {
   });
 });
 
+describe("GET /api/me color", () => {
+  const appAs = (user: AppUser) =>
+    createApp({
+      baseUrl: BASE,
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data: fakeData().data,
+      links: fakeLinks().links,
+      memberOverrides: fakeMemberOverrides().memberOverrides,
+      memberVetoes: fakeMemberVetoes().memberVetoes,
+      profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
+      resolveSession: async () => ({ user }),
+    });
+  const picked = { ...person(ALEX, "Alex"), color: "#2F6BB8" };
+
+  it("reports the picked color to an approved user", async () => {
+    const res = await appAs({
+      ...picked,
+      role: "member",
+      status: "approved",
+    }).request("/api/me");
+    expect(await res.json()).toMatchObject({
+      status: "approved",
+      user: { color: "#2F6BB8" },
+    });
+  });
+
+  it("does not report it to a pending user", async () => {
+    const res = await appAs({
+      ...picked,
+      role: "member",
+      status: "pending",
+    }).request("/api/me");
+    expect(JSON.stringify(await res.json())).not.toContain("2F6BB8");
+  });
+});
+
 describe("GET /api/me display names", () => {
   const named = {
     ...person(ALEX, "Kel"),

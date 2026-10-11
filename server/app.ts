@@ -82,12 +82,28 @@ export function createApp(deps: AppDeps) {
   api.get("/me", (c) => {
     const user = c.get("user");
     if (!user) return c.json({ status: "anonymous" });
-    const { discordId, name, displayName, discordName, image, role, status } =
-      user;
+    const {
+      discordId,
+      name,
+      displayName,
+      color,
+      discordName,
+      image,
+      role,
+      status,
+    } = user;
     return status === "approved"
       ? c.json({
           status,
-          user: { discordId, name, displayName, discordName, image, role },
+          user: {
+            discordId,
+            name,
+            displayName,
+            color,
+            discordName,
+            image,
+            role,
+          },
         })
       : c.json({
           status,

@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 
+import { parseColor } from "../colors";
 import { parseDisplayName } from "../profile";
 import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, ProfileStore } from "../types";
 import { readJson } from "../validate";
 
-/** Own display name and public profiles; both need an approved user (checked in app.ts). */
+/** Own display name, own color and public profiles; both need an approved user (checked in app.ts). */
 export function profileRoutes(profiles: ProfileStore) {
   const routes = new Hono<AppEnv>();
 
@@ -18,6 +19,18 @@ export function profileRoutes(profiles: ProfileStore) {
     if (!result.ok) return refusalResponse(c, result);
     const { displayName } = result.value;
     return c.json({ name: displayName ?? user.discordName, displayName });
+  });
+
+  routes.put("/me/color", async (c) => {
+    const parsed = parseColor(await readJson(c));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+
+    const result = await profiles.setColor(
+      c.get("user")!.discordId,
+      parsed.value,
+    );
+    if (!result.ok) return refusalResponse(c, result);
+    return c.json({ color: result.value.color });
   });
 
   routes.get("/profiles/:discordId", async (c) => {

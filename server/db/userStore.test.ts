@@ -44,6 +44,7 @@ describe("migrations", () => {
       role: "member",
       status: "pending",
       displayName: null,
+      color: null,
     });
     await client.close();
   });
@@ -113,12 +114,14 @@ describe("user store", () => {
         role: "member",
         status: "pending",
         displayName: null,
+        color: null,
       });
       await setRow(SAM, "member", "approved");
       expect(await store.getOrCreate(SAM)).toEqual({
         role: "member",
         status: "approved",
         displayName: null,
+        color: null,
       });
     });
 
@@ -271,6 +274,7 @@ describe("user store", () => {
         role: "member",
         status: "pending",
         displayName: null,
+        color: null,
       });
     });
 
