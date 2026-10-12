@@ -74,6 +74,25 @@ export function parseImportBody(
   return { ok: true, value };
 }
 
+/** The most members one multi-mark may name, counted before dedupe. */
+export const MAX_MARK_MEMBERS = 100;
+
+/**
+ * Body of a multi-member mark: exactly `{discordIds}`, a non-empty array of at
+ * most MAX_MARK_MEMBERS Discord ids (snowflakes), deduped.
+ */
+export function parsePlayersBody(
+  body: unknown,
+): { ok: true; value: Set<string> } | { ok: false } {
+  if (!exactKeys(body, "discordIds") || !Array.isArray(body.discordIds))
+    return { ok: false };
+  const ids = body.discordIds;
+  if (ids.length === 0 || ids.length > MAX_MARK_MEMBERS) return { ok: false };
+  if (!ids.every((id) => typeof id === "string" && /^\d{15,25}$/.test(id)))
+    return { ok: false };
+  return { ok: true, value: new Set(ids as string[]) };
+}
+
 /** Played ids as the legacy count map, every count 1. */
 export const toCounts = (ids: string[]): Record<string, number> =>
   Object.fromEntries(ids.map((id) => [id, 1]));

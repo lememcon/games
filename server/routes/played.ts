@@ -4,6 +4,7 @@ import {
   parseBggId,
   parseImportBody,
   parsePlayedBody,
+  parsePlayersBody,
   parseYear,
   toCounts,
 } from "../played";
@@ -32,6 +33,20 @@ export function playedRoutes(played: PlayedStore) {
         Object.entries(all).map(([id, games]) => [id, toCounts(games)]),
       ),
     });
+  });
+
+  routes.post("/played/:year/:bggId", async (c) => {
+    const year = parseYear(c.req.param("year"));
+    if (year === null) return c.json({ error: "invalid_year" }, 400);
+    const bggId = parseBggId(c.req.param("bggId"));
+    if (bggId === null) return c.json({ error: "invalid_bgg_id" }, 400);
+    const parsed = parsePlayersBody(await readJson(c));
+    if (!parsed.ok) return c.json({ error: "invalid_body" }, 400);
+
+    const result = await played.markPlayed(parsed.value, year, bggId);
+    if (!result.ok) return refusalResponse(c, result);
+    privateNoCache(c);
+    return c.json({ played: result.value });
   });
 
   routes.get("/me/played", async (c) => {

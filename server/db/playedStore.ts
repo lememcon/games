@@ -1,17 +1,20 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { AllPlayedGames, PlayedStore } from "../types";
-import { playedCount, year as yearTable } from "./schema";
+import { appUser, playedCount, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const UNKNOWN_YEAR = refuse(404, "unknown_year");
+const UNKNOWN_MEMBER = refuse(422, "unknown_member");
+
+type Tx = Parameters<Parameters<StoreDb["transaction"]>[0]>[0];
 
 /** A row means played; its count is ignored (the previous release may write above 1). */
 export function createPlayedStore(db: StoreDb): PlayedStore {
-  const yearExists = async (year: number) =>
+  const yearExists = async (year: number, q: StoreDb | Tx = db) =>
     (
-      await db
+      await q
         .select({ year: yearTable.year })
         .from(yearTable)
         .where(eq(yearTable.year, year))
@@ -28,18 +31,21 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
         .orderBy(asc(playedCount.bggId))
     ).map(({ bggId }) => String(bggId));
 
+  const readAll = async (year: number, q: StoreDb | Tx = db) => {
+    const rows = await q
+      .select({ discordId: playedCount.discordId, bggId: playedCount.bggId })
+      .from(playedCount)
+      .where(eq(playedCount.year, year))
+      .orderBy(asc(playedCount.bggId));
+    const all: AllPlayedGames = {};
+    for (const { discordId, bggId } of rows)
+      (all[discordId] ??= []).push(String(bggId));
+    return all;
+  };
+
   return {
     async getAll(year) {
-      if (!(await yearExists(year))) return null;
-      const rows = await db
-        .select({ discordId: playedCount.discordId, bggId: playedCount.bggId })
-        .from(playedCount)
-        .where(eq(playedCount.year, year))
-        .orderBy(asc(playedCount.bggId));
-      const all: AllPlayedGames = {};
-      for (const { discordId, bggId } of rows)
-        (all[discordId] ??= []).push(String(bggId));
-      return all;
+      return (await yearExists(year)) ? readAll(year) : null;
     },
 
     async get(discordId, year) {
@@ -65,6 +71,34 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
           );
       }
       return { ok: true, value: null };
+    },
+
+    async markPlayed(discordIds, year, bggId) {
+      return db.transaction(async (tx) => {
+        if (!(await yearExists(year, tx))) return UNKNOWN_YEAR;
+        const [{ members }] = await tx
+          .select({ members: count() })
+          .from(appUser)
+          .where(
+            and(
+              inArray(appUser.discordId, [...discordIds]),
+              eq(appUser.status, "approved"),
+            ),
+          );
+        if (members !== discordIds.size) return UNKNOWN_MEMBER;
+        await tx
+          .insert(playedCount)
+          .values(
+            [...discordIds].map((discordId) => ({
+              discordId,
+              year,
+              bggId,
+              count: 1,
+            })),
+          )
+          .onConflictDoNothing();
+        return { ok: true as const, value: await readAll(year, tx) };
+      });
     },
 
     async importPlayed(discordId, year, bggIds) {

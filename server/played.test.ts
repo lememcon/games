@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_IMPORT_ENTRIES,
+  MAX_MARK_MEMBERS,
   MAX_PLAYED_COUNT,
   parseBggId,
   parseImportBody,
   parsePlayedBody,
+  parsePlayersBody,
   parseYear,
   toCounts,
 } from "./played";
@@ -157,5 +159,41 @@ describe("toCounts", () => {
   it("maps every played id to a count of 1", () => {
     expect(toCounts(["11", "200"])).toEqual({ "11": 1, "200": 1 });
     expect(toCounts([])).toEqual({});
+  });
+});
+
+describe("parsePlayersBody", () => {
+  const A = "222222222222222222";
+  const B = "333333333333333333";
+
+  it("accepts snowflakes and dedupes them", () => {
+    expect(parsePlayersBody({ discordIds: [A, B, A] })).toEqual({
+      ok: true,
+      value: new Set([A, B]),
+    });
+  });
+
+  it("counts the cap before deduping", () => {
+    const many = (n: number) => Array.from({ length: n }, () => A);
+    expect(parsePlayersBody({ discordIds: many(MAX_MARK_MEMBERS) }).ok).toBe(
+      true,
+    );
+    expect(
+      parsePlayersBody({ discordIds: many(MAX_MARK_MEMBERS + 1) }),
+    ).toEqual({ ok: false });
+  });
+
+  it.each([
+    [{ discordIds: [] }],
+    [{ discordIds: [1] }],
+    [{ discordIds: ["abc"] }],
+    [{ discordIds: ["1234"] }],
+    [{ discordIds: "222222222222222222" }],
+    [{ discordIds: ["222222222222222222"], extra: 1 }],
+    [{}],
+    [[]],
+    [null],
+  ])("rejects %j", (body) => {
+    expect(parsePlayersBody(body)).toEqual({ ok: false });
   });
 });

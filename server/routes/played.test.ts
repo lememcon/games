@@ -31,10 +31,11 @@ const users: Record<string, AppUser> = {
   pending: { ...approved, status: "pending" },
 };
 
-function makeApp() {
+function makeApp(members?: string[]) {
   const fake = fakePlayed({
     years: [2025, 2026],
     played: { [`${PAT}:2025`]: [11] },
+    members,
   });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
@@ -361,5 +362,68 @@ describe("POST /api/me/played/:year/import", () => {
     );
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "unknown_year" });
+  });
+});
+
+describe("POST /api/played/:year/:bggId", () => {
+  const url = "/api/played/2025/12";
+
+  it("401s anonymous and 403s pending users", async () => {
+    const { app, calls } = makeApp();
+    const body = { discordIds: [KEL] };
+    expect((await app.request(url, post(body))).status).toBe(401);
+    expect((await app.request(url, post(body, as("pending")))).status).toBe(
+      403,
+    );
+    expect(calls).toEqual([]);
+  });
+
+  it("marks several members, answers everyone's games uncached, and is idempotent", async () => {
+    const { app, rows } = makeApp([KEL, PAT]);
+    for (let i = 0; i < 2; i++) {
+      const res = await app.request(
+        url,
+        post({ discordIds: [KEL, PAT] }, as("member")),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("private, no-cache");
+      expect(await res.json()).toEqual({
+        played: { [KEL]: ["12"], [PAT]: ["11", "12"] },
+      });
+    }
+    expect([...rows.get(`${KEL}:2025`)!]).toEqual([12]);
+  });
+
+  it("400s a bad year, bgg id or body", async () => {
+    const { app, calls } = makeApp();
+    const ok = post({ discordIds: [KEL] }, as("member"));
+    expect((await app.request("/api/played/20x5/12", ok)).status).toBe(400);
+    expect((await app.request("/api/played/2025/0", ok)).status).toBe(400);
+    for (const body of [{}, { discordIds: [] }, { discordIds: ["x"] }])
+      expect((await app.request(url, post(body, as("member")))).status).toBe(
+        400,
+      );
+    expect(calls).toEqual([]);
+  });
+
+  it("404s an unknown year", async () => {
+    const { app } = makeApp();
+    const res = await app.request(
+      "/api/played/1999/12",
+      post({ discordIds: [KEL] }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_year" });
+  });
+
+  it("422s an unknown member and writes nothing", async () => {
+    const { app, rows } = makeApp([KEL]);
+    const res = await app.request(
+      url,
+      post({ discordIds: [KEL, PAT] }, as("member")),
+    );
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({ error: "unknown_member" });
+    expect(rows.has(`${KEL}:2025`)).toBe(false);
   });
 });
