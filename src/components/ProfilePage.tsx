@@ -14,6 +14,7 @@ import {
 
 import ColorPicker from "@/components/ColorPicker";
 import ProfileOverrides from "@/components/ProfileOverrides";
+import ProfilePlayed from "@/components/ProfilePlayed";
 import ProfileVetoes from "@/components/ProfileVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
 import { MAX_DISPLAY_NAME, displayNameError } from "@/lib/profile";
@@ -90,6 +91,7 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
       )}
       <ProfileOverrides discordId={user.discordId} />
       <ProfileVetoes />
+      <ProfilePlayed />
     </Stack>
   );
 };
