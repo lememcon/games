@@ -7,8 +7,11 @@ import type {
   PlayerGameScore,
 } from "../../src/types";
 
+export const aliceId = "100000000000000001";
+export const bobId = "100000000000000002";
+
 export const approvedUser: ApprovedUser = {
-  discordId: "1001",
+  discordId: aliceId,
   name: "Alice",
   image: null,
   displayName: null,
@@ -33,7 +36,19 @@ const row = (
   player: string,
   score: number,
   rank: number,
-): PlayerGameScore => ({ bgg_id, game, player, score, rank });
+): PlayerGameScore => ({
+  bgg_id,
+  game,
+  player,
+  score,
+  rank,
+  // Alice and Bob are members; Cara has no account.
+  ...(player === "Alice"
+    ? { discord_id: aliceId }
+    : player === "Bob"
+      ? { discord_id: bobId }
+      : {}),
+});
 
 export const scores: PlayerGameScore[] = [
   row(101, "Alpha", "Alice", 10, 1),
@@ -116,6 +131,15 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   await page.route(
     (url) => /^\/api\/me\/vetoes\/\d+$/.test(pathOf(url)),
     (route) => route.fulfill({ status: 204 }),
+  );
+  await page.route(
+    (url) => pathOf(url) === "/api/played",
+    (route) => json(route, { played: {} }),
+  );
+  await page.route(
+    (url) => /^\/api\/played\/\d+\/\d+$/.test(pathOf(url)),
+    (route) =>
+      json(route, { played: { [aliceId]: ["101"], [bobId]: ["101"] } }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/me/played",

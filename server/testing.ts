@@ -299,7 +299,12 @@ export function fakeProfiles(
 
 /** In-memory PlayedStore for tests; refuses years that were not given. */
 export function fakePlayed(
-  initial: { years?: number[]; played?: Record<string, number[]> } = {},
+  initial: {
+    years?: number[];
+    played?: Record<string, number[]>;
+    /** Approved members, for `markPlayed`; absent means every id is known. */
+    members?: string[];
+  } = {},
 ) {
   const years = new Set(initial.years ?? [2025]);
   /** Played bgg ids by `discordId:year`. */
@@ -339,6 +344,17 @@ export function fakePlayed(
       if (isPlayed) ids.add(bggId);
       else ids.delete(bggId);
       return { ok: true, value: null };
+    },
+    markPlayed: async (discordIds, year, bggId) => {
+      calls.push({ discordId: [...discordIds].join(","), year, bggId });
+      if (!years.has(year)) return refuse(404, "unknown_year");
+      if (
+        initial.members &&
+        [...discordIds].some((id) => !initial.members!.includes(id))
+      )
+        return refuse(422, "unknown_member");
+      for (const id of discordIds) bucket(id, year).add(bggId);
+      return { ok: true, value: (await played.getAll(year))! };
     },
     importPlayed: async (discordId, year, incoming) => {
       calls.push({ discordId, year });

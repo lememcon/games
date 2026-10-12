@@ -229,3 +229,47 @@ describe("collapsing counts to played (migration 0016)", () => {
     await pre.close();
   });
 });
+
+describe("markPlayed", () => {
+  const approve = (...ids: string[]) =>
+    client.query(
+      "UPDATE app_user SET status = 'approved' WHERE discord_id = ANY($1)",
+      [ids],
+    );
+
+  it("marks every member, keeps existing rows and other games and years", async () => {
+    await approve(ALEX, JO);
+    await insert(ALEX, 2025, 11, 3);
+    await insert(JO, 2026, 12, 1);
+    const result = await store.markPlayed(new Set([ALEX, JO]), 2025, 11);
+    expect(result).toEqual({
+      ok: true,
+      value: { [ALEX]: ["11"], [JO]: ["11"] },
+    });
+    expect(await rowCount()).toBe(3);
+    const { rows } = await client.query<{ count: number }>(
+      "SELECT count FROM played_count WHERE discord_id = $1 AND year = 2025",
+      [ALEX],
+    );
+    expect(rows).toEqual([{ count: 3 }]);
+    expect(await store.get(JO, 2026)).toEqual(["12"]);
+  });
+
+  it("refuses an unknown year", async () => {
+    await approve(ALEX);
+    expect(await store.markPlayed(new Set([ALEX]), 1999, 11)).toMatchObject({
+      ok: false,
+      error: "unknown_year",
+    });
+    expect(await rowCount()).toBe(0);
+  });
+
+  it("refuses and writes nothing when any id is pending or unknown", async () => {
+    await approve(ALEX);
+    for (const other of [JO, "111111111111111111"])
+      expect(
+        await store.markPlayed(new Set([ALEX, other]), 2025, 11),
+      ).toMatchObject({ ok: false, status: 422, error: "unknown_member" });
+    expect(await rowCount()).toBe(0);
+  });
+});

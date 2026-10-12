@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 
 import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
@@ -9,10 +9,11 @@ import Filters from "@/components/Filters";
 import Game from "@/components/Game";
 import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
+import MarkPlayedDialog from "@/components/MarkPlayedDialog";
 import SplitSuggestions from "@/components/SplitSuggestions";
 import UnplayedShelf from "@/components/UnplayedShelf";
 import YearTrends from "@/components/YearTrends";
-import useAllPlayedCounts from "@/hooks/useAllPlayedCounts";
+import { useMarkPlayedCounts } from "@/hooks/useAllPlayedCounts";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
@@ -30,6 +31,7 @@ import {
   suggestSplits,
 } from "@/lib/games";
 import images from "@/lib/images";
+import { markPlayedOptions } from "@/lib/markPlayed";
 import { PlayerColorProvider } from "@/lib/playerColors";
 import {
   buildFilterSearch,
@@ -88,20 +90,28 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
   const sortMode = parseSortMode(storedSort);
   const [isPlayed, togglePlayed, ownCounts] = usePlayedCounts(year ?? "");
-  const allCounts = useAllPlayedCounts(year ?? "");
+  const [allCounts, markPlayed] = useMarkPlayedCounts(year ?? "");
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  // A dialog opened for one year must not confirm against another.
+  const [markingYear, setMarkingYear] = useState(year);
+  if (markingYear !== year) {
+    setMarkingYear(year);
+    setMarkingId(null);
+  }
   const gameNames = useMemo(
     () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
     [data.scores],
   );
   // The member's own edits show at once, so they replace their fetched entry
   // (the fetched counts are only refreshed when the year changes).
-  const playerCounts = useMemo(
+  const everyonesCounts = useMemo(
     () =>
-      playerCountsByName(
-        data.by_player,
-        ownCounts ? { ...allCounts, [user.discordId]: ownCounts } : allCounts,
-      ),
-    [data.by_player, allCounts, ownCounts, user.discordId],
+      ownCounts ? { ...allCounts, [user.discordId]: ownCounts } : allCounts,
+    [allCounts, ownCounts, user.discordId],
+  );
+  const playerCounts = useMemo(
+    () => playerCountsByName(data.by_player, everyonesCounts),
+    [data.by_player, everyonesCounts],
   );
 
   const overrides = usePlayerOverrides();
@@ -228,6 +238,41 @@ function Scoreboard({ user }: ScoreboardProps) {
     </Notice>
   );
 
+  // Marking opens the dialog (once the member's own games are in); unmarking
+  // is direct.
+  const handleToggle = (id: string) => {
+    if (isPlayed(id)) togglePlayed(id);
+    else if (ownCounts !== null) setMarkingId(id);
+  };
+
+  const markingDialog =
+    markingId !== null && year !== null
+      ? (() => {
+          const { options, selected } = markPlayedOptions({
+            byPlayer: data.by_player,
+            bggId: markingId,
+            selfId: user.discordId,
+            selfName: user.displayName ?? user.name,
+            playedByDiscord: everyonesCounts,
+          });
+          return (
+            <MarkPlayedDialog
+              game={gameNames[markingId] ?? markingId}
+              year={year}
+              selfId={user.discordId}
+              options={options}
+              initialSelected={selected}
+              onClose={() => setMarkingId(null)}
+              onConfirm={async (ids) => {
+                await markPlayed(markingId, ids);
+                if (ids.includes(user.discordId)) togglePlayed(markingId);
+                setMarkingId(null);
+              }}
+            />
+          );
+        })()
+      : null;
+
   const handleYear = (year: string | null) => {
     if (year === null) return;
     pending.current = null;
@@ -342,8 +387,9 @@ function Scoreboard({ user }: ScoreboardProps) {
                     individualMax={individualMax}
                     gameData={game_data}
                     isPlayed={isPlayed}
-                    onToggle={togglePlayed}
+                    onToggle={handleToggle}
                   />
+                  {markingDialog}
                   <YearTrends
                     totals={yearTotals}
                     year={Number(year)}

@@ -88,7 +88,7 @@ export interface UserRecord extends UserRow {
 /** Why a change was refused; `status` is the HTTP status to answer with. */
 export interface Refusal {
   ok: false;
-  status: 400 | 403 | 404 | 409;
+  status: 400 | 403 | 404 | 409 | 422;
   error: string;
 }
 
@@ -372,6 +372,16 @@ export interface PlayedStore {
     bggId: number,
     played: boolean,
   ): Promise<MutationResult<null>>;
+  /**
+   * Marks a game played for every member in one transaction and returns
+   * everyone's played games for the year. Refuses with 404 `unknown_year` and
+   * 422 `unknown_member` (any id is not an approved member; nothing is written).
+   */
+  markPlayed(
+    discordIds: Set<string>,
+    year: number,
+    bggId: number,
+  ): Promise<MutationResult<AllPlayedGames>>;
   /**
    * Marks the games played and returns all the member's played games for the
    * year. Refuses with 404 `unknown_year`.

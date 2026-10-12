@@ -1,7 +1,9 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import useAllPlayedCounts from "@/hooks/useAllPlayedCounts";
+import useAllPlayedCounts, {
+  useMarkPlayedCounts,
+} from "@/hooks/useAllPlayedCounts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -96,5 +98,99 @@ describe("useAllPlayedCounts", () => {
     rerender({ y: "2026" });
     expect(result.current).toEqual({});
     await waitFor(() => expect(result.current).toEqual(counts("2026")));
+  });
+});
+
+describe("useMarkPlayedCounts", () => {
+  const loadThenPost = (answer: () => Promise<Response>) =>
+    vi.fn(async (url: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? answer()
+        : json({ played: played(String(url).slice(-4)) }),
+    ) as unknown as typeof fetch;
+
+  it("posts the members and replaces the year with the response", async () => {
+    const fetchImpl = loadThenPost(async () =>
+      json({ played: { d1: ["11", "12"], d3: ["12"] } }),
+    );
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+    await waitFor(() => expect(result.current[0]).toEqual(counts("2025")));
+
+    await act(() => result.current[1]("12", ["d1", "d3"]));
+
+    expect(result.current[0]).toEqual({
+      d1: { "11": 1, "12": 1 },
+      d3: { "12": 1 },
+    });
+    const post = (
+      fetchImpl as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect(String(post[0])).toBe("/api/played/2025/12");
+    expect(JSON.parse(post[1].body)).toEqual({ discordIds: ["d1", "d3"] });
+  });
+
+  it("rethrows a failure and leaves the map alone", async () => {
+    const fetchImpl = loadThenPost(async () => json({ error: "x" }, 422));
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+    await waitFor(() => expect(result.current[0]).toEqual(counts("2025")));
+
+    await expect(act(() => result.current[1]("12", ["d1"]))).rejects.toThrow();
+
+    expect(result.current[0]).toEqual(counts("2025"));
+  });
+
+  it("keeps a response that arrives before the initial load", async () => {
+    let load: (r: Response) => void = () => {};
+    const fetchImpl = vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? Promise.resolve(json({ played: { d1: ["12"] } }))
+        : new Promise<Response>((resolve) => (load = resolve)),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+
+    await act(() => result.current[1]("12", ["d1"]));
+    await act(async () => load(json({ played: played("2025") })));
+
+    expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+  });
+
+  it("keeps a response after the initial load failed", async () => {
+    const fetchImpl = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === "POST"
+          ? json({ played: { d1: ["12"] } })
+          : json({ error: "x" }, 500),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+
+    await act(() => result.current[1]("12", ["d1"]));
+
+    expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+  });
+
+  it("ignores a response that arrives after the year changed", async () => {
+    let answer: (r: Response) => void = () => {};
+    const fetchImpl = loadThenPost(
+      () => new Promise<Response>((resolve) => (answer = resolve)),
+    );
+    const { result, rerender } = renderHook(
+      ({ y }) => useMarkPlayedCounts(y, fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    await waitFor(() => expect(result.current[0]).toEqual(counts("2025")));
+
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current[1]("12", ["d1"]);
+    });
+    rerender({ y: "2026" });
+    await waitFor(() => expect(result.current[0]).toEqual(counts("2026")));
+    await act(async () => {
+      answer(json({ played: { d9: ["12"] } }));
+      await pending;
+    });
+
+    expect(result.current[0]).toEqual(counts("2026"));
   });
 });
