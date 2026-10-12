@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useMantineTheme } from "@mantine/core";
 
 import PlayedByList from "@/components/PlayedByList";
-import PlayedCounter from "@/components/PlayedCounter";
+import PlayedToggle from "@/components/PlayedToggle";
 import ScorePopover from "@/components/ScorePopover";
 import { formatBounds } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
@@ -17,9 +17,8 @@ interface GameRowProps {
   selectedMax: number;
   individualMax: number;
   bounds: Bounds | null;
-  played: number;
-  onInc: () => void;
-  onDec: () => void;
+  played: boolean;
+  onToggle: () => void;
 }
 
 // The compact chase unit: a mini horizontal card keeping the tray language
@@ -35,8 +34,7 @@ const GameRow = ({
   individualMax,
   bounds,
   played,
-  onInc,
-  onDec,
+  onToggle,
 }: GameRowProps) => {
   const theme = useMantineTheme();
   const chip = score_color(theme, normalized_score(game.score, selectedMax));
@@ -75,7 +73,7 @@ const GameRow = ({
         />
       </div>
 
-      <PlayedCounter count={played} onInc={onInc} onDec={onDec} />
+      <PlayedToggle game={game.name} played={played} onToggle={onToggle} />
     </div>
   );
 };

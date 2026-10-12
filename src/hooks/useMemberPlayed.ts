@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { toPlayedMap, type PlayedMap } from "@/lib/played";
 import type { AllPlayedCountsResponse } from "@/types";
 
-type Counts = Record<string, number>;
+type Counts = PlayedMap;
 
 export type MemberPlayedState =
   | { status: "loading" }
@@ -22,22 +23,27 @@ const LOADING: MemberPlayedState = { status: "loading" };
 const readYear = async (
   year: string,
   fetchImpl: typeof fetch,
-): Promise<AllPlayedCountsResponse["counts"]> => {
+): Promise<Record<string, Counts>> => {
   try {
     const body = await apiFetch<AllPlayedCountsResponse>(
       `/played?year=${year}`,
       {},
       fetchImpl,
     );
-    return body.counts;
+    return Object.fromEntries(
+      Object.entries(body.played ?? {}).map(([id, games]) => [
+        id,
+        toPlayedMap(games),
+      ]),
+    );
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return {};
     throw e;
   }
 };
 
-// One member's play counts for a year and the years before it, one request per
-// year. The recap year's response also gives everyone's counts. An empty year
+// One member's played games for a year and the years before it, one request per
+// year. The recap year's response also gives everyone's games. An empty year
 // ("") fetches nothing. State is tagged with its request key, so a superseded
 // result is dropped.
 const useMemberPlayed = (

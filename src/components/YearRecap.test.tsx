@@ -192,7 +192,7 @@ describe("YearRecap", () => {
       "/2025/games/2",
     );
     expect(screen.getByRole("link", { name: "Root" })).toBeInTheDocument();
-    expect(screen.getAllByText("0 plays")).toHaveLength(2);
+    expect(screen.getAllByText("not played")).toHaveLength(2);
     // Azul is a new pick (nothing earlier), not in the unplayed list.
     expect(screen.getAllByRole("link", { name: "Azul" })).toHaveLength(1);
     expect(screen.getByText("first played 2025")).toBeInTheDocument();
@@ -243,15 +243,19 @@ describe("YearRecap", () => {
     h.data = dataFor([...scores, row(9, "Wingspan", "Bo", 10, 3)]);
     h.played = ready({
       byYear: { "2025": { "1": 2, "9": 1 }, "2024": { "1": 1 } },
-      allCounts: { me: { "1": 2, "9": 1 }, bo: { "2": 5, "1": 1 } },
+      allCounts: {
+        me: { "1": 2, "9": 1 },
+        bo: { "2": 5, "1": 1 },
+        cy: { "1": 1 },
+      },
     } as never);
     show();
     expect(screen.getByText("Fun facts")).toBeInTheDocument();
-    expect(screen.getByText("3, group average 4.5")).toBeInTheDocument();
-    expect(screen.getByText("Azul, 2 plays")).toBeInTheDocument();
+    expect(screen.getByText("Average games per member")).toBeInTheDocument();
+    expect(screen.getByText("1.7")).toBeInTheDocument();
     expect(screen.getByText("1 (Azul)")).toBeInTheDocument();
     expect(screen.getByText("96 for Azul")).toBeInTheDocument();
-    expect(screen.getByText("Heat, 5 plays (Ana: 0)")).toBeInTheDocument();
+    expect(screen.getByText("Azul, played by 3 members")).toBeInTheDocument();
     expect(screen.getByText("Only Ana played")).toBeInTheDocument();
     expect(screen.getAllByText("Wingspan")[0]).toBeInTheDocument();
     expect(screen.getByText("Versus 2024")).toBeInTheDocument();
@@ -267,13 +271,9 @@ describe("YearRecap", () => {
     } as never);
     show();
     expect(screen.getByText("Fun facts")).toBeInTheDocument();
-    expect(screen.getByText("0, group average 1")).toBeInTheDocument();
-    for (const gone of [
-      "Most played",
-      "Your #1 picks",
-      "Highest rating",
-      "Only Ana played",
-    ]) {
+    expect(screen.getByText("Average games per member")).toBeInTheDocument();
+    expect(screen.getByText("Azul, played by 1 member")).toBeInTheDocument();
+    for (const gone of ["Your #1 picks", "Highest rating", "Only Ana played"]) {
       expect(screen.queryByText(gone)).toBeNull();
     }
     expect(screen.getByText("Group favourite")).toBeInTheDocument();

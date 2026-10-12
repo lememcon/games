@@ -69,7 +69,7 @@ export interface SelectedGame {
   max: number;
   players: Record<string, SelectedGamePlayer>;
   // Selected players (or all, when none are selected) who played this game
-  // this year, by name; only counts above zero.
+  // this year, by name.
   playedBy: Record<string, number>;
   image?: string;
 }
@@ -162,7 +162,7 @@ export interface Profile {
   linkedPlayers: string[];
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
-  // Recorded plays (sum of played_count) across all members and years.
+  // The profile owner's distinct games played across all years.
   totalPlays: number;
 }
 
@@ -276,16 +276,17 @@ export interface ImportProblem {
   message: string;
 }
 
-// Every member's play counts for a year: discord id, then bgg id. Body of
-// GET /api/played.
+// Every member's played games for a year: discord id, then bgg ids. Body of
+// GET /api/played. A missing field reads as empty.
 export interface AllPlayedCountsResponse {
-  counts: Record<string, Record<string, number>>;
+  played?: Record<string, string[]>;
 }
 
-// The signed-in member's play counts for a year, by bgg id; absent means zero.
-// Body of GET /api/me/played and of POST /api/me/played/:year/import.
+// The signed-in member's played games for a year, as bgg ids. Body of
+// GET /api/me/played and of POST /api/me/played/:year/import. A missing field
+// reads as empty.
 export interface PlayedCountsResponse {
-  counts: Record<string, number>;
+  played?: string[];
 }
 
 // One member's own player count range for a game, narrowing the game's range.
@@ -336,21 +337,20 @@ export interface RecapRanked extends RecapGame {
 }
 
 export interface RecapFacts {
-  totalPlays: number;
-  // Null when no member played anything that year.
-  groupAvgPlays: number | null;
-  mostPlayed: (RecapGame & { plays: number }) | null;
+  // Average games played per member who played any; null when none did.
+  groupAvgGames: number | null;
   // Games the member ranked first, best rated first; `games` holds at most 3.
   topPicks: { total: number; games: TopGame[] };
   highestRating: TopGame | null;
-  groupFavourite: (RecapGame & { plays: number; memberPlays: number }) | null;
+  // The game played by the most members, and how many played it.
+  groupFavourite: (RecapGame & { members: number }) | null;
   // Games only the member played; `games` holds at most 5.
   onlyYou: { total: number; games: RecapGame[] };
   versusPrevious: { year: number; gamesPlayed: number; delta: number } | null;
 }
 
 export interface Recap {
-  // Games the member logged a play for that year.
+  // Games the member marked played that year.
   playedGames: number;
   // Group top games the member never played, in rank order.
   unplayedTop: RecapRanked[];

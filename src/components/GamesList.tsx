@@ -11,9 +11,8 @@ interface GamesListProps {
   selectedMax: number;
   individualMax: number;
   gameData: GamesData;
-  getPlayedCount: (id: string) => number;
-  onInc: (id: string) => void;
-  onDec: (id: string) => void;
+  isPlayed: (id: string) => boolean;
+  onToggle: (id: string) => void;
   // Rendered between the podium and the remaining rows.
   afterPodium?: ReactNode;
 }
@@ -31,9 +30,8 @@ const GamesList = ({
   selectedMax,
   individualMax,
   gameData,
-  getPlayedCount,
-  onInc,
-  onDec,
+  isPlayed,
+  onToggle,
   afterPodium,
 }: GamesListProps) => {
   const podium = games.slice(0, 3);
@@ -52,9 +50,8 @@ const GamesList = ({
             selectedMax={selectedMax}
             individualMax={individualMax}
             bounds={boundsFor(gameData, game)}
-            played={getPlayedCount(game.id)}
-            onInc={() => onInc(game.id)}
-            onDec={() => onDec(game.id)}
+            played={isPlayed(game.id)}
+            onToggle={() => onToggle(game.id)}
             leastHappy={i === 0 ? leastHappy : null}
           />
         ))}
@@ -73,9 +70,8 @@ const GamesList = ({
               selectedMax={selectedMax}
               individualMax={individualMax}
               bounds={boundsFor(gameData, game)}
-              played={getPlayedCount(game.id)}
-              onInc={() => onInc(game.id)}
-              onDec={() => onDec(game.id)}
+              played={isPlayed(game.id)}
+              onToggle={() => onToggle(game.id)}
             />
           ))}
         </div>

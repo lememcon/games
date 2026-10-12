@@ -30,9 +30,8 @@ const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
       selectedMax={100}
       individualMax={50}
       bounds={{ min: 2, max: 4 }}
-      played={0}
-      onInc={() => {}}
-      onDec={() => {}}
+      played={false}
+      onToggle={() => {}}
       {...props}
     />,
   );
@@ -40,9 +39,9 @@ const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
 describe("GameRow", () => {
   it("shows who has played the game", () => {
     const { getByText } = renderRow({
-      game: { ...game, playedBy: { alice: 2 } },
+      game: { ...game, playedBy: { alice: 1 } },
     });
-    expect(getByText("alice ×2")).toBeInTheDocument();
+    expect(getByText("alice")).toBeInTheDocument();
   });
 
   it("shows no played-by list when nobody has played", () => {
@@ -97,12 +96,12 @@ describe("GameRow", () => {
     expect(queryByText("2-4")).not.toBeInTheDocument();
   });
 
-  it("forwards the play-count increment", async () => {
+  it("forwards the played toggle", async () => {
     const user = userEvent.setup();
-    const onInc = vi.fn();
-    const { getByRole } = renderRow({ played: 3, onInc });
+    const onToggle = vi.fn();
+    const { getByRole } = renderRow({ played: true, onToggle });
 
-    await user.click(getByRole("button", { name: "+" }));
-    expect(onInc).toHaveBeenCalledOnce();
+    await user.click(getByRole("button", { name: /^Played/ }));
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 });

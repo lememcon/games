@@ -7,7 +7,7 @@ interface PlayedByListProps {
   playedBy: Record<string, number>;
 }
 
-// Chips for the players who played a game this year ("Ann ×3"), each in the
+// Chips for the players who played a game this year, each in the
 // player's identity color. Renders nothing when nobody has.
 const PlayedByList = ({ playedBy }: PlayedByListProps) => {
   const colors = useContext(PlayerColorContext);
@@ -16,13 +16,13 @@ const PlayedByList = ({ playedBy }: PlayedByListProps) => {
 
   return (
     <ul className="tray-played-by" aria-label="Played by">
-      {entries.map(([name, count]) => (
+      {entries.map(([name]) => (
         <li
           key={name}
           className="tray-played-by__chip"
           style={{ color: colors[name] ?? PALETTE[0] }}
         >
-          {name} ×{count}
+          {name}
         </li>
       ))}
     </ul>

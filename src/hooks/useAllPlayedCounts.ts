@@ -1,30 +1,40 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { toPlayedMap, type PlayedMap } from "@/lib/played";
 import type { AllPlayedCountsResponse } from "@/types";
 
-type AllCounts = AllPlayedCountsResponse["counts"];
+type AllPlayed = Record<string, PlayedMap>;
 
-const EMPTY: AllCounts = {};
+const EMPTY: AllPlayed = {};
 
-// Every member's play counts for a year (discord id, then bgg id), fetched once
-// per year. Read-only: an empty year ("") skips the request, and a failure
-// leaves the counts empty so nothing is hidden.
+// Every member's played games for a year (discord id, then bgg id), fetched
+// once per year. Read-only: an empty year ("") skips the request, and a failure
+// leaves the map empty so nothing is hidden.
 const useAllPlayedCounts = (
   year: string,
   fetchImpl: typeof fetch = fetch,
-): AllCounts => {
-  const [loaded, setLoaded] = useState<{ year: string; counts: AllCounts }>({
+): AllPlayed => {
+  const [loaded, setLoaded] = useState<{ year: string; played: AllPlayed }>({
     year: "",
-    counts: EMPTY,
+    played: EMPTY,
   });
 
   useEffect(() => {
     if (year === "") return;
     let cancelled = false;
     apiFetch<AllPlayedCountsResponse>(`/played?year=${year}`, {}, fetchImpl)
-      .then(({ counts }) => {
-        if (!cancelled) setLoaded({ year, counts });
+      .then(({ played }) => {
+        if (cancelled) return;
+        setLoaded({
+          year,
+          played: Object.fromEntries(
+            Object.entries(played ?? {}).map(([id, games]) => [
+              id,
+              toPlayedMap(games),
+            ]),
+          ),
+        });
       })
       .catch(() => {});
     return () => {
@@ -32,7 +42,7 @@ const useAllPlayedCounts = (
     };
   }, [year, fetchImpl]);
 
-  return loaded.year === year ? loaded.counts : EMPTY;
+  return loaded.year === year ? loaded.played : EMPTY;
 };
 
 export default useAllPlayedCounts;

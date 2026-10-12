@@ -73,7 +73,7 @@ describe("buildRecap top list", () => {
   it("handles an empty year", () => {
     const r = recap({ top: [] });
     expect(r.unplayedTop).toEqual([]);
-    expect(r.facts.totalPlays).toBe(0);
+    expect(r.facts.groupAvgGames).toBeNull();
   });
 });
 
@@ -127,32 +127,23 @@ describe("buildRecap facts", () => {
     row(7, "", 1, 100),
   ];
 
-  it("totals plays and averages over members who played", () => {
+  it("averages games over members who played any", () => {
     const f = recap({
-      counts: { "1": 3, "2": 1, "3": 0 },
       allCounts: {
-        me: { "1": 3, "2": 1 },
-        b: { "1": 2 },
+        me: { "1": 1, "2": 1 },
+        b: { "1": 1 },
         c: { "1": 0 },
       },
     }).facts;
-    expect(f.totalPlays).toBe(4);
-    expect(f.groupAvgPlays).toBe(3);
+    expect(f.groupAvgGames).toBe(1.5);
   });
 
   it("has no average when nobody played, and a lone member averages themself", () => {
-    expect(recap().facts.groupAvgPlays).toBeNull();
+    expect(recap().facts.groupAvgGames).toBeNull();
     expect(
-      recap({ counts: { "1": 2 }, allCounts: { me: { "1": 2 } } }).facts
-        .groupAvgPlays,
-    ).toBe(2);
-  });
-
-  it("picks the most played game, ties to the first name, skipping unnamed", () => {
-    expect(
-      recap({ counts: { "1": 2, "2": 2, "99": 9 }, scores }).facts.mostPlayed,
-    ).toEqual({ bggId: 1, game: "Azul", plays: 2 });
-    expect(recap({ scores }).facts.mostPlayed).toBeNull();
+      recap({ counts: { "1": 1 }, allCounts: { me: { "1": 1 } } }).facts
+        .groupAvgGames,
+    ).toBe(1);
   });
 
   it("lists the member's #1 picks by rating, at most 3", () => {
@@ -185,18 +176,18 @@ describe("buildRecap facts", () => {
     ).toBe("Aeon");
   });
 
-  it("finds the group favourite, with the member's own plays", () => {
+  it("finds the group favourite, the game most members played", () => {
     const f = recap({
       scores,
-      counts: { "1": 5 },
-      allCounts: { me: { "1": 5 }, b: { "2": 5, "1": 1 }, c: { "2": 3 } },
+      counts: { "1": 1 },
+      allCounts: {
+        me: { "1": 1 },
+        b: { "2": 1, "1": 1 },
+        c: { "2": 1 },
+        d: { "2": 1 },
+      },
     }).facts;
-    expect(f.groupFavourite).toEqual({
-      bggId: 2,
-      game: "Heat",
-      plays: 8,
-      memberPlays: 0,
-    });
+    expect(f.groupFavourite).toEqual({ bggId: 2, game: "Heat", members: 3 });
   });
 
   it("breaks group favourite ties by name and skips unnamed games", () => {

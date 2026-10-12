@@ -27,16 +27,16 @@ you've already played. Live at **[games.lememcon.com](https://games.lememcon.com
   score-normalizing max rescale to match.
 - **Filter by player count** — games whose min/max player counts don't fit the
   current selection are hidden.
-- **Played counter** — increment/decrement a per-game play count, saved to your
-  account per year (so it follows you across browsers), with an option to hide
-  games you've played. Counts a browser stored locally before this are imported
-  the first time that year is viewed while signed in.
+- **Played toggle** — mark a game as played (or not), saved to your account per
+  year (so it follows you across browsers), with an option to hide games you've
+  played. Games a browser stored locally as play counts before this are imported
+  as played the first time that year is viewed while signed in.
 - **Year switcher** — pick any imported year; each year is a separate import.
 - **Game detail pages** — per-game view with the BoardGameGeek cover image,
   player-count bounds, and a table of every player's rank and score.
 
 State that should survive reloads (selected year, player filter, hide-played
-toggle) is stored in `localStorage`; play counts live in the database, per member.
+toggle) is stored in `localStorage`; played games live in the database, per member.
 
 ## Tech stack
 
@@ -102,7 +102,7 @@ Score data is **not** bundled — it comes from the API, which reads PostgreSQL:
   imported via Vite's `import.meta.glob`.
 - `src/lib/games.ts` holds the pure logic — `buildSelectedGames` aggregates and
   sorts the games list, and `computeMaxScores` derives the normalization maxima.
-  It takes injected dependencies (images, metadata, play counts) so it can be
+  It takes injected dependencies (images, metadata, played games) so it can be
   unit-tested without a rendered tree.
 
 ### Layout
@@ -245,7 +245,8 @@ DELETE FROM year WHERE year = 2026;
 **Deploy order**: the app no longer carries its data, so deploy the backend and run the
 migration (applied automatically when the container starts), then import `games.json` (games-only) and each
 year through the admin page, and only then deploy the SPA (merge after the import).
-Deploying the SPA first shows an empty app.
+Deploying the SPA first shows an empty app. For releases that change the API, deploy the
+API first, then the SPA.
 
 ### BoardGameGeek data (admin)
 

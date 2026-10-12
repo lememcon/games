@@ -58,9 +58,8 @@ const renderList = (props: Partial<ComponentProps<typeof GamesList>> = {}) =>
       selectedMax={400}
       individualMax={100}
       gameData={gameData}
-      getPlayedCount={() => 0}
-      onInc={() => {}}
-      onDec={() => {}}
+      isPlayed={() => false}
+      onToggle={() => {}}
       {...props}
     />,
   );
@@ -128,44 +127,26 @@ describe("GamesList", () => {
     expect(queryByText("Rank 4")).not.toBeInTheDocument();
   });
 
-  it("passes the game id to the play-count handlers", async () => {
+  it("passes the game id to the toggle handler", async () => {
     const user = userEvent.setup();
-    const onInc = vi.fn();
-    const { getAllByRole } = renderList({ onInc });
+    const onToggle = vi.fn();
+    const { getAllByRole } = renderList({ onToggle });
 
-    await user.click(getAllByRole("button", { name: "+" })[0]);
+    await user.click(getAllByRole("button", { name: /^Played:/ })[0]);
 
-    expect(onInc).toHaveBeenCalledWith("100");
+    expect(onToggle).toHaveBeenCalledWith("100");
   });
 
-  it("passes the game id to the decrement handler", async () => {
+  it("wires the toggle on chase rows too", async () => {
     const user = userEvent.setup();
-    const onDec = vi.fn();
-    const { getAllByRole } = renderList({ onDec, getPlayedCount: () => 1 });
+    const onToggle = vi.fn();
+    const { getAllByRole } = renderList({ onToggle, isPlayed: () => true });
 
-    await user.click(getAllByRole("button", { name: "-" })[0]);
+    // Nim is the 4th game, the only chase row, so its button is last.
+    const buttons = getAllByRole("button", { name: /^Played/ });
+    await user.click(buttons[buttons.length - 1]);
 
-    expect(onDec).toHaveBeenCalledWith("100");
-  });
-
-  it("wires the play-count handlers on chase rows too", async () => {
-    const user = userEvent.setup();
-    const onInc = vi.fn();
-    const onDec = vi.fn();
-    const { getAllByRole } = renderList({
-      onInc,
-      onDec,
-      getPlayedCount: () => 2,
-    });
-
-    // Nim is the 4th game — the only chase row — so its buttons are last.
-    const incs = getAllByRole("button", { name: "+" });
-    const decs = getAllByRole("button", { name: "-" });
-    await user.click(incs[incs.length - 1]);
-    await user.click(decs[decs.length - 1]);
-
-    expect(onInc).toHaveBeenCalledWith("400");
-    expect(onDec).toHaveBeenCalledWith("400");
+    expect(onToggle).toHaveBeenCalledWith("400");
   });
 
   it("renders the afterPodium slot between the podium and the rows", () => {

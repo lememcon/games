@@ -31,9 +31,8 @@ const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
       selectedMax={100}
       individualMax={60}
       bounds={{ min: 1, max: 4 }}
-      played={0}
-      onInc={() => {}}
-      onDec={() => {}}
+      played={false}
+      onToggle={() => {}}
       {...props}
     />,
   );
@@ -41,11 +40,11 @@ const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
 describe("GameCard", () => {
   it("shows who has played the game", () => {
     const { getByText } = renderCard({
-      game: { ...game, playedBy: { alice: 3, bob: 1 } },
+      game: { ...game, playedBy: { alice: 1, bob: 1 } },
     });
 
-    expect(getByText("alice ×3")).toBeInTheDocument();
-    expect(getByText("bob ×1")).toBeInTheDocument();
+    expect(getByText("alice")).toBeInTheDocument();
+    expect(getByText("bob")).toBeInTheDocument();
   });
 
   it("shows no played-by list when nobody has played", () => {
@@ -112,13 +111,13 @@ describe("GameCard", () => {
     ).toBeNull();
   });
 
-  it("forwards the play-count increment", async () => {
+  it("forwards the played toggle", async () => {
     const user = userEvent.setup();
-    const onInc = vi.fn();
-    const { getByRole } = renderCard({ onInc });
+    const onToggle = vi.fn();
+    const { getByRole } = renderCard({ onToggle });
 
-    await user.click(getByRole("button", { name: "+" }));
+    await user.click(getByRole("button", { name: /^Played:/ }));
 
-    expect(onInc).toHaveBeenCalledOnce();
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 });

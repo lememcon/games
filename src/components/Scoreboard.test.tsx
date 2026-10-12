@@ -46,7 +46,7 @@ const state = vi.hoisted(() => ({
   own: {} as Record<string, number> | null,
   allPlayed: {} as Record<string, Record<string, number>>,
   useAllPlayedCounts: vi.fn(),
-  incPlayed: vi.fn(),
+  togglePlayed: vi.fn(),
   usePlayedCounts: vi.fn(),
   // Everyone's own player count ranges, by discord id then bgg id.
   ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
@@ -74,9 +74,8 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
   default: (year: string) => {
     state.usePlayedCounts(year);
     return [
-      (id: string) => state.played[id] ?? 0,
-      state.incPlayed,
-      vi.fn(),
+      (id: string) => (state.played[id] ?? 0) > 0,
+      state.togglePlayed,
       state.own,
     ];
   },
@@ -203,14 +202,14 @@ describe("Scoreboard", () => {
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
   });
 
-  it("counts plays through the played counter", async () => {
+  it("toggles played through the played toggle", async () => {
     const user = userEvent.setup();
     at("/2026");
     render();
 
-    await user.click(await screen.findByRole("button", { name: "+" }));
+    await user.click(await screen.findByRole("button", { name: /^Played:/ }));
 
-    expect(state.incPlayed).toHaveBeenCalledWith("11");
+    expect(state.togglePlayed).toHaveBeenCalledWith("11");
   });
 
   it("shows the never-played shelf on the year landing", () => {
@@ -706,18 +705,18 @@ describe("Scoreboard", () => {
         },
       };
       state.own = {};
-      const { getByText, queryByText } = render();
+      const { getByText, queryByLabelText } = render();
 
       expect(getByText("Belfort")).toBeInTheDocument();
-      expect(queryByText("alice ×1")).toBeNull();
+      expect(queryByLabelText("Played by")).toBeNull();
     });
 
     it("shows who played a game while it is visible", () => {
       localStorage.setItem("hide_played", "false");
-      state.allPlayed = { "d-alice": { "11": 3 } };
-      const { getByText } = render();
+      state.allPlayed = { "d-alice": { "11": 1 } };
+      const { getByLabelText } = render();
 
-      expect(getByText("alice ×3")).toBeInTheDocument();
+      expect(getByLabelText("Played by")).toHaveTextContent("alice");
     });
   });
 

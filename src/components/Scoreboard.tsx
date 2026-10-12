@@ -87,8 +87,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
   const sortMode = parseSortMode(storedSort);
-  const [getPlayedCount, incPlayedCount, decPlayedCount, ownCounts] =
-    usePlayedCounts(year ?? "");
+  const [isPlayed, togglePlayed, ownCounts] = usePlayedCounts(year ?? "");
   const allCounts = useAllPlayedCounts(year ?? "");
   const gameNames = useMemo(
     () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
@@ -342,9 +341,8 @@ function Scoreboard({ user }: ScoreboardProps) {
                     selectedMax={selectedMax}
                     individualMax={individualMax}
                     gameData={game_data}
-                    getPlayedCount={getPlayedCount}
-                    onInc={incPlayedCount}
-                    onDec={decPlayedCount}
+                    isPlayed={isPlayed}
+                    onToggle={togglePlayed}
                   />
                   <YearTrends
                     totals={yearTotals}
