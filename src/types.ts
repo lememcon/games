@@ -282,6 +282,12 @@ export interface AllPlayedCountsResponse {
   played?: Record<string, string[]>;
 }
 
+// Everyone's played games for the year after a multi-member mark. Body of
+// POST /api/played/:year/:bggId.
+export interface MarkPlayedResponse {
+  played: Record<string, string[]>;
+}
+
 // The signed-in member's played games for a year, as bgg ids. Body of
 // GET /api/me/played and of POST /api/me/played/:year/import. A missing field
 // reads as empty.
