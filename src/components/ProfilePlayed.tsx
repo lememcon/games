@@ -22,7 +22,7 @@ import {
 
 // The member's own played games for a year, with remove and add.
 const ProfilePlayed = () => {
-  const { years, loading: yearsLoading } = useYears();
+  const { years, loading: yearsLoading, error: yearsError } = useYears();
   // Empty until the member picks one, so a refetched years list cannot reset it.
   const [chosen, setChosen] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
@@ -48,6 +48,8 @@ const ProfilePlayed = () => {
       </Text>
       {yearsLoading ? (
         <Loader size="sm" />
+      ) : yearsError ? (
+        <Text size="sm">Couldn&apos;t load years.</Text>
       ) : years.length === 0 ? (
         <Text size="sm">No years yet.</Text>
       ) : (

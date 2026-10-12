@@ -94,12 +94,13 @@ describe("ProfilePlayed", () => {
     );
     expect(state.countsYear).toHaveBeenLastCalledWith("2020");
     expect(state.dataYear).toHaveBeenLastCalledWith("2020");
-    state.years = { ...state.years, years: ["2020", thisYear] };
+    state.years = { ...state.years, years: ["2019", "2020", thisYear] };
     rerender(
       <MantineProvider>
         <ProfilePlayed />
       </MantineProvider>,
     );
+    expect(screen.getByRole("combobox", { name: "Year" })).toHaveValue("2020");
     expect(state.countsYear).toHaveBeenLastCalledWith("2020");
   });
 
@@ -133,6 +134,13 @@ describe("ProfilePlayed", () => {
     expect(screen.getByText("No years yet.")).toBeVisible();
     expect(state.countsYear).toHaveBeenLastCalledWith("");
     expect(state.dataYear).toHaveBeenLastCalledWith(null);
+  });
+
+  it("shows an error when years fail to load", () => {
+    state.years = { years: [], loading: false, error: true };
+    renderWithMantine(<ProfilePlayed />);
+    expect(screen.getByText("Couldn't load years.")).toBeVisible();
+    expect(screen.queryByText("No years yet.")).toBeNull();
   });
 
   it("shows an empty state", () => {
