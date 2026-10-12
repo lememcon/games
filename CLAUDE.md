@@ -45,7 +45,7 @@ A separate `commitlint` job runs on pull requests only.
 - `src/lib/routes.ts` — scoreboard URL scheme; also owns the shareable filter query
   (`?players=A,B&hidePlayed=1`: `buildFilterSearch`, `parseFilterSearch`, `sharePath`).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
-  state), `usePlayedCounts` (server-backed per-member counts via `/api/me/played`, with a
+  state), `usePlayedCounts` (server-backed per-member played flags via `/api/me/played`, with an
   import of the legacy `played_counts_<year>` localStorage key the first time that
   year is viewed while signed in, see
   `lib/playedMigration.ts`), `useAuthError` (reads then strips `?error=` from the URL),
@@ -68,7 +68,7 @@ A separate `commitlint` job runs on pull requests only.
     `testing.ts` has `fakeData()` for route tests. Game metadata (players, image) lives only in
     `game_metadata` (`db/bggRepo.ts` `upsertMetadata`, shared with the import); the `game`
     table holds just `bgg_id` and a nullable name, and `/api/games` full-joins the two.
-  - Played counts: `played.ts` (pure validation), `routes/played.ts` (`GET /api/me/played?year=`,
+  - Played games: `played.ts` (pure validation), `routes/played.ts` (`GET /api/me/played?year=`,
     `PUT /api/me/played/:year/:bggId`, `POST /api/me/played/:year/import`, plus the
     approved-only bulk read `GET /api/played?year=` behind `useAllPlayedCounts`),
     `db/playedStore.ts` (the `PlayedStore` behind `deps.played`; table `played_count`, one
