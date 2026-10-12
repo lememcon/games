@@ -1,12 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
-import type { AllPlayedCounts, PlayedCounts, PlayedStore } from "../types";
+import type { AllPlayedGames, PlayedStore } from "../types";
 import { playedCount, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const UNKNOWN_YEAR = refuse(404, "unknown_year");
 
+/** A row means played; its count is ignored (the previous release may write above 1). */
 export function createPlayedStore(db: StoreDb): PlayedStore {
   const yearExists = async (year: number) =>
     (
@@ -16,32 +17,28 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
         .where(eq(yearTable.year, year))
     ).length > 0;
 
-  const read = async (discordId: string, year: number) => {
-    const rows = await db
-      .select({ bggId: playedCount.bggId, count: playedCount.count })
-      .from(playedCount)
-      .where(
-        and(eq(playedCount.discordId, discordId), eq(playedCount.year, year)),
-      );
-    const counts: PlayedCounts = {};
-    for (const { bggId, count } of rows) counts[bggId] = count;
-    return counts;
-  };
+  const read = async (discordId: string, year: number) =>
+    (
+      await db
+        .select({ bggId: playedCount.bggId })
+        .from(playedCount)
+        .where(
+          and(eq(playedCount.discordId, discordId), eq(playedCount.year, year)),
+        )
+        .orderBy(asc(playedCount.bggId))
+    ).map(({ bggId }) => String(bggId));
 
   return {
     async getAll(year) {
       if (!(await yearExists(year))) return null;
       const rows = await db
-        .select({
-          discordId: playedCount.discordId,
-          bggId: playedCount.bggId,
-          count: playedCount.count,
-        })
+        .select({ discordId: playedCount.discordId, bggId: playedCount.bggId })
         .from(playedCount)
-        .where(eq(playedCount.year, year));
-      const all: AllPlayedCounts = {};
-      for (const { discordId, bggId, count } of rows)
-        (all[discordId] ??= {})[bggId] = count;
+        .where(eq(playedCount.year, year))
+        .orderBy(asc(playedCount.bggId));
+      const all: AllPlayedGames = {};
+      for (const { discordId, bggId } of rows)
+        (all[discordId] ??= []).push(String(bggId));
       return all;
     },
 
@@ -49,9 +46,14 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
       return (await yearExists(year)) ? read(discordId, year) : null;
     },
 
-    async set(discordId, year, bggId, count) {
+    async set(discordId, year, bggId, played) {
       if (!(await yearExists(year))) return UNKNOWN_YEAR;
-      if (count === 0) {
+      if (played) {
+        await db
+          .insert(playedCount)
+          .values({ discordId, year, bggId, count: 1 })
+          .onConflictDoNothing();
+      } else {
         await db
           .delete(playedCount)
           .where(
@@ -61,34 +63,17 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
               eq(playedCount.bggId, bggId),
             ),
           );
-      } else {
-        await db
-          .insert(playedCount)
-          .values({ discordId, year, bggId, count })
-          .onConflictDoUpdate({
-            target: [
-              playedCount.discordId,
-              playedCount.year,
-              playedCount.bggId,
-            ],
-            set: { count },
-          });
       }
       return { ok: true, value: null };
     },
 
-    async importCounts(discordId, year, counts) {
+    async importPlayed(discordId, year, bggIds) {
       if (!(await yearExists(year))) return UNKNOWN_YEAR;
-      if (counts.size > 0)
+      if (bggIds.size > 0)
         await db
           .insert(playedCount)
           .values(
-            [...counts].map(([bggId, count]) => ({
-              discordId,
-              year,
-              bggId,
-              count,
-            })),
+            [...bggIds].map((bggId) => ({ discordId, year, bggId, count: 1 })),
           )
           .onConflictDoNothing();
       return { ok: true, value: await read(discordId, year) };

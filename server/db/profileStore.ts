@@ -144,9 +144,10 @@ export function createProfileStore(
 
       const [{ plays: totalPlays }] = await db
         .select({
-          plays: sql<number>`coalesce(sum(${playedCount.count}), 0)::int`,
+          plays: sql<number>`count(distinct ${playedCount.bggId})::int`,
         })
-        .from(playedCount);
+        .from(playedCount)
+        .where(eq(playedCount.discordId, discordId));
 
       return {
         discordId,

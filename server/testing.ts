@@ -3,6 +3,7 @@ import type { NormalizedImport } from "./import";
 import { refuse } from "./result";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
 import type {
+  AllPlayedGames,
   BggRepo,
   DataStore,
   GameMetadataRow,
@@ -14,7 +15,7 @@ import type {
   MemberOverrideStore,
   MemberVetoStore,
   MyVetoRow,
-  PlayedCounts,
+  PlayedGames,
   PlayedStore,
   PlayerLink,
   PlayerRange,
@@ -298,52 +299,53 @@ export function fakeProfiles(
 
 /** In-memory PlayedStore for tests; refuses years that were not given. */
 export function fakePlayed(
-  initial: { years?: number[]; counts?: Record<string, PlayedCounts> } = {},
+  initial: { years?: number[]; played?: Record<string, number[]> } = {},
 ) {
   const years = new Set(initial.years ?? [2025]);
-  /** Counts by `discordId:year`. */
-  const rows = new Map<string, PlayedCounts>(
-    Object.entries(initial.counts ?? {}),
+  /** Played bgg ids by `discordId:year`. */
+  const rows = new Map<string, Set<number>>(
+    Object.entries(initial.played ?? {}).map(([key, ids]) => [
+      key,
+      new Set(ids),
+    ]),
   );
   const calls: { discordId: string; year: number; bggId?: number }[] = [];
   const bucket = (discordId: string, year: number) => {
     const key = `${discordId}:${year}`;
-    if (!rows.has(key)) rows.set(key, {});
+    if (!rows.has(key)) rows.set(key, new Set());
     return rows.get(key)!;
   };
+  const list = (ids: Set<number>): PlayedGames =>
+    [...ids].sort((a, b) => a - b).map(String);
   const played: PlayedStore = {
     getAll: async (year) => {
       calls.push({ discordId: "*", year });
       if (!years.has(year)) return null;
-      const all: Record<string, PlayedCounts> = {};
-      for (const [key, counts] of rows) {
+      const all: AllPlayedGames = {};
+      for (const [key, ids] of rows) {
         const [discordId, y] = key.split(":");
-        const present = Object.fromEntries(
-          Object.entries(counts).filter(([, n]) => n > 0),
-        );
-        if (Number(y) === year && Object.keys(present).length > 0)
-          all[discordId] = present;
+        if (Number(y) === year && ids.size > 0) all[discordId] = list(ids);
       }
       return all;
     },
     get: async (discordId, year) => {
       calls.push({ discordId, year });
-      return years.has(year) ? { ...bucket(discordId, year) } : null;
+      return years.has(year) ? list(bucket(discordId, year)) : null;
     },
-    set: async (discordId, year, bggId, count) => {
+    set: async (discordId, year, bggId, isPlayed) => {
       calls.push({ discordId, year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");
-      const counts = bucket(discordId, year);
-      if (count === 0) delete counts[bggId];
-      else counts[bggId] = count;
+      const ids = bucket(discordId, year);
+      if (isPlayed) ids.add(bggId);
+      else ids.delete(bggId);
       return { ok: true, value: null };
     },
-    importCounts: async (discordId, year, incoming) => {
+    importPlayed: async (discordId, year, incoming) => {
       calls.push({ discordId, year });
       if (!years.has(year)) return refuse(404, "unknown_year");
-      const counts = bucket(discordId, year);
-      for (const [id, count] of incoming) counts[id] ??= count;
-      return { ok: true, value: { ...counts } };
+      const ids = bucket(discordId, year);
+      for (const id of incoming) ids.add(id);
+      return { ok: true, value: list(ids) };
     },
   };
   return { played, rows, calls };
