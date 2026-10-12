@@ -81,7 +81,6 @@ export const buildRecap = ({
     unplayedTop,
     newPicks,
     facts: buildFacts({
-      counts,
       played,
       earlier,
       earlierCounts,
@@ -94,7 +93,6 @@ export const buildRecap = ({
 };
 
 interface FactsArgs {
-  counts: Counts;
   played: string[];
   earlier: string[];
   earlierCounts: Record<string, Counts>;
@@ -112,7 +110,6 @@ const toTop = (row: PlayerGameScore): TopGame => ({
 });
 
 const buildFacts = ({
-  counts,
   played,
   earlier,
   earlierCounts,
@@ -121,21 +118,11 @@ const buildFacts = ({
   allCounts,
   named,
 }: FactsArgs): RecapFacts => {
-  const totalPlays = sum(played.map((id) => counts[id]));
-
   const memberTotals = Object.values(allCounts)
-    .map((c) => sum(playedIds(c).map((id) => c[id])))
+    .map((c) => playedIds(c).length)
     .filter((total) => total > 0);
-  const groupAvgPlays =
+  const groupAvgGames =
     memberTotals.length === 0 ? null : sum(memberTotals) / memberTotals.length;
-
-  const mostPlayed =
-    played
-      .flatMap((id) => {
-        const game = named(id);
-        return game ? [{ ...game, plays: counts[id] }] : [];
-      })
-      .sort((a, b) => b.plays - a.plays || byText(a.game, b.game))[0] ?? null;
 
   // The member's own rows (the server already keeps one per game).
   const mine = scores.filter(
@@ -152,16 +139,17 @@ const buildFacts = ({
   const groupTotals = new Map<string, number>();
   for (const c of Object.values(allCounts)) {
     for (const id of playedIds(c)) {
-      groupTotals.set(id, (groupTotals.get(id) ?? 0) + c[id]);
+      groupTotals.set(id, (groupTotals.get(id) ?? 0) + 1);
     }
   }
   const groupFavourite =
     [...groupTotals]
-      .flatMap(([id, plays]) => {
+      .flatMap(([id, members]) => {
         const game = named(id);
-        return game ? [{ ...game, plays, memberPlays: counts[id] ?? 0 }] : [];
+        return game ? [{ ...game, members }] : [];
       })
-      .sort((a, b) => b.plays - a.plays || byText(a.game, b.game))[0] ?? null;
+      .sort((a, b) => b.members - a.members || byText(a.game, b.game))[0] ??
+    null;
 
   const others = Object.entries(allCounts).filter(([id]) => id !== discordId);
   const only = played
@@ -172,9 +160,7 @@ const buildFacts = ({
 
   const previous = earlier[0];
   return {
-    totalPlays,
-    groupAvgPlays,
-    mostPlayed,
+    groupAvgGames,
     topPicks: {
       total: firsts.length,
       games: firsts.slice(0, TOP_PICKS_SHOWN).map(toTop),

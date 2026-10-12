@@ -275,50 +275,37 @@ body {
   min-width: 140px;
 }
 
-/* ---- Played stepper ---- */
+/* ---- Played toggle ---- */
 .tray-played {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tray-played__label {
-  font-size: 0.74rem;
-  color: #7a736a;
-  font-weight: 600;
-  font-family: var(--mantine-font-family-monospace);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.tray-played__steps {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.tray-step {
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid #d9cfba;
+  border-radius: 999px;
   background: #f0eadd;
   color: #2b2723;
+  font-size: 0.74rem;
+  font-weight: 600;
   font-family: var(--mantine-font-family-monospace);
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1;
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
   cursor: pointer;
-  display: grid;
-  place-items: center;
 }
 
-.tray-step:hover:not(:disabled) {
+.tray-played:hover {
   background: #e7ddc9;
 }
 
-.tray-step:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.tray-played:focus-visible {
+  outline: 2px solid #2b2723;
+  outline-offset: 2px;
+}
+
+.tray-played--on {
+  background: #2b2723;
+  border-color: #2b2723;
+  color: #fbf7ee;
+}
+
+.tray-played--on:hover {
+  background: #3d3731;
 }
 
 /* ---- Back button ---- */

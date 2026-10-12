@@ -60,7 +60,7 @@ export const games: GamesData = {
 interface MockOptions {
   me?: Me;
   games?: GamesData;
-  played?: Record<string, number>;
+  played?: string[];
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -71,7 +71,7 @@ const pathOf = (url: URL | string) => new URL(url).pathname;
 // Mocks the whole API. Playwright tries the most recently registered route
 // first, so the catch-all goes in first and the specific routes override it.
 export async function mockApi(page: Page, opts: MockOptions = {}) {
-  const { me = approvedMe, played = {}, games: gamesData = games } = opts;
+  const { me = approvedMe, played = [], games: gamesData = games } = opts;
 
   await page.route(
     (url) => pathOf(url).startsWith("/api/"),
@@ -119,7 +119,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => pathOf(url) === "/api/me/played",
-    (route) => json(route, { counts: played }),
+    (route) => json(route, { played }),
   );
   await page.route(
     (url) => /^\/api\/me\/played\/\d+\/\d+$/.test(pathOf(url)),

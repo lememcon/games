@@ -46,7 +46,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
       </Group>
       <SimpleGrid cols={2}>
         {stats && <StatTile label="years of data" value={`${stats.years}`} />}
-        <StatTile label="total plays" value={`${totalPlays}`} />
+        <StatTile label="games played" value={`${totalPlays}`} />
       </SimpleGrid>
       {stats ? (
         <>

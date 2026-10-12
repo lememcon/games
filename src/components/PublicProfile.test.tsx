@@ -63,7 +63,7 @@ describe("PublicProfile", () => {
     expect(screen.getByText("Couldn't load this profile")).toBeInTheDocument();
   });
 
-  it("shows the name and the years and total plays tiles", () => {
+  it("shows the name and the years and games played tiles", () => {
     set({ status: "ready", profile: base });
     renderWithMantine(<PublicProfile discordId="5" />);
 
@@ -71,7 +71,7 @@ describe("PublicProfile", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("years of data")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
-    expect(screen.getByText("total plays")).toBeInTheDocument();
+    expect(screen.getByText("games played")).toBeInTheDocument();
     for (const gone of [
       "wins",
       "win rate",
@@ -106,11 +106,11 @@ describe("PublicProfile", () => {
     expect(screen.queryByText("Top games by year")).toBeNull();
   });
 
-  it("still shows total plays when no scores are linked", () => {
+  it("still shows games played when no scores are linked", () => {
     set({ status: "ready", profile: { ...base, stats: null } });
     renderWithMantine(<PublicProfile discordId="5" />);
     expect(screen.getByText("120")).toBeInTheDocument();
-    expect(screen.getByText("total plays")).toBeInTheDocument();
+    expect(screen.getByText("games played")).toBeInTheDocument();
     expect(screen.queryByText("years of data")).toBeNull();
   });
 

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 
 import PlayedByList from "@/components/PlayedByList";
-import PlayedCounter from "@/components/PlayedCounter";
+import PlayedToggle from "@/components/PlayedToggle";
 import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
 import { PALETTE, medalColor } from "@/lib/colors";
@@ -16,9 +16,8 @@ interface GameCardProps {
   selectedMax: number;
   individualMax: number;
   bounds: Bounds | null;
-  played: number;
-  onInc: () => void;
-  onDec: () => void;
+  played: boolean;
+  onToggle: () => void;
   // Name of the least happy scorer, shown on the top result only.
   leastHappy?: string | null;
 }
@@ -34,8 +33,7 @@ const GameCard = ({
   individualMax,
   bounds,
   played,
-  onInc,
-  onDec,
+  onToggle,
   leastHappy,
 }: GameCardProps) => {
   const chip = medalColor(rank) ?? PALETTE[(rank - 1) % PALETTE.length];
@@ -86,7 +84,11 @@ const GameCard = ({
         <div className="tray-card__foot">
           {bounds && <span className="tray-meta">{formatBounds(bounds)}</span>}
           <div className="tray-card__played">
-            <PlayedCounter count={played} onInc={onInc} onDec={onDec} />
+            <PlayedToggle
+              game={game.name}
+              played={played}
+              onToggle={onToggle}
+            />
           </div>
         </div>
       </div>

@@ -38,255 +38,213 @@ function makeFetch() {
 const answer = (call: Call, status: number, body?: unknown) =>
   act(async () => call.respond(status, body));
 
-const getCount = (result: Result) => result.current[0];
-const inc = (result: Result, id: string) => act(() => result.current[1](id));
-const dec = (result: Result, id: string) => act(() => result.current[2](id));
+const isPlayed = (result: Result, id: string) => result.current[0](id);
+const toggle = (result: Result, id: string) => act(() => result.current[1](id));
 
 // Renders for 2025 and answers the initial GET; game 7 is a marker so the load
 // is visible even when there is nothing else to show.
-async function loaded(counts: Record<string, number> = {}, year = "2025") {
+async function loaded(played: string[] = [], year = "2025") {
   const f = makeFetch();
   const hook = renderHook(({ y }) => usePlayedCounts(y, f.fetchImpl), {
     initialProps: { y: year },
   });
-  await answer(f.calls[0], 200, { counts: { "7": 1, ...counts } });
-  await waitFor(() => expect(getCount(hook.result)("7")).toBe(1));
+  await answer(f.calls[0], 200, { played: ["7", ...played] });
+  await waitFor(() => expect(isPlayed(hook.result, "7")).toBe(true));
   return { ...f, ...hook };
 }
 
 describe("usePlayedCounts", () => {
   beforeEach(() => localStorage.clear());
 
-  it("loads the member's counts for the year", async () => {
+  it("loads the member's played games for the year", async () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
 
-    expect(getCount(result)("100")).toBe(0);
+    expect(isPlayed(result, "100")).toBe(false);
     expect(f.calls[0]).toMatchObject({
       path: "/me/played?year=2025",
       method: "GET",
     });
-    await answer(f.calls[0], 200, { counts: { "100": 2 } });
+    await answer(f.calls[0], 200, { played: ["100"] });
 
-    await waitFor(() => expect(getCount(result)("100")).toBe(2));
-    expect(result.current[3]).toEqual({ "100": 2 });
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
+    expect(result.current[2]).toEqual({ "100": 1 });
   });
 
-  it("returns null until loaded, then {} once the last count is removed", async () => {
+  it("reads a missing played field as empty", async () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-    expect(result.current[3]).toBeNull();
 
-    await answer(f.calls[0], 200, { counts: { "100": 1 } });
-    await waitFor(() => expect(result.current[3]).toEqual({ "100": 1 }));
+    await answer(f.calls[0], 200, {});
 
-    dec(result, "100");
-    expect(result.current[3]).toEqual({});
+    await waitFor(() => expect(result.current[2]).toEqual({}));
+  });
+
+  it("returns null until loaded, then {} once the last game is unmarked", async () => {
+    const f = makeFetch();
+    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    expect(result.current[2]).toBeNull();
+
+    await answer(f.calls[0], 200, { played: ["100"] });
+    await waitFor(() => expect(result.current[2]).toEqual({ "100": 1 }));
+
+    toggle(result, "100");
+    expect(result.current[2]).toEqual({});
   });
 
   it("does not fetch for an empty year", () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("", f.fetchImpl));
 
-    inc(result, "100");
+    toggle(result, "100");
 
     expect(f.fetchImpl).not.toHaveBeenCalled();
-    expect(getCount(result)("100")).toBe(0);
+    expect(isPlayed(result, "100")).toBe(false);
   });
 
-  it("ignores edits before the counts have loaded", () => {
+  it("ignores edits before the played games have loaded", () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
 
-    inc(result, "100");
+    toggle(result, "100");
 
-    expect(getCount(result)("100")).toBe(0);
+    expect(isPlayed(result, "100")).toBe(false);
     expect(f.puts()).toHaveLength(0);
   });
 
-  it("shows an increment at once and writes the absolute count", async () => {
+  it("shows a toggle at once and writes the absolute flag", async () => {
     const { result, puts } = await loaded();
 
-    inc(result, "100");
+    toggle(result, "100");
 
-    expect(getCount(result)("100")).toBe(1);
+    expect(isPlayed(result, "100")).toBe(true);
     expect(puts()).toHaveLength(1);
     expect(puts()[0]).toMatchObject({
       path: "/me/played/2025/100",
-      body: { count: 1 },
+      body: { played: true },
     });
-    await answer(puts()[0], 200, { count: 1 });
-    expect(getCount(result)("100")).toBe(1);
+    await answer(puts()[0], 200, { played: true });
+    expect(isPlayed(result, "100")).toBe(true);
   });
 
-  it("adds up rapid clicks and sends the latest value after the first settles", async () => {
-    const { result, puts } = await loaded();
+  it("unmarks a played game", async () => {
+    const { result, puts } = await loaded(["100"]);
 
-    inc(result, "100");
-    inc(result, "100");
-    inc(result, "100");
+    toggle(result, "100");
 
-    expect(getCount(result)("100")).toBe(3);
-    expect(puts("100")).toHaveLength(1);
-    await answer(puts("100")[0], 200);
-    await waitFor(() => expect(puts("100")).toHaveLength(2));
-    expect(puts("100")[1].body).toEqual({ count: 3 });
-    await answer(puts("100")[1], 200);
-    expect(getCount(result)("100")).toBe(3);
-    expect(puts("100")).toHaveLength(2);
+    expect(isPlayed(result, "100")).toBe(false);
+    expect(result.current[2]).toEqual({ "7": 1 });
+    expect(puts()[0].body).toEqual({ played: false });
   });
 
   it("sends the reverted value once the in-flight write settles", async () => {
     const { result, puts } = await loaded();
 
-    inc(result, "100");
-    dec(result, "100");
+    toggle(result, "100");
+    toggle(result, "100");
     await answer(puts("100")[0], 200);
 
-    expect(getCount(result)("100")).toBe(0);
+    expect(isPlayed(result, "100")).toBe(false);
     await waitFor(() => expect(puts("100")).toHaveLength(2));
-    expect(puts("100")[1].body).toEqual({ count: 0 });
+    expect(puts("100")[1].body).toEqual({ played: false });
   });
 
   it("sends nothing more when the latest value equals the one in flight", async () => {
     const { result, puts } = await loaded();
 
-    inc(result, "100");
-    dec(result, "100");
-    inc(result, "100");
+    toggle(result, "100");
+    toggle(result, "100");
+    toggle(result, "100");
     await answer(puts("100")[0], 200);
 
-    expect(getCount(result)("100")).toBe(1);
+    expect(isPlayed(result, "100")).toBe(true);
     expect(puts("100")).toHaveLength(1);
   });
 
   it("keeps sending the latest value after the year changes", async () => {
     const { result, puts, rerender, calls } = await loaded();
 
-    inc(result, "100");
-    inc(result, "100");
+    toggle(result, "100");
+    toggle(result, "100");
     rerender({ y: "2026" });
     await answer(puts("100")[0], 200);
 
     await waitFor(() => expect(puts("100")).toHaveLength(2));
     expect(puts("100")[1]).toMatchObject({
       path: "/me/played/2025/100",
-      body: { count: 2 },
+      body: { played: false },
     });
     expect(calls.some((c) => c.path === "/me/played?year=2026")).toBe(true);
-  });
-
-  it("removes the entry when the count drops to zero", async () => {
-    const { result, puts } = await loaded({ "100": 1 });
-
-    dec(result, "100");
-
-    expect(getCount(result)("100")).toBe(0);
-    expect(result.current[3]).toEqual({ "7": 1 });
-    expect(puts()[0].body).toEqual({ count: 0 });
-  });
-
-  it("ignores a decrement for a game that was never counted", async () => {
-    const { result, puts } = await loaded();
-
-    dec(result, "unknown");
-
-    expect(getCount(result)("unknown")).toBe(0);
-    expect(puts()).toHaveLength(0);
-  });
-
-  it("does not count past the maximum", async () => {
-    const { result, puts } = await loaded({ "100": 999 });
-
-    inc(result, "100");
-
-    expect(getCount(result)("100")).toBe(999);
-    expect(puts()).toHaveLength(0);
   });
 
   it("writes different games independently", async () => {
     const { result, puts } = await loaded();
 
-    inc(result, "100");
-    inc(result, "200");
+    toggle(result, "100");
+    toggle(result, "200");
 
     expect(puts()).toHaveLength(2);
-    expect(getCount(result)("100")).toBe(1);
-    expect(getCount(result)("200")).toBe(1);
+    expect(isPlayed(result, "100")).toBe(true);
+    expect(isPlayed(result, "200")).toBe(true);
   });
 
-  it("rolls back to the confirmed count when a write fails", async () => {
-    const { result, puts } = await loaded({ "100": 2 });
+  it("rolls back to the confirmed value when a write fails", async () => {
+    const { result, puts } = await loaded(["100"]);
 
-    inc(result, "100");
-    expect(getCount(result)("100")).toBe(3);
+    toggle(result, "100");
+    expect(isPlayed(result, "100")).toBe(false);
     await answer(puts()[0], 500, { error: "boom" });
 
-    await waitFor(() => expect(getCount(result)("100")).toBe(2));
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
     expect(puts()).toHaveLength(1);
   });
 
-  it("rolls a failed first play back to zero", async () => {
+  it("rolls a failed first mark back to unplayed", async () => {
     const { result, puts } = await loaded();
 
-    inc(result, "100");
+    toggle(result, "100");
     await answer(puts()[0], 500);
 
-    await waitFor(() => expect(getCount(result)("100")).toBe(0));
-    expect(result.current[3]).toEqual({ "7": 1 });
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(false));
+    expect(result.current[2]).toEqual({ "7": 1 });
   });
 
   it("does not roll back past a newer change when an older write fails", async () => {
-    const { result, puts } = await loaded({ "100": 2 });
+    const { result, puts } = await loaded(["100"]);
 
-    inc(result, "100"); // 3, in flight
-    inc(result, "100"); // 4, queued
+    toggle(result, "100"); // unplayed, in flight
+    toggle(result, "100"); // played again, queued
     await answer(puts("100")[0], 500);
 
-    expect(getCount(result)("100")).toBe(4);
-    await waitFor(() => expect(puts("100")).toHaveLength(2));
-    expect(puts("100")[1].body).toEqual({ count: 4 });
-    await answer(puts("100")[1], 200);
-    expect(getCount(result)("100")).toBe(4);
-  });
-
-  it("rolls back to the confirmed value when the retry also fails", async () => {
-    const { result, puts } = await loaded({ "100": 2 });
-
-    inc(result, "100");
-    inc(result, "100");
-    await answer(puts("100")[0], 500);
-    await waitFor(() => expect(puts("100")).toHaveLength(2));
-    await answer(puts("100")[1], 500);
-
-    await waitFor(() => expect(getCount(result)("100")).toBe(2));
-    expect(puts("100")).toHaveLength(2);
+    expect(isPlayed(result, "100")).toBe(true);
+    // The server still has it played, so there is nothing more to send.
+    expect(puts("100")).toHaveLength(1);
   });
 
   it("keeps each game's rollback separate when responses arrive out of order", async () => {
-    const { result, puts } = await loaded({ "100": 1, "200": 1 });
+    const { result, puts } = await loaded(["100"]);
 
-    inc(result, "100");
-    inc(result, "200");
+    toggle(result, "100");
+    toggle(result, "200");
     await answer(puts("200")[0], 200);
     await answer(puts("100")[0], 500);
 
-    await waitFor(() => expect(getCount(result)("100")).toBe(1));
-    expect(getCount(result)("200")).toBe(2);
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
+    expect(isPlayed(result, "200")).toBe(true);
   });
 
   it("drops responses that arrive after the year changed", async () => {
-    const { result, rerender, calls, puts } = await loaded({ "100": 1 });
+    const { result, rerender, calls, puts } = await loaded(["100"]);
 
-    inc(result, "100");
+    toggle(result, "100");
     rerender({ y: "2026" });
-    expect(getCount(result)("100")).toBe(0);
+    expect(isPlayed(result, "100")).toBe(false);
     expect(calls.at(-1)).toMatchObject({ path: "/me/played?year=2026" });
 
     await answer(puts()[0], 500);
-    expect(getCount(result)("100")).toBe(0);
-    await answer(calls.at(-1)!, 200, { counts: { "100": 5 } });
-    await waitFor(() => expect(getCount(result)("100")).toBe(5));
+    expect(isPlayed(result, "100")).toBe(false);
+    await answer(calls.at(-1)!, 200, { played: ["100"] });
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
   });
 
   it("drops a load that resolves after the year changed", async () => {
@@ -297,21 +255,22 @@ describe("usePlayedCounts", () => {
     );
     rerender({ y: "2026" });
 
-    await answer(f.calls[0], 200, { counts: { "100": 9 } });
-    await answer(f.calls[1], 200, { counts: { "100": 1 } });
+    await answer(f.calls[0], 200, { played: ["100"] });
+    await answer(f.calls[1], 200, { played: ["200"] });
 
-    await waitFor(() => expect(getCount(result)("100")).toBe(1));
+    await waitFor(() => expect(isPlayed(result, "200")).toBe(true));
+    expect(isPlayed(result, "100")).toBe(false);
   });
 
-  it("shows no counts and takes no edits when not signed in", async () => {
+  it("shows nothing played and takes no edits when not signed in", async () => {
     const f = makeFetch();
     const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
     localStorage.setItem("played_counts_2025", JSON.stringify({ "100": 2 }));
 
     await answer(f.calls[0], 401, { error: "unauthorized" });
-    inc(result, "100");
+    toggle(result, "100");
 
-    expect(result.current[3]).toBeNull();
+    expect(result.current[2]).toBeNull();
     expect(f.calls).toHaveLength(1);
     expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
   });
@@ -346,89 +305,90 @@ describe("usePlayedCounts", () => {
       localStorage.setItem("played_counts_2025", JSON.stringify(legacy)),
     );
 
-    it("imports valid data, shows the merged counts and removes the key", async () => {
+    it("imports valid data, shows the merged games and removes the key", async () => {
       const f = makeFetch();
       const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: { "100": 5 } });
+      await answer(f.calls[0], 200, { played: ["100"] });
 
       await waitFor(() => expect(f.calls).toHaveLength(2));
       expect(f.calls[1]).toMatchObject({
         path: "/me/played/2025/import",
         method: "POST",
-        body: { counts: legacy },
+        body: { games: ["100", "200"] },
       });
       expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
-      await answer(f.calls[1], 200, { counts: { "100": 5, "200": 1 } });
+      await answer(f.calls[1], 200, { played: ["100", "200"] });
 
-      await waitFor(() => expect(getCount(result)("200")).toBe(1));
-      expect(getCount(result)("100")).toBe(5);
+      await waitFor(() => expect(isPlayed(result, "200")).toBe(true));
+      expect(isPlayed(result, "100")).toBe(true);
       expect(localStorage.getItem("played_counts_2025")).toBeNull();
     });
 
     it("ignores edits until the import has finished", async () => {
       const f = makeFetch();
       const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: {} });
+      await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
 
-      inc(result, "100");
-      expect(getCount(result)("100")).toBe(0);
+      toggle(result, "100");
+      expect(isPlayed(result, "100")).toBe(false);
       expect(f.puts()).toHaveLength(0);
     });
 
-    it("keeps the imported value when incremented right after", async () => {
+    it("keeps the imported games when toggled right after", async () => {
       const f = makeFetch();
       const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: {} });
+      await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
-      await answer(f.calls[1], 200, { counts: legacy });
-      await waitFor(() => expect(getCount(result)("100")).toBe(3));
+      await answer(f.calls[1], 200, { played: ["100", "200"] });
+      await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
 
-      inc(result, "100");
+      toggle(result, "100");
 
-      expect(getCount(result)("100")).toBe(4);
-      expect(f.puts()[0].body).toEqual({ count: 4 });
+      expect(isPlayed(result, "100")).toBe(false);
+      expect(isPlayed(result, "200")).toBe(true);
+      expect(f.puts()[0].body).toEqual({ played: false });
     });
 
-    it("keeps the key and the server's counts when the import fails", async () => {
+    it("keeps the key and the server's games when the import fails", async () => {
       const f = makeFetch();
       const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: { "100": 5 } });
+      await answer(f.calls[0], 200, { played: ["100"] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 500, { error: "boom" });
 
-      await waitFor(() => expect(getCount(result)("100")).toBe(5));
+      await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
       expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
-      inc(result, "100");
-      expect(f.puts()[0].body).toEqual({ count: 6 });
+      toggle(result, "200");
+      expect(f.puts()[0].body).toEqual({ played: true });
     });
 
     it("treats an unknown year on import as final and keeps the key", async () => {
       const f = makeFetch();
       const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: {} });
+      await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 404, { error: "unknown_year" });
 
-      inc(result, "100");
+      toggle(result, "100");
 
       expect(f.calls).toHaveLength(2);
-      expect(getCount(result)("100")).toBe(0);
+      expect(isPlayed(result, "100")).toBe(false);
       expect(localStorage.getItem("played_counts_2025")).not.toBeNull();
     });
 
     it("does not import again once the key is gone", async () => {
       const f = makeFetch();
       const first = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: {} });
+      await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
-      await answer(f.calls[1], 200, { counts: legacy });
-      await waitFor(() => expect(getCount(first.result)("100")).toBe(3));
+      await answer(f.calls[1], 200, { played: ["100", "200"] });
+      await waitFor(() => expect(isPlayed(first.result, "100")).toBe(true));
       first.unmount();
 
       const second = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[2], 200, { counts: legacy });
-      await waitFor(() => expect(getCount(second.result)("100")).toBe(3));
+      await answer(f.calls[2], 200, { played: ["100", "200"] });
+      await waitFor(() => expect(isPlayed(second.result, "100")).toBe(true));
 
       expect(f.calls).toHaveLength(3);
     });
@@ -437,7 +397,7 @@ describe("usePlayedCounts", () => {
       localStorage.setItem("played_counts_2025", "{not json");
       const f = makeFetch();
       renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: { "100": 1 } });
+      await answer(f.calls[0], 200, { played: ["100"] });
 
       await waitFor(() =>
         expect(localStorage.getItem("played_counts_2025")).toBeNull(),
@@ -451,7 +411,7 @@ describe("usePlayedCounts", () => {
         localStorage.setItem("played_counts_2025", raw);
         const f = makeFetch();
         renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-        await answer(f.calls[0], 200, { counts: {} });
+        await answer(f.calls[0], 200, { played: [] });
 
         await waitFor(() =>
           expect(localStorage.getItem("played_counts_2025")).toBeNull(),
@@ -460,17 +420,17 @@ describe("usePlayedCounts", () => {
       },
     );
 
-    it("imports only the valid entries, clamping oversized counts", async () => {
+    it("imports only the valid entries, any positive count as played", async () => {
       localStorage.setItem(
         "played_counts_2025",
         JSON.stringify({ "100": 5000, "200": 2, abc: 1, "300": 0 }),
       );
       const f = makeFetch();
       renderHook(() => usePlayedCounts("2025", f.fetchImpl));
-      await answer(f.calls[0], 200, { counts: {} });
+      await answer(f.calls[0], 200, { played: [] });
 
       await waitFor(() => expect(f.calls).toHaveLength(2));
-      expect(f.calls[1].body).toEqual({ counts: { "100": 999, "200": 2 } });
+      expect(f.calls[1].body).toEqual({ games: ["100", "200"] });
     });
   });
 });

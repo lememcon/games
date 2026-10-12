@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
-import {
-  MAX_PLAYED_COUNT,
-  clearLegacyCounts,
-  readLegacyCounts,
-} from "@/lib/playedMigration";
+import { toPlayedMap, type PlayedMap } from "@/lib/played";
+import { clearLegacyCounts, readLegacyPlayed } from "@/lib/playedMigration";
 import type { PlayedCountsResponse } from "@/types";
 
-type Counts = PlayedCountsResponse["counts"];
+type Counts = PlayedMap;
 
 // Everything one year's load and edits share. A new one replaces it when the
 // year changes, and the old one stops acting (`cancelled`).
 interface Session {
   year: string;
   cancelled: boolean;
-  // Edits are ignored until the server's counts (and any import) are in.
+  // Edits are ignored until the server's played games (and any import) are in.
   ready: boolean;
-  // What the member sees; inc and dec compute from it so rapid clicks add up.
+  // What the member sees; toggles compute from it so rapid clicks flip it.
   desired: Counts;
   // The last value the server acknowledged, for rolling back.
   confirmed: Counts;
@@ -25,8 +22,8 @@ interface Session {
   inFlight: Set<string>;
 }
 
-const withCount = (counts: Counts, id: string, count: number): Counts => {
-  if (count > 0) return { ...counts, [id]: count };
+const withPlayed = (counts: Counts, id: string, played: boolean): Counts => {
+  if (played) return { ...counts, [id]: 1 };
   const { [id]: _removed, ...rest } = counts;
   return rest;
 };
@@ -39,13 +36,13 @@ function flush(
   fetchImpl: typeof fetch,
   onRollback: (counts: Counts) => void,
 ) {
-  const want = s.desired[id] ?? 0;
-  if (s.inFlight.has(id) || want === (s.confirmed[id] ?? 0)) return;
+  const want = id in s.desired;
+  if (s.inFlight.has(id) || want === id in s.confirmed) return;
 
   s.inFlight.add(id);
   apiFetch(
     `/me/played/${s.year}/${id}`,
-    { method: "PUT", body: { count: want } },
+    { method: "PUT", body: { played: want } },
     fetchImpl,
   )
     .then(
@@ -54,29 +51,24 @@ function flush(
     )
     .then((ok) => {
       s.inFlight.delete(id);
-      if (ok) s.confirmed = withCount(s.confirmed, id, want);
+      if (ok) s.confirmed = withPlayed(s.confirmed, id, want);
       // A newer change is sent as is (after a failure too); otherwise a
       // failed write goes back to what the server has. A cancelled session
       // still sends what was wanted but no longer updates the screen.
-      else if ((s.desired[id] ?? 0) === want) {
-        s.desired = withCount(s.desired, id, s.confirmed[id] ?? 0);
+      else if (id in s.desired === want) {
+        s.desired = withPlayed(s.desired, id, id in s.confirmed);
         if (!s.cancelled) onRollback(s.desired);
       }
       flush(s, id, fetchImpl, onRollback);
     });
 }
 
-// The signed-in member's play counts for a year, kept on the server. Edits show
-// at once and are written as absolute counts, one request per game at a time.
+// The signed-in member's played games for a year, kept on the server. Edits show
+// at once and are written as absolute flags, one request per game at a time.
 const usePlayedCounts = (
   year: string,
   fetchImpl: typeof fetch = fetch,
-): [
-  (id: string) => number,
-  (id: string) => void,
-  (id: string) => void,
-  Counts | null,
-] => {
+): [(id: string) => boolean, (id: string) => void, Counts | null] => {
   const [shown, setShown] = useState<{ year: string; counts: Counts | null }>({
     year,
     counts: null,
@@ -101,25 +93,27 @@ const usePlayedCounts = (
     const load = async () => {
       let counts: Counts;
       try {
-        ({ counts } = await apiFetch<PlayedCountsResponse>(
+        const body = await apiFetch<PlayedCountsResponse>(
           `/me/played?year=${year}`,
           {},
           fetchImpl,
-        ));
+        );
+        counts = toPlayedMap(body.played);
       } catch {
-        // Not signed in, unknown year or a failure: no counts, no edits.
+        // Not signed in, unknown year or a failure: nothing played, no edits.
         return;
       }
       if (s.cancelled) return;
 
-      const legacy = readLegacyCounts(year);
+      const legacy = readLegacyPlayed(year);
       if (legacy) {
         try {
-          ({ counts } = await apiFetch<PlayedCountsResponse>(
+          const body = await apiFetch<PlayedCountsResponse>(
             `/me/played/${year}/import`,
-            { method: "POST", body: { counts: legacy } },
+            { method: "POST", body: { games: legacy } },
             fetchImpl,
-          ));
+          );
+          counts = toPlayedMap(body.played);
           if (s.cancelled) return;
           clearLegacyCounts(year);
         } catch (e) {
@@ -142,31 +136,22 @@ const usePlayedCounts = (
     };
   }, [year, fetchImpl]);
 
-  const change = useCallback(
-    (id: string, delta: 1 | -1) => {
+  const toggle = useCallback(
+    (id: string) => {
       const s = session.current;
       if (!s?.ready) return;
-      const current = s.desired[id] ?? 0;
-      const next = Math.min(Math.max(current + delta, 0), MAX_PLAYED_COUNT);
-      if (next === current) return;
-      s.desired = withCount(s.desired, id, next);
+      s.desired = withPlayed(s.desired, id, !(id in s.desired));
       setShown({ year: s.year, counts: s.desired });
       flush(s, id, fetchImpl, (counts) => setShown({ year: s.year, counts }));
     },
     [fetchImpl],
   );
 
-  const incPlayedCount = useCallback((id: string) => change(id, 1), [change]);
-  const decPlayedCount = useCallback((id: string) => change(id, -1), [change]);
-
-  // Null until the counts for this year are in; {} once loaded and empty.
+  // Null until the played games for this year are in; {} once loaded and empty.
   const counts = shown.year === year ? shown.counts : null;
-  const getPlayedCount = useCallback(
-    (id: string) => counts?.[id] || 0,
-    [counts],
-  );
+  const isPlayed = useCallback((id: string) => !!counts?.[id], [counts]);
 
-  return [getPlayedCount, incPlayedCount, decPlayedCount, counts];
+  return [isPlayed, toggle, counts];
 };
 
 export default usePlayedCounts;

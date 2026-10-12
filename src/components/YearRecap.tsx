@@ -34,19 +34,10 @@ const names = (games: RecapGame[], total: number) =>
 const factRows = (facts: RecapFacts, name: string): [string, string][] => {
   const rows: [string, string | null][] = [
     [
-      "Total plays",
-      facts.totalPlays === 0 && facts.groupAvgPlays === null
+      "Average games per member",
+      facts.groupAvgGames === null
         ? null
-        : `${facts.totalPlays}` +
-          (facts.groupAvgPlays === null
-            ? ""
-            : `, group average ${Number(facts.groupAvgPlays.toFixed(1))}`),
-    ],
-    [
-      "Most played",
-      facts.mostPlayed
-        ? `${facts.mostPlayed.game}, ${plural(facts.mostPlayed.plays, "play")}`
-        : null,
+        : `${Number(facts.groupAvgGames.toFixed(1))}`,
     ],
     [
       "Your #1 picks",
@@ -63,7 +54,7 @@ const factRows = (facts: RecapFacts, name: string): [string, string][] => {
     [
       "Group favourite",
       facts.groupFavourite
-        ? `${facts.groupFavourite.game}, ${plural(facts.groupFavourite.plays, "play")} (${name}: ${facts.groupFavourite.memberPlays})`
+        ? `${facts.groupFavourite.game}, played by ${plural(facts.groupFavourite.members, "member")}`
         : null,
     ],
     [
@@ -212,7 +203,7 @@ const Loaded = ({
                   </Badge>
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
-                <Text c="dimmed">0 plays</Text>
+                <Text c="dimmed">not played</Text>
               </Group>
             ))}
           </Stack>

@@ -1,10 +1,5 @@
-// One-time move of played counts from the old per-browser localStorage key to
-// the server. Pure apart from the storage it is handed.
-
-import type { PlayedCountsResponse } from "@/types";
-
-// The server's upper bound for one game's count (server/played.ts).
-export const MAX_PLAYED_COUNT = 999;
+// One-time move of played games from the old per-browser localStorage key (which
+// stored play counts) to the server. Pure apart from the storage it is handed.
 
 export const legacyKey = (year: string) => `played_counts_${year}`;
 
@@ -17,13 +12,11 @@ export const clearLegacyCounts = (year: string): void => {
 };
 
 /**
- * The importable counts stored for the year: ids that are positive integers and
- * counts clamped to 1..999; anything else is dropped. Null when nothing usable
- * is stored; unusable data is cleared so it is not examined again.
+ * The importable played ids stored for the year: ids that are positive integers
+ * with a legacy count above zero; anything else is dropped. Null when nothing
+ * usable is stored; unusable data is cleared so it is not examined again.
  */
-export const readLegacyCounts = (
-  year: string,
-): PlayedCountsResponse["counts"] | null => {
+export const readLegacyPlayed = (year: string): string[] | null => {
   let raw: string | null;
   try {
     raw = localStorage.getItem(legacyKey(year));
@@ -39,7 +32,7 @@ export const readLegacyCounts = (
     parsed = null;
   }
 
-  const counts: PlayedCountsResponse["counts"] = {};
+  const ids: string[] = [];
   if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
     for (const [id, count] of Object.entries(parsed)) {
       if (
@@ -49,13 +42,13 @@ export const readLegacyCounts = (
         Number.isInteger(count) &&
         count >= 1
       )
-        counts[id] = Math.min(count, MAX_PLAYED_COUNT);
+        ids.push(id);
     }
   }
 
-  if (Object.keys(counts).length === 0) {
+  if (ids.length === 0) {
     clearLegacyCounts(year);
     return null;
   }
-  return counts;
+  return ids;
 };
