@@ -25,6 +25,9 @@ vi.mock("@/components/ColorPicker", () => ({
 vi.mock("@/components/ProfileVetoes", () => ({
   default: () => <div>vetoes section</div>,
 }));
+vi.mock("@/components/ProfilePlayed", () => ({
+  default: () => <div>played section</div>,
+}));
 vi.mock("@/hooks/useDisplayName", () => ({
   default: (onSaved: () => void) => {
     hook.onSaved = onSaved;
@@ -155,5 +158,6 @@ describe("ProfilePage", () => {
     renderPage();
     expect(screen.getByText("overrides for 9")).toBeInTheDocument();
     expect(screen.getByText("vetoes section")).toBeInTheDocument();
+    expect(screen.getByText("played section")).toBeInTheDocument();
   });
 });
