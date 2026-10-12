@@ -58,7 +58,7 @@ export interface AppDeps {
   store: UserStore;
   /** Display names and public profiles. */
   profiles: ProfileStore;
-  /** Each member's played counts. */
+  /** Each member's played games. */
   played: PlayedStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
@@ -326,7 +326,7 @@ export interface Profile {
   linkedPlayers: string[];
   /** Null when no player is linked. */
   stats: ProfileStats | null;
-  /** Recorded plays (sum of played_count) across all members and years. */
+  /** Distinct games this member marked played, across all years. */
   totalPlays: number;
 }
 
@@ -349,34 +349,38 @@ export interface ProfileStore {
   getProfile(discordId: string): Promise<Profile | null>;
 }
 
-/** A member's play counts for one year, by bgg id; absent means zero. */
-export type PlayedCounts = Record<string, number>;
+/** The bgg ids a member played in one year, ascending; absent means unplayed. */
+export type PlayedGames = string[];
 
-/** Every member's play counts for one year: discord id, then bgg id. */
-export type AllPlayedCounts = Record<string, PlayedCounts>;
+/** Every member's played games for one year, by discord id. */
+export type AllPlayedGames = Record<string, PlayedGames>;
 
-/** All SQL for played counts lives behind this interface (server/db/playedStore.ts). */
+/**
+ * All SQL for played games lives behind this interface
+ * (server/db/playedStore.ts). A played_count row means played; its count is
+ * ignored.
+ */
 export interface PlayedStore {
-  /** Members with at least one play; null when the year is unknown. */
-  getAll(year: number): Promise<AllPlayedCounts | null>;
+  /** Members with at least one played game; null when the year is unknown. */
+  getAll(year: number): Promise<AllPlayedGames | null>;
   /** Null when the year is unknown. */
-  get(discordId: string, year: number): Promise<PlayedCounts | null>;
-  /** Sets the count; 0 deletes the row. Refuses with 404 `unknown_year`. */
+  get(discordId: string, year: number): Promise<PlayedGames | null>;
+  /** Marks a game played or unplayed. Refuses with 404 `unknown_year`. */
   set(
     discordId: string,
     year: number,
     bggId: number,
-    count: number,
+    played: boolean,
   ): Promise<MutationResult<null>>;
   /**
-   * Adds only the games the member has no count for (the stored count wins) and
-   * returns all their counts for the year. Refuses with 404 `unknown_year`.
+   * Marks the games played and returns all the member's played games for the
+   * year. Refuses with 404 `unknown_year`.
    */
-  importCounts(
+  importPlayed(
     discordId: string,
     year: number,
-    counts: Map<number, number>,
-  ): Promise<MutationResult<PlayedCounts>>;
+    bggIds: Set<number>,
+  ): Promise<MutationResult<PlayedGames>>;
 }
 
 /** Every member's own player count ranges: discord id, then bgg id. */

@@ -1,30 +1,46 @@
 import { Hono } from "hono";
 
-import { parseBggId, parseCount, parseImportBody, parseYear } from "../played";
+import {
+  parseBggId,
+  parseImportBody,
+  parsePlayedBody,
+  parseYear,
+  toCounts,
+} from "../played";
 import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, PlayedStore } from "../types";
 import { readJson } from "../validate";
 
-/** Played counts: everyone's (`/played`) and the signed-in member's own (`/me/played`); all need an approved user (checked in app.ts). */
+/**
+ * Played games: everyone's (`/played`) and the signed-in member's own
+ * (`/me/played`); all need an approved user (checked in app.ts). Responses
+ * carry `played` (bgg id arrays) and the legacy `counts` (every count 1) for
+ * clients from the previous release; requests take either shape.
+ */
 export function playedRoutes(played: PlayedStore) {
   const routes = new Hono<AppEnv>();
 
   routes.get("/played", async (c) => {
     const year = parseYear(c.req.query("year"));
     if (year === null) return c.json({ error: "invalid_year" }, 400);
-    const counts = await played.getAll(year);
-    if (!counts) return c.json({ error: "unknown_year" }, 404);
+    const all = await played.getAll(year);
+    if (!all) return c.json({ error: "unknown_year" }, 404);
     privateNoCache(c);
-    return c.json({ counts });
+    return c.json({
+      played: all,
+      counts: Object.fromEntries(
+        Object.entries(all).map(([id, games]) => [id, toCounts(games)]),
+      ),
+    });
   });
 
   routes.get("/me/played", async (c) => {
     const year = parseYear(c.req.query("year"));
     if (year === null) return c.json({ error: "invalid_year" }, 400);
-    const counts = await played.get(c.get("user")!.discordId, year);
-    if (!counts) return c.json({ error: "unknown_year" }, 404);
+    const games = await played.get(c.get("user")!.discordId, year);
+    if (!games) return c.json({ error: "unknown_year" }, 404);
     privateNoCache(c);
-    return c.json({ counts });
+    return c.json({ played: games, counts: toCounts(games) });
   });
 
   routes.put("/me/played/:year/:bggId", async (c) => {
@@ -32,7 +48,7 @@ export function playedRoutes(played: PlayedStore) {
     if (year === null) return c.json({ error: "invalid_year" }, 400);
     const bggId = parseBggId(c.req.param("bggId"));
     if (bggId === null) return c.json({ error: "invalid_bgg_id" }, 400);
-    const parsed = parseCount(await readJson(c));
+    const parsed = parsePlayedBody(await readJson(c));
     if (!parsed.ok) return c.json({ error: "invalid_body" }, 400);
 
     const result = await played.set(
@@ -42,7 +58,7 @@ export function playedRoutes(played: PlayedStore) {
       parsed.value,
     );
     if (!result.ok) return refusalResponse(c, result);
-    return c.json({ count: parsed.value });
+    return c.json({ played: parsed.value, count: parsed.value ? 1 : 0 });
   });
 
   routes.post("/me/played/:year/import", async (c) => {
@@ -51,13 +67,13 @@ export function playedRoutes(played: PlayedStore) {
     const parsed = parseImportBody(await readJson(c));
     if (!parsed.ok) return c.json({ error: "invalid_body" }, 400);
 
-    const result = await played.importCounts(
+    const result = await played.importPlayed(
       c.get("user")!.discordId,
       year,
       parsed.value,
     );
     if (!result.ok) return refusalResponse(c, result);
-    return c.json({ counts: result.value });
+    return c.json({ played: result.value, counts: toCounts(result.value) });
   });
 
   return routes;

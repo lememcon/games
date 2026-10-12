@@ -2,7 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createPlayedStore } from "./playedStore";
-import { createTestDb } from "./testDb";
+import { applyMigrations, createTestDb } from "./testDb";
 import { createUserStore } from "./userStore";
 
 const ALEX = "998877665544332211";
@@ -34,26 +34,50 @@ beforeEach(async () => {
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
 });
 
+const insert = (
+  discordId: string,
+  year: number,
+  bggId: number,
+  count: number,
+) =>
+  client.query(
+    "INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES ($1, $2, $3, $4)",
+    [discordId, year, bggId, count],
+  );
+
 describe("get", () => {
-  it("is empty for a member with no counts and null for an unknown year", async () => {
-    expect(await store.get(ALEX, 2025)).toEqual({});
+  it("is empty for a member with nothing played and null for an unknown year", async () => {
+    expect(await store.get(ALEX, 2025)).toEqual([]);
     expect(await store.get(ALEX, 1999)).toBeNull();
+  });
+
+  it("lists played ids in ascending order", async () => {
+    await store.set(ALEX, 2025, 200, true);
+    await store.set(ALEX, 2025, 11, true);
+    await store.set(ALEX, 2025, 30, true);
+    expect(await store.get(ALEX, 2025)).toEqual(["11", "30", "200"]);
+  });
+
+  it("reads a row with a legacy count above 1 as played", async () => {
+    await insert(ALEX, 2025, 11, 5);
+    expect(await store.get(ALEX, 2025)).toEqual(["11"]);
+    expect(await store.getAll(2025)).toEqual({ [ALEX]: ["11"] });
   });
 });
 
 describe("getAll", () => {
-  it("groups every member's counts for the year, leaving out games reset to zero", async () => {
-    await store.set(ALEX, 2025, 11, 2);
-    await store.set(ALEX, 2025, 12, 1);
-    await store.set(JO, 2025, 11, 4);
-    await store.set(JO, 2026, 13, 7);
-    await store.set(JO, 2025, 99, 3);
-    await store.set(JO, 2025, 99, 0);
+  it("groups every member's played games for the year, leaving out unplayed ones", async () => {
+    await store.set(ALEX, 2025, 12, true);
+    await store.set(ALEX, 2025, 11, true);
+    await store.set(JO, 2025, 11, true);
+    await store.set(JO, 2026, 13, true);
+    await store.set(JO, 2025, 99, true);
+    await store.set(JO, 2025, 99, false);
     expect(await store.getAll(2025)).toEqual({
-      [ALEX]: { "11": 2, "12": 1 },
-      [JO]: { "11": 4 },
+      [ALEX]: ["11", "12"],
+      [JO]: ["11"],
     });
-    expect(await store.getAll(2026)).toEqual({ [JO]: { "13": 7 } });
+    expect(await store.getAll(2026)).toEqual({ [JO]: ["13"] });
   });
 
   it("is empty for a year with no plays and null for an unknown year", async () => {
@@ -63,78 +87,89 @@ describe("getAll", () => {
 });
 
 describe("set", () => {
-  it("inserts, updates and deletes at zero", async () => {
-    expect(await store.set(ALEX, 2025, 11, 2)).toEqual({
+  it("marks played with count 1, idempotently", async () => {
+    expect(await store.set(ALEX, 2025, 11, true)).toEqual({
       ok: true,
       value: null,
     });
-    expect(await store.get(ALEX, 2025)).toEqual({ "11": 2 });
-    await store.set(ALEX, 2025, 11, 5);
-    expect(await store.get(ALEX, 2025)).toEqual({ "11": 5 });
-    await store.set(ALEX, 2025, 11, 0);
-    expect(await store.get(ALEX, 2025)).toEqual({});
-    expect(await rowCount()).toBe(0);
+    expect(await store.set(ALEX, 2025, 11, true)).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(
+      (await client.query("SELECT bgg_id, count FROM played_count")).rows,
+    ).toEqual([{ bgg_id: 11, count: 1 }]);
   });
 
-  it("treats zero for a game with no row as a no-op", async () => {
-    expect((await store.set(ALEX, 2025, 11, 0)).ok).toBe(true);
+  it("leaves an existing legacy count alone when marking played", async () => {
+    await insert(ALEX, 2025, 11, 5);
+    await store.set(ALEX, 2025, 11, true);
+    expect((await client.query("SELECT count FROM played_count")).rows).toEqual(
+      [{ count: 5 }],
+    );
+  });
+
+  it("deletes the row when unplayed, idempotently", async () => {
+    await store.set(ALEX, 2025, 11, true);
+    expect((await store.set(ALEX, 2025, 11, false)).ok).toBe(true);
+    expect((await store.set(ALEX, 2025, 11, false)).ok).toBe(true);
+    expect(await store.get(ALEX, 2025)).toEqual([]);
     expect(await rowCount()).toBe(0);
   });
 
   it("keeps members and years apart", async () => {
-    await store.set(ALEX, 2025, 11, 1);
-    await store.set(JO, 2025, 11, 3);
-    await store.set(ALEX, 2026, 11, 7);
-    expect(await store.get(ALEX, 2025)).toEqual({ "11": 1 });
-    expect(await store.get(JO, 2025)).toEqual({ "11": 3 });
-    expect(await store.get(ALEX, 2026)).toEqual({ "11": 7 });
+    await store.set(ALEX, 2025, 11, true);
+    await store.set(JO, 2025, 12, true);
+    await store.set(ALEX, 2026, 13, true);
+    expect(await store.get(ALEX, 2025)).toEqual(["11"]);
+    expect(await store.get(JO, 2025)).toEqual(["12"]);
+    expect(await store.get(ALEX, 2026)).toEqual(["13"]);
   });
 
   it("refuses an unknown year", async () => {
-    expect(await store.set(ALEX, 1999, 11, 1)).toEqual({
+    expect(await store.set(ALEX, 1999, 11, true)).toEqual({
       ok: false,
       status: 404,
       error: "unknown_year",
     });
     expect(await rowCount()).toBe(0);
   });
-
-  it("enforces the count range in the database", async () => {
-    await expect(store.set(ALEX, 2025, 11, 1000)).rejects.toThrow();
-  });
 });
 
-describe("importCounts", () => {
-  it("fills missing games only, keeping stored counts", async () => {
-    await store.set(ALEX, 2025, 11, 2);
-    const result = await store.importCounts(
-      ALEX,
-      2025,
-      new Map([
-        [11, 9],
-        [12, 4],
-      ]),
-    );
-    expect(result).toEqual({ ok: true, value: { "11": 2, "12": 4 } });
+describe("importPlayed", () => {
+  it("adds missing games with count 1, keeping stored rows", async () => {
+    await insert(ALEX, 2025, 11, 2);
+    const result = await store.importPlayed(ALEX, 2025, new Set([11, 12]));
+    expect(result).toEqual({ ok: true, value: ["11", "12"] });
+    expect(
+      (
+        await client.query(
+          "SELECT bgg_id, count FROM played_count ORDER BY bgg_id",
+        )
+      ).rows,
+    ).toEqual([
+      { bgg_id: 11, count: 2 },
+      { bgg_id: 12, count: 1 },
+    ]);
   });
 
-  it("returns the existing counts for an empty import", async () => {
-    await store.set(ALEX, 2025, 11, 2);
-    expect(await store.importCounts(ALEX, 2025, new Map())).toEqual({
+  it("returns the existing played games for an empty import", async () => {
+    await store.set(ALEX, 2025, 11, true);
+    expect(await store.importPlayed(ALEX, 2025, new Set())).toEqual({
       ok: true,
-      value: { "11": 2 },
+      value: ["11"],
     });
   });
 
   it("does not touch other members or years", async () => {
-    await store.set(JO, 2025, 11, 3);
-    await store.importCounts(ALEX, 2025, new Map([[11, 1]]));
-    expect(await store.get(JO, 2025)).toEqual({ "11": 3 });
-    expect(await store.get(ALEX, 2026)).toEqual({});
+    await store.set(JO, 2025, 11, true);
+    await store.importPlayed(ALEX, 2025, new Set([12]));
+    expect(await store.get(JO, 2025)).toEqual(["11"]);
+    expect(await store.get(ALEX, 2026)).toEqual([]);
   });
 
   it("refuses an unknown year", async () => {
-    expect(await store.importCounts(ALEX, 1999, new Map([[11, 1]]))).toEqual({
+    expect(await store.importPlayed(ALEX, 1999, new Set([11]))).toEqual({
       ok: false,
       status: 404,
       error: "unknown_year",
@@ -143,18 +178,54 @@ describe("importCounts", () => {
 });
 
 describe("cascades", () => {
-  it("removes a member's counts when the member is deleted", async () => {
-    await store.set(ALEX, 2025, 11, 1);
-    await store.set(JO, 2025, 11, 1);
+  it("removes a member's played games when the member is deleted", async () => {
+    await store.set(ALEX, 2025, 11, true);
+    await store.set(JO, 2025, 11, true);
     await client.query("DELETE FROM app_user WHERE discord_id = $1", [ALEX]);
     expect(await rowCount()).toBe(1);
-    expect(await store.get(JO, 2025)).toEqual({ "11": 1 });
+    expect(await store.get(JO, 2025)).toEqual(["11"]);
   });
 
-  it("removes counts when the year is deleted", async () => {
-    await store.set(ALEX, 2025, 11, 1);
-    await store.set(ALEX, 2026, 11, 1);
+  it("removes played games when the year is deleted", async () => {
+    await store.set(ALEX, 2025, 11, true);
+    await store.set(ALEX, 2026, 11, true);
     await client.query("DELETE FROM year WHERE year = 2025");
     expect(await rowCount()).toBe(1);
+  });
+});
+
+describe("collapsing counts to played (migration 0016)", () => {
+  it("sets every count to 1 and still accepts old-release writes", async () => {
+    const pre = new PGlite();
+    await applyMigrations(pre, 0, 16);
+    await pre.exec(
+      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}'), ('${JO}');
+       INSERT INTO year (year) VALUES (2025), (2026);
+       INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');
+       INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES
+         ('${ALEX}', 2025, 1, 1), ('${ALEX}', 2025, 2, 3),
+         ('${ALEX}', 2026, 1, 999), ('${JO}', 2025, 1, 3);`,
+    );
+    await applyMigrations(pre, 16);
+    const { rows: collapsed } = await pre.query(
+      "SELECT discord_id, year, bgg_id, count FROM played_count ORDER BY discord_id, year, bgg_id",
+    );
+    expect(collapsed).toEqual([
+      { discord_id: JO, year: 2025, bgg_id: 1, count: 1 },
+      { discord_id: ALEX, year: 2025, bgg_id: 1, count: 1 },
+      { discord_id: ALEX, year: 2025, bgg_id: 2, count: 1 },
+      { discord_id: ALEX, year: 2026, bgg_id: 1, count: 1 },
+    ]);
+    await pre.exec(
+      `INSERT INTO played_count (discord_id, year, bgg_id, count)
+       VALUES ('${JO}', 2026, 2, 2)`,
+    );
+    await expect(
+      pre.exec(
+        `INSERT INTO played_count (discord_id, year, bgg_id, count)
+         VALUES ('${JO}', 2026, 1, 0)`,
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+    await pre.close();
   });
 });
