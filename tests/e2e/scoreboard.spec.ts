@@ -50,13 +50,11 @@ test("played toggle updates and saves to the server", async ({ page }) => {
       req.method() === "PUT" &&
       new URL(req.url()).pathname === "/api/me/played/2024/101",
   );
-  const toggle = page.getByRole("button", { name: "Mark played: Alpha" });
+  const toggle = page.getByRole("button", { name: "Played: Alpha" });
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await toggle.click();
 
-  await expect(
-    page.getByRole("button", { name: "Played: Alpha" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   expect((await put).postDataJSON()).toEqual({ played: true });
 });
 

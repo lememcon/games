@@ -207,9 +207,7 @@ describe("Scoreboard", () => {
     at("/2026");
     render();
 
-    await user.click(
-      await screen.findByRole("button", { name: /^Mark played/ }),
-    );
+    await user.click(await screen.findByRole("button", { name: /^Played:/ }));
 
     expect(state.togglePlayed).toHaveBeenCalledWith("11");
   });

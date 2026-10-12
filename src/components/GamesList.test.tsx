@@ -132,7 +132,7 @@ describe("GamesList", () => {
     const onToggle = vi.fn();
     const { getAllByRole } = renderList({ onToggle });
 
-    await user.click(getAllByRole("button", { name: /^Mark played/ })[0]);
+    await user.click(getAllByRole("button", { name: /^Played:/ })[0]);
 
     expect(onToggle).toHaveBeenCalledWith("100");
   });

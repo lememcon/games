@@ -10,7 +10,7 @@ describe("PlayedToggle", () => {
       <PlayedToggle game="Azul" played={false} onToggle={() => {}} />,
     );
 
-    const button = getByRole("button", { name: "Mark played: Azul" });
+    const button = getByRole("button", { name: "Played: Azul" });
     expect(button).toHaveAttribute("aria-pressed", "false");
     expect(button).toHaveTextContent("Mark played");
   });

@@ -69,7 +69,7 @@ export interface SelectedGame {
   max: number;
   players: Record<string, SelectedGamePlayer>;
   // Selected players (or all, when none are selected) who played this game
-  // this year, by name; only counts above zero.
+  // this year, by name.
   playedBy: Record<string, number>;
   image?: string;
 }
@@ -162,7 +162,7 @@ export interface Profile {
   linkedPlayers: string[];
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
-  // Games marked played across all years.
+  // The profile owner's distinct games played across all years.
   totalPlays: number;
 }
 

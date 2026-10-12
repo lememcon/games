@@ -11,7 +11,7 @@ const PlayedToggle = ({ game, played, onToggle }: PlayedToggleProps) => (
     type="button"
     className={`tray-played${played ? " tray-played--on" : ""}`}
     aria-pressed={played}
-    aria-label={`${played ? "Played" : "Mark played"}: ${game}`}
+    aria-label={`Played: ${game}`}
     onClick={onToggle}
   >
     {played ? (

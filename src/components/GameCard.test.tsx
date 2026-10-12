@@ -116,7 +116,7 @@ describe("GameCard", () => {
     const onToggle = vi.fn();
     const { getByRole } = renderCard({ onToggle });
 
-    await user.click(getByRole("button", { name: /^Mark played/ }));
+    await user.click(getByRole("button", { name: /^Played:/ }));
 
     expect(onToggle).toHaveBeenCalledOnce();
   });
