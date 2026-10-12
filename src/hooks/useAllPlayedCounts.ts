@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { toPlayedMap, type PlayedMap } from "@/lib/played";
@@ -25,12 +25,19 @@ const useAllPlayed = (
     played: EMPTY,
   });
 
+  // The current year, and whether a POST response already set it (so a GET
+  // still in flight must not overwrite that newer result).
+  const yearRef = useRef(year);
+  const marked = useRef(false);
+
   useEffect(() => {
+    yearRef.current = year;
+    marked.current = false;
     if (year === "") return;
     let cancelled = false;
     apiFetch<AllPlayedCountsResponse>(`/played?year=${year}`, {}, fetchImpl)
       .then(({ played }) => {
-        if (cancelled) return;
+        if (cancelled || marked.current) return;
         setLoaded({ year, played: toMaps(played) });
       })
       .catch(() => {});
@@ -48,9 +55,9 @@ const useAllPlayed = (
         { method: "POST", body: { discordIds } },
         fetchImpl,
       );
-      setLoaded((prev) =>
-        prev.year === year ? { year, played: toMaps(played) } : prev,
-      );
+      if (yearRef.current !== year) return;
+      marked.current = true;
+      setLoaded({ year, played: toMaps(played) });
     },
     [year, fetchImpl],
   );

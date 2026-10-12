@@ -324,6 +324,47 @@ describe("Scoreboard", () => {
       expect(state.togglePlayed).not.toHaveBeenCalled();
     });
 
+    it("shows an error and keeps the dialog open when marking fails", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.data = linked;
+      state.markPlayed.mockRejectedValueOnce(new Error("nope"));
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+      await user.click(
+        within(await screen.findByRole("dialog")).getByRole("button", {
+          name: "bob",
+        }),
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Mark 2 played",
+        }),
+      );
+
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(state.togglePlayed).not.toHaveBeenCalled();
+    });
+
+    it("closes the dialog when the year changes", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.data = linked;
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+      act(() => {
+        window.history.pushState({}, "", "/2025");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
     it("closes without marking on Cancel", async () => {
       const user = userEvent.setup();
       at("/2026");

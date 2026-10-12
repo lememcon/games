@@ -92,6 +92,12 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [isPlayed, togglePlayed, ownCounts] = usePlayedCounts(year ?? "");
   const [allCounts, markPlayed] = useMarkPlayedCounts(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
+  // A dialog opened for one year must not confirm against another.
+  const [markingYear, setMarkingYear] = useState(year);
+  if (markingYear !== year) {
+    setMarkingYear(year);
+    setMarkingId(null);
+  }
   const gameNames = useMemo(
     () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
     [data.scores],

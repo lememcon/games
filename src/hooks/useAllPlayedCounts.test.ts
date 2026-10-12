@@ -139,6 +139,36 @@ describe("useMarkPlayedCounts", () => {
     expect(result.current[0]).toEqual(counts("2025"));
   });
 
+  it("keeps a response that arrives before the initial load", async () => {
+    let load: (r: Response) => void = () => {};
+    const fetchImpl = vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? Promise.resolve(json({ played: { d1: ["12"] } }))
+        : new Promise<Response>((resolve) => (load = resolve)),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+
+    await act(() => result.current[1]("12", ["d1"]));
+    await act(async () => load(json({ played: played("2025") })));
+
+    expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+  });
+
+  it("keeps a response after the initial load failed", async () => {
+    const fetchImpl = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === "POST"
+          ? json({ played: { d1: ["12"] } })
+          : json({ error: "x" }, 500),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayedCounts("2025", fetchImpl));
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+
+    await act(() => result.current[1]("12", ["d1"]));
+
+    expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+  });
+
   it("ignores a response that arrives after the year changed", async () => {
     let answer: (r: Response) => void = () => {};
     const fetchImpl = loadThenPost(
