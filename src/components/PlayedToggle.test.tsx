@@ -13,6 +13,7 @@ describe("PlayedToggle", () => {
     const button = getByRole("button", { name: "Played: Azul" });
     expect(button).toHaveAttribute("aria-pressed", "false");
     expect(button).toHaveTextContent("Mark played");
+    expect(button).toHaveAttribute("aria-haspopup", "dialog");
   });
 
   it("shows a pressed Played badge once the game has been played", () => {
@@ -23,6 +24,7 @@ describe("PlayedToggle", () => {
     const button = getByRole("button", { name: "Played: Azul" });
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toHaveTextContent("✓ Played");
+    expect(button).not.toHaveAttribute("aria-haspopup");
   });
 
   it("fires onToggle when clicked", async () => {

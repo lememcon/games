@@ -1,4 +1,4 @@
-import { act, cleanup, screen } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,6 +46,7 @@ const state = vi.hoisted(() => ({
   own: {} as Record<string, number> | null,
   allPlayed: {} as Record<string, Record<string, number>>,
   useAllPlayedCounts: vi.fn(),
+  markPlayed: vi.fn(),
   togglePlayed: vi.fn(),
   usePlayedCounts: vi.fn(),
   // Everyone's own player count ranges, by discord id then bgg id.
@@ -105,9 +106,9 @@ vi.mock("@/hooks/useVetoes", () => ({
 }));
 
 vi.mock("@/hooks/useAllPlayedCounts", () => ({
-  default: (year: string) => {
+  useMarkPlayedCounts: (year: string) => {
     state.useAllPlayedCounts(year);
-    return state.allPlayed;
+    return [state.allPlayed, state.markPlayed];
   },
 }));
 
@@ -202,14 +203,142 @@ describe("Scoreboard", () => {
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
   });
 
-  it("toggles played through the played toggle", async () => {
-    const user = userEvent.setup();
-    at("/2026");
-    render();
+  describe("marking played", () => {
+    const linked: Data = {
+      ...loadedData,
+      scores: loadedData.by_id[11],
+      by_player: {
+        alice: [
+          {
+            game: "Belfort",
+            player: "alice",
+            rank: 1,
+            score: 50,
+            bgg_id: 11,
+            discord_id: "1",
+          },
+        ],
+        bob: [
+          {
+            game: "Belfort",
+            player: "bob",
+            rank: 2,
+            score: 30,
+            bgg_id: 11,
+            discord_id: "2",
+          },
+        ],
+      },
+    };
 
-    await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+    it("opens the dialog instead of marking straight away", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.data = linked;
+      render();
 
-    expect(state.togglePlayed).toHaveBeenCalledWith("11");
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+
+      expect(
+        await screen.findByRole("dialog", { name: /Mark "Belfort" played/ }),
+      ).toBeInTheDocument();
+      expect(state.togglePlayed).not.toHaveBeenCalled();
+    });
+
+    it("does nothing while the member's own games have not loaded", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.own = null;
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(state.togglePlayed).not.toHaveBeenCalled();
+    });
+
+    it("unmarks a played game directly", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.played = { "11": 1 };
+      state.own = { "11": 1 };
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+
+      expect(state.togglePlayed).toHaveBeenCalledWith("11");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("marks the chosen members and then the member themself", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.data = linked;
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+      await user.click(
+        await within(await screen.findByRole("dialog")).findByRole("button", {
+          name: "bob",
+        }),
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Mark 2 played",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(state.markPlayed).toHaveBeenCalledWith("11", ["1", "2"]),
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(state.togglePlayed).toHaveBeenCalledWith("11");
+    });
+
+    it("does not toggle the member's own game when they are left out", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      state.data = linked;
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+      await user.click(
+        await within(await screen.findByRole("dialog")).findByRole("button", {
+          name: "alice (you)",
+        }),
+      );
+      await user.click(
+        await within(await screen.findByRole("dialog")).findByRole("button", {
+          name: "bob",
+        }),
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Mark 1 played",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(state.markPlayed).toHaveBeenCalledWith("11", ["2"]),
+      );
+      expect(state.togglePlayed).not.toHaveBeenCalled();
+    });
+
+    it("closes without marking on Cancel", async () => {
+      const user = userEvent.setup();
+      at("/2026");
+      render();
+
+      await user.click(await screen.findByRole("button", { name: /^Played:/ }));
+      await user.click(
+        await within(await screen.findByRole("dialog")).findByRole("button", {
+          name: "Cancel",
+        }),
+      );
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(state.markPlayed).not.toHaveBeenCalled();
+    });
   });
 
   it("shows the never-played shelf on the year landing", () => {
