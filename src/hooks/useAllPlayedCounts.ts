@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
-import { toPlayedMap, type PlayedMap } from "@/lib/played";
+import { toPlayedMaps, type PlayedMap } from "@/lib/played";
 import type { AllPlayedCountsResponse, MarkPlayedResponse } from "@/types";
 
 type AllPlayed = Record<string, PlayedMap>;
 
 const EMPTY: AllPlayed = {};
-
-const toMaps = (played: Record<string, string[]> | undefined): AllPlayed =>
-  Object.fromEntries(
-    Object.entries(played ?? {}).map(([id, games]) => [id, toPlayedMap(games)]),
-  );
 
 // Every member's played games for a year (discord id, then bgg id), fetched
 // once per year. Read-only: an empty year ("") skips the request, and a failure
@@ -38,7 +33,7 @@ const useAllPlayed = (
     apiFetch<AllPlayedCountsResponse>(`/played?year=${year}`, {}, fetchImpl)
       .then(({ played }) => {
         if (cancelled || marked.current) return;
-        setLoaded({ year, played: toMaps(played) });
+        setLoaded({ year, played: toPlayedMaps(played) });
       })
       .catch(() => {});
     return () => {
@@ -57,7 +52,7 @@ const useAllPlayed = (
       );
       if (yearRef.current !== year) return;
       marked.current = true;
-      setLoaded({ year, played: toMaps(played) });
+      setLoaded({ year, played: toPlayedMaps(played) });
     },
     [year, fetchImpl],
   );

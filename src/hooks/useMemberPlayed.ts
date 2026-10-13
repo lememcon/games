@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
-import { toPlayedMap, type PlayedMap } from "@/lib/played";
+import { toPlayedMaps, type PlayedMap } from "@/lib/played";
 import type { AllPlayedCountsResponse } from "@/types";
 
 type Counts = PlayedMap;
@@ -30,12 +30,7 @@ const readYear = async (
       {},
       fetchImpl,
     );
-    return Object.fromEntries(
-      Object.entries(body.played ?? {}).map(([id, games]) => [
-        id,
-        toPlayedMap(games),
-      ]),
-    );
+    return toPlayedMaps(body.played);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return {};
     throw e;

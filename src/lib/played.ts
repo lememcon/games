@@ -8,6 +8,14 @@ export type PlayedMap = Record<string, 1>;
 export const toPlayedMap = (ids: string[] | undefined): PlayedMap =>
   Object.fromEntries((ids ?? []).map((id) => [id, 1 as const]));
 
+/** Each member's played map, from a discord id -> played bgg ids record. */
+export const toPlayedMaps = (
+  played: Record<string, string[]> | undefined,
+): Record<string, PlayedMap> =>
+  Object.fromEntries(
+    Object.entries(played ?? {}).map(([id, games]) => [id, toPlayedMap(games)]),
+  );
+
 /** Game names by string bgg id, from a year's score rows. */
 export const gameNamesById = (
   scores: PlayerGameScore[],

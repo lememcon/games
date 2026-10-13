@@ -6,6 +6,7 @@ import {
   gameNamesById,
   playedGames,
   toPlayedMap,
+  toPlayedMaps,
 } from "@/lib/played";
 import type { PlayerGameScore } from "@/types";
 
@@ -16,6 +17,24 @@ describe("toPlayedMap", () => {
 
   it("reads a missing list as empty", () => {
     expect(toPlayedMap(undefined)).toEqual({});
+  });
+});
+
+describe("toPlayedMaps", () => {
+  it("reads a missing record as empty", () => {
+    expect(toPlayedMaps(undefined)).toEqual({});
+  });
+
+  it("reads an empty record as empty", () => {
+    expect(toPlayedMaps({})).toEqual({});
+  });
+
+  it("maps each member's ids to 1", () => {
+    expect(toPlayedMaps({ a: ["1", "2"], b: [], c: ["3"] })).toEqual({
+      a: { "1": 1, "2": 1 },
+      b: {},
+      c: { "3": 1 },
+    });
   });
 });
 
