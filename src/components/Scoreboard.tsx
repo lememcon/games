@@ -346,6 +346,11 @@ function Scoreboard({ user }: ScoreboardProps) {
               overrides={overrides}
               vetoes={vetoes}
               discordId={user.discordId}
+              backHref={sharePath(year, {
+                players,
+                hidePlayed,
+                sort: sortMode,
+              })}
             />
           ) : (
             <>

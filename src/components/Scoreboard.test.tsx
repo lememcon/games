@@ -437,6 +437,28 @@ describe("Scoreboard", () => {
     const search = () => window.location.search;
     const stored = (key: string) => JSON.parse(localStorage.getItem(key)!);
 
+    it("keeps the filters when a game is opened and the member goes back", async () => {
+      at("/2026?players=alice&hidePlayed=1&sort=even");
+      const user = userEvent.setup();
+      const { getByRole, getAllByRole, getByText } = render();
+
+      await user.click(getByRole("link", { name: "Belfort" }));
+      expect(path()).toBe("/2026/games/11");
+      const back = getAllByRole("link", { name: "Back to games" });
+      expect(back[0]).toHaveAttribute(
+        "href",
+        "/2026?players=alice&hidePlayed=1&sort=even",
+      );
+
+      await user.click(back[0]);
+      expect(path()).toBe("/2026");
+      expect(search()).toBe("?players=alice&hidePlayed=1&sort=even");
+      expect(getByText("Filter By Players")).toBeInTheDocument();
+      expect(stored("players")).toEqual(["alice"]);
+      expect(stored("hide_played")).toBe(true);
+      expect(stored("sort_mode")).toBe("even");
+    });
+
     it("lets the URL override the saved filters", () => {
       at("/2026?players=alice&hidePlayed=1");
       localStorage.setItem("players", JSON.stringify(["bob"]));
