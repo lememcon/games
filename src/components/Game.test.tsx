@@ -75,6 +75,32 @@ describe("Game", () => {
     yearTotals.totals = [];
   });
 
+  it("links both back buttons to the year by default", () => {
+    const { getAllByRole } = renderWithMantine(
+      <Game data={data} gameData={gameData} year="2024" id="11" />,
+    );
+
+    const back = getAllByRole("link", { name: "Back to games" });
+    expect(back).toHaveLength(2);
+    back.forEach((link) => expect(link).toHaveAttribute("href", "/2024"));
+  });
+
+  it("links both back buttons to backHref when given", () => {
+    const { getAllByRole } = renderWithMantine(
+      <Game
+        data={data}
+        gameData={gameData}
+        year="2024"
+        id="11"
+        backHref="/2024?hidePlayed=1"
+      />,
+    );
+
+    getAllByRole("link", { name: "Back to games" }).forEach((link) =>
+      expect(link).toHaveAttribute("href", "/2024?hidePlayed=1"),
+    );
+  });
+
   it("renders the game name, player bounds, and BGG link", () => {
     const { getByRole } = renderWithMantine(
       <Game data={data} gameData={gameData} year="2024" id="11" />,

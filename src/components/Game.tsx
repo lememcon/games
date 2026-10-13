@@ -25,6 +25,8 @@ interface GameProps {
   // The signed-in member's Discord id, the key of their ranges in `overrides`
   // and their vetoes in `vetoes`.
   discordId?: string;
+  // Where the back buttons go; defaults to the year's scoreboard.
+  backHref?: string;
 }
 
 const Game = ({
@@ -35,6 +37,7 @@ const Game = ({
   overrides,
   vetoes,
   discordId,
+  backHref = yearPath(year),
 }: GameProps) => {
   const { totals } = useYearTotals();
   const max = data.max;
@@ -50,7 +53,7 @@ const Game = ({
 
   return (
     <div>
-      <BackButton href={yearPath(year)} />
+      <BackButton href={backHref} />
       <GameDetailHeader
         name={players[0].game}
         bounds={bounds}
@@ -81,7 +84,7 @@ const Game = ({
           }
         />
       )}
-      <BackButton href={yearPath(year)} style={{ marginTop: "2em" }} />
+      <BackButton href={backHref} style={{ marginTop: "2em" }} />
     </div>
   );
 };
