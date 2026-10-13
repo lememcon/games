@@ -54,7 +54,11 @@ describe("usePlayerOverrides", () => {
       none(),
       res({ overrides: [{ discordId: "d1", bggId: 1, min: 2, max: 2 }] }),
     );
-    await act(() => hook.result.current.save(1, { min: 2, max: 2 }));
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await hook.result.current.save(1, { min: 2, max: 2 });
+    });
+    expect(ok).toBe(true);
     expect(fetchImpl.mock.calls[1][1]).toMatchObject({
       method: "PUT",
       body: '{"min":2,"max":2}',
@@ -85,6 +89,15 @@ describe("usePlayerOverrides", () => {
     );
     await act(() => hook.result.current.save(1, { min: 3, max: 4 }));
     expect(hook.result.current.error).toMatch(message);
+  });
+
+  it("resolves false when the save fails", async () => {
+    const { hook } = await setup(res({}, 500), res({ overrides: mine }));
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await hook.result.current.save(1, { min: 3, max: 4 });
+    });
+    expect(ok).toBe(false);
   });
 
   it("falls back to a generic error", async () => {

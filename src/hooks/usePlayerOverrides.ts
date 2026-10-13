@@ -42,12 +42,14 @@ const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
   }, [fetchImpl]);
 
   const mutate = useCallback(
-    async (run: () => Promise<void>) => {
+    async (run: () => Promise<void>): Promise<boolean> => {
       setSaving(true);
       setError(null);
+      let ok = true;
       try {
         await run();
       } catch (e) {
+        ok = false;
         setError(describe(e));
       }
       // Refetch either way so a stale view resyncs.
@@ -61,6 +63,7 @@ const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
         setError((prev) => prev ?? GENERIC_ERROR);
       }
       setSaving(false);
+      return ok;
     },
     [fetchImpl],
   );
