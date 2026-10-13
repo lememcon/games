@@ -51,8 +51,7 @@ const ProfileOverrides = ({ discordId }: ProfileOverridesProps) => {
 
   const add = async () => {
     if (!picked || !range) return;
-    await overrides.save(Number(picked), range);
-    pick(null);
+    if (await overrides.save(Number(picked), range)) pick(null);
   };
 
   return (

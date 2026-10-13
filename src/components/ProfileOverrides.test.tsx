@@ -38,7 +38,7 @@ describe("ProfileOverrides", () => {
       saving: false,
       error: null,
     });
-    ov.state.save.mockReset().mockResolvedValue(undefined);
+    ov.state.save.mockReset().mockResolvedValue(true);
     ov.state.reset.mockReset();
     Object.assign(gm.state, {
       games: {
@@ -98,6 +98,46 @@ describe("ProfileOverrides", () => {
     await userEvent.type(maxInput, "3");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(ov.state.save).toHaveBeenCalledWith(2, { min: 2, max: 3 });
+  });
+
+  it("clears the add form after a successful add", async () => {
+    render();
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "Game to override" }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: "Azul", hidden: true }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(
+      screen.getByRole("textbox", { name: "New minimum players" }),
+    ).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  });
+
+  it("keeps the add form values when the save fails", async () => {
+    ov.state.save.mockResolvedValue(false);
+    render();
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "Game to override" }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: "Azul", hidden: true }),
+    );
+    const maxInput = screen.getByRole("textbox", {
+      name: "New maximum players",
+    });
+    await userEvent.clear(maxInput);
+    await userEvent.type(maxInput, "3");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(ov.state.save).toHaveBeenCalledWith(2, { min: 2, max: 3 });
+    expect(
+      screen.getByRole("textbox", { name: "New minimum players" }),
+    ).toHaveValue("2");
+    expect(maxInput).toHaveValue("3");
+    expect(
+      screen.getByRole("combobox", { name: "Game to override" }),
+    ).toHaveValue("Azul");
   });
 
   it("refuses an out-of-range new override", async () => {
