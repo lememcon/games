@@ -35,6 +35,7 @@ const base: BuildRecapArgs = {
   scores: [],
   discordId: "me",
   allCounts: {},
+  games: {},
 };
 const recap = (over: Partial<BuildRecapArgs> = {}) =>
   buildRecap({ ...base, ...over });
@@ -97,13 +98,43 @@ describe("buildRecap new picks", () => {
     expect(r.newPicks).toEqual([{ bggId: 2, game: "Heat" }]);
   });
 
-  it("counts a 0 in an earlier year as not played, and skips unnamed games", () => {
+  it("counts a 0 in an earlier year as not played, and labels unnamed games", () => {
     const r = recap({
       counts: { "1": 1, "9": 1 },
       scores,
       earlierCounts: { "2023": { "1": 0, "7": 1 } },
     });
-    expect(r.newPicks).toEqual([{ bggId: 1, game: "Azul" }]);
+    expect(r.newPicks).toEqual([
+      { bggId: 1, game: "Azul" },
+      { bggId: 9, game: "Game 9" },
+    ]);
+  });
+
+  it("names a pick with no score row from the catalog, score names winning", () => {
+    const r = recap({
+      counts: { "1": 1, "9": 1 },
+      scores,
+      games: { "1": { name: "Other" }, "9": { name: "Wingspan" } },
+      earlierCounts: { "2023": { "5": 1 } },
+    });
+    expect(r.newPicks).toEqual([
+      { bggId: 1, game: "Azul" },
+      { bggId: 9, game: "Wingspan" },
+    ]);
+  });
+
+  it("sorts catalog-named picks among the rest by displayed name", () => {
+    const r = recap({
+      counts: { "1": 1, "2": 1, "9": 1 },
+      scores,
+      games: { "9": { name: "Betrayal" } },
+      earlierCounts: { "2023": { "5": 1 } },
+    });
+    expect(r.newPicks?.map((g) => g.game)).toEqual([
+      "Azul",
+      "Betrayal",
+      "Heat",
+    ]);
   });
 
   it("sorts new picks by name", () => {

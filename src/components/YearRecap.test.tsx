@@ -198,6 +198,26 @@ describe("YearRecap", () => {
     expect(screen.getByText("first played 2025")).toBeInTheDocument();
   });
 
+  it("lists a new pick with no score row by catalog name or id", () => {
+    h.games = {
+      games: { "9": { name: "Wingspan" } },
+      loading: false,
+      error: false,
+    };
+    h.played = ready({
+      byYear: { "2025": { "1": 2, "9": 1, "8": 1 }, "2024": { "2": 1 } },
+    } as never);
+    show();
+    expect(
+      screen.getByText("3 games played · 3 new picks"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
+      "href",
+      "/2025/games/9",
+    );
+    expect(screen.getByRole("link", { name: "Game 8" })).toBeInTheDocument();
+  });
+
   it("only lists games from the scoreboard's top 10", () => {
     const many = Array.from({ length: 14 }, (_, i) =>
       row(100 + i, `Game ${i}`, "Ana", 50 - i, i + 1, "me"),
