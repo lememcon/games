@@ -119,6 +119,7 @@ const Loaded = ({
       scores: data.scores,
       discordId,
       allCounts: played.allCounts,
+      games,
     });
   }, [played, data, games, year, discordId]);
 

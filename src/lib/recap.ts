@@ -1,4 +1,6 @@
+import { gameLabel } from "@/lib/games";
 import type {
+  GamesData,
   PlayerGameScore,
   Recap,
   RecapFacts,
@@ -27,6 +29,8 @@ export interface BuildRecapArgs {
   discordId: string;
   // Every member's counts that year: discord id, then bgg id.
   allCounts: Record<string, Counts>;
+  // The game catalog; names new picks that have no score row.
+  games: GamesData;
 }
 
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -45,6 +49,7 @@ export const buildRecap = ({
   scores,
   discordId,
   allCounts,
+  games,
 }: BuildRecapArgs): Recap => {
   const played = playedIds(counts);
 
@@ -72,8 +77,10 @@ export const buildRecap = ({
       ? null
       : played
           .filter((id) => earlier.every((y) => !(earlierCounts[y][id] > 0)))
-          .map(named)
-          .filter((g): g is RecapGame => g !== null)
+          .map(
+            (id) =>
+              named(id) ?? { bggId: Number(id), game: gameLabel(games, id) },
+          )
           .sort((a, b) => byText(a.game, b.game));
 
   return {
