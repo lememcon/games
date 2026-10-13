@@ -27,8 +27,9 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec(
-    `DELETE FROM played_count; DELETE FROM year; DELETE FROM app_user;
-     INSERT INTO year (year) VALUES (2025), (2026);`,
+    `DELETE FROM played_count; DELETE FROM year; DELETE FROM app_user; DELETE FROM game;
+     INSERT INTO year (year) VALUES (2025), (2026);
+     INSERT INTO game (bgg_id) VALUES (11), (12), (13), (30), (99), (200);`,
   );
   const users = createUserStore(db);
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
@@ -114,6 +115,18 @@ describe("set", () => {
     expect((await store.set(ALEX, 2025, 11, false)).ok).toBe(true);
     expect((await store.set(ALEX, 2025, 11, false)).ok).toBe(true);
     expect(await store.get(ALEX, 2025)).toEqual([]);
+    expect(await rowCount()).toBe(0);
+  });
+
+  it("refuses an unknown game, writes nothing, and still unmarks it", async () => {
+    expect(await store.set(ALEX, 2025, 4040, true)).toEqual({
+      ok: false,
+      status: 404,
+      error: "unknown_game",
+    });
+    expect(await rowCount()).toBe(0);
+    await insert(ALEX, 2025, 4040, 1);
+    expect((await store.set(ALEX, 2025, 4040, false)).ok).toBe(true);
     expect(await rowCount()).toBe(0);
   });
 
@@ -261,6 +274,14 @@ describe("markPlayed", () => {
       ok: false,
       error: "unknown_year",
     });
+    expect(await rowCount()).toBe(0);
+  });
+
+  it("refuses an unknown game and writes nothing", async () => {
+    await approve(ALEX, JO);
+    expect(
+      await store.markPlayed(new Set([ALEX, JO]), 2025, 4040),
+    ).toMatchObject({ ok: false, status: 404, error: "unknown_game" });
     expect(await rowCount()).toBe(0);
   });
 

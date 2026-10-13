@@ -31,11 +31,12 @@ const users: Record<string, AppUser> = {
   pending: { ...approved, status: "pending" },
 };
 
-function makeApp(members?: string[]) {
+function makeApp(members?: string[], games?: number[]) {
   const fake = fakePlayed({
     years: [2025, 2026],
     played: { [`${PAT}:2025`]: [11] },
     members,
+    games,
   });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
@@ -280,6 +281,22 @@ describe("PUT /api/me/played/:year/:bggId", () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "unknown_year" });
   });
+
+  it("404s an unknown game when marking played, not when unmarking", async () => {
+    const { app, rows } = makeApp(undefined, [11]);
+    const res = await app.request(
+      "/api/me/played/2025/999",
+      put({ played: true }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_game" });
+    expect(rows.has(`${KEL}:2025`)).toBe(false);
+    const unmark = await app.request(
+      "/api/me/played/2025/999",
+      put({ played: false }, as("member")),
+    );
+    expect(unmark.status).toBe(200);
+  });
 });
 
 describe("POST /api/me/played/:year/import", () => {
@@ -414,6 +431,17 @@ describe("POST /api/played/:year/:bggId", () => {
     );
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "unknown_year" });
+  });
+
+  it("404s an unknown game and writes nothing", async () => {
+    const { app, rows } = makeApp(undefined, [11]);
+    const res = await app.request(
+      "/api/played/2025/999",
+      post({ discordIds: [KEL] }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_game" });
+    expect(rows.has(`${KEL}:2025`)).toBe(false);
   });
 
   it("422s an unknown member and writes nothing", async () => {
