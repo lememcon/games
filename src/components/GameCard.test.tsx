@@ -120,4 +120,33 @@ describe("GameCard", () => {
 
     expect(onToggle).toHaveBeenCalledOnce();
   });
+
+  it("has no veto button without onVeto", () => {
+    const { queryByRole } = renderCard();
+    expect(queryByRole("button", { name: /^Veto:/ })).toBeNull();
+  });
+
+  it("forwards veto clicks", async () => {
+    const user = userEvent.setup();
+    const onVeto = vi.fn();
+    const { getByRole } = renderCard({ onVeto });
+    const button = getByRole("button", { name: /^Veto:/ });
+    expect(button).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(button);
+
+    expect(onVeto).toHaveBeenCalledOnce();
+  });
+
+  it("shows a pressed, disabled veto button", () => {
+    const { getByRole } = renderCard({
+      onVeto: () => {},
+      vetoed: true,
+      vetoDisabled: true,
+    });
+    const button = getByRole("button", { name: /^Veto:/ });
+
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(button).toBeDisabled();
+  });
 });

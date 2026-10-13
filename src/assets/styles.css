@@ -221,6 +221,15 @@ body {
 
 .tray-card__played {
   margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tray-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 /* ---- Compact row ---- */
@@ -306,6 +315,21 @@ body {
 
 .tray-played--on:hover {
   background: #3d3731;
+}
+
+.tray-played:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tray-played--veto.tray-played--on {
+  background: #9b2c2c;
+  border-color: #9b2c2c;
+  color: #fff;
+}
+
+.tray-played--veto.tray-played--on:hover:not(:disabled) {
+  background: #7f2323;
 }
 
 /* ---- Back button ---- */

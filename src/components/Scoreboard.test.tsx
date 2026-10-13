@@ -55,6 +55,9 @@ const state = vi.hoisted(() => ({
   // Everyone's vetoes, by discord id then bgg id.
   vetoes: {} as Record<string, ReadonlySet<string>>,
   useVetoes: vi.fn(),
+  veto: vi.fn(),
+  unveto: vi.fn(),
+  vetoError: null as string | null,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
 vi.mock("@/hooks/useData", () => ({
@@ -98,9 +101,9 @@ vi.mock("@/hooks/useVetoes", () => ({
     return {
       all: state.vetoes,
       saving: false,
-      error: null,
-      veto: vi.fn(),
-      unveto: vi.fn(),
+      error: state.vetoError,
+      veto: state.veto,
+      unveto: state.unveto,
     };
   },
 }));
@@ -139,6 +142,9 @@ describe("Scoreboard", () => {
     state.allPlayed = {};
     state.ranges = {};
     state.vetoes = {};
+    state.veto = vi.fn();
+    state.unveto = vi.fn();
+    state.vetoError = null;
     state.unplayed = [];
   });
   afterEach(() => {
@@ -801,6 +807,37 @@ describe("Scoreboard", () => {
       at("/2026");
       render();
       expect(state.useVetoes).toHaveBeenCalledWith();
+    });
+
+    it("vetoes a game from its card", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      const { getByRole } = render();
+
+      await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+      expect(state.veto).toHaveBeenCalledWith(11);
+    });
+
+    it("unvetoes a game the member already vetoed", async () => {
+      at("/2026");
+      state.vetoes = { "1": new Set(["11"]) };
+      const user = userEvent.setup();
+      const { getByRole } = render();
+
+      const button = getByRole("button", { name: "Veto: Belfort" });
+      expect(button).toHaveAttribute("aria-pressed", "true");
+      await user.click(button);
+
+      expect(state.unveto).toHaveBeenCalledWith(11);
+    });
+
+    it("shows a veto error", () => {
+      at("/2026");
+      state.vetoError = "Something went wrong";
+      const { getByRole } = render();
+
+      expect(getByRole("alert")).toHaveTextContent("Something went wrong");
     });
 
     it("shows the member's veto switch on the game page", () => {

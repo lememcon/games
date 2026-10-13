@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 
+import { Text } from "@mantine/core";
+
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
+import type { VetoesState } from "@/hooks/useVetoes";
 import { leastHappyPlayer, realBounds } from "@/lib/games";
 import type { GamesData, SelectedGame } from "@/types";
 
@@ -15,6 +18,9 @@ interface GamesListProps {
   onToggle: (id: string) => void;
   // Rendered between the podium and the remaining rows.
   afterPodium?: ReactNode;
+  // The members' vetoes and the signed-in member; omitted to hide the buttons.
+  vetoes?: VetoesState;
+  discordId?: string;
 }
 
 // Only show real bounds; games missing metadata leave the range blank rather
@@ -33,13 +39,31 @@ const GamesList = ({
   isPlayed,
   onToggle,
   afterPodium,
+  vetoes,
+  discordId,
 }: GamesListProps) => {
   const podium = games.slice(0, 3);
   const rest = games.slice(3);
   const leastHappy = games.length > 0 ? leastHappyPlayer(games[0]) : null;
 
+  const vetoProps = (game: SelectedGame) => {
+    const bggId = Number(game.id);
+    if (!vetoes || !discordId || Number.isNaN(bggId)) return {};
+    const vetoed = vetoes.all[discordId]?.has(game.id) ?? false;
+    return {
+      vetoed,
+      vetoDisabled: vetoes.saving,
+      onVeto: () => (vetoed ? vetoes.unveto(bggId) : vetoes.veto(bggId)),
+    };
+  };
+
   return (
     <div className="tray-list">
+      {vetoes?.error && (
+        <Text role="alert" c="red" size="sm">
+          {vetoes.error}
+        </Text>
+      )}
       <div className="tray-podium">
         {podium.map((game, i) => (
           <GameCard
@@ -53,6 +77,7 @@ const GamesList = ({
             played={isPlayed(game.id)}
             onToggle={() => onToggle(game.id)}
             leastHappy={i === 0 ? leastHappy : null}
+            {...vetoProps(game)}
           />
         ))}
       </div>
@@ -72,6 +97,7 @@ const GamesList = ({
               bounds={boundsFor(gameData, game)}
               played={isPlayed(game.id)}
               onToggle={() => onToggle(game.id)}
+              {...vetoProps(game)}
             />
           ))}
         </div>

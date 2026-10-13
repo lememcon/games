@@ -402,6 +402,8 @@ function Scoreboard({ user }: ScoreboardProps) {
                     gameData={game_data}
                     isPlayed={isPlayed}
                     onToggle={handleToggle}
+                    vetoes={vetoes}
+                    discordId={user.discordId}
                   />
                   {markingDialog}
                   <YearTrends
