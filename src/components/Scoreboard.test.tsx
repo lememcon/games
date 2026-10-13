@@ -1099,6 +1099,22 @@ describe("Scoreboard", () => {
       expect(getByText("No scores yet")).toBeInTheDocument();
     });
 
+    it("keeps the query and applies the filters through the / redirect", () => {
+      at("/?players=alice&hidePlayed=1");
+      render();
+      expect(path()).toBe("/2026");
+      expect(window.location.search).toBe("?players=alice&hidePlayed=1");
+      expect(JSON.parse(localStorage.getItem("players")!)).toEqual(["alice"]);
+      expect(JSON.parse(localStorage.getItem("hide_played")!)).toBe(true);
+    });
+
+    it("keeps the query through the legacy /games/:id redirect", () => {
+      at("/games/11?sort=lowest");
+      render();
+      expect(path()).toBe("/2026/games/11");
+      expect(window.location.search).toBe("?sort=lowest");
+    });
+
     it("does not trap the back button after a redirect", () => {
       at("/other");
       const before = window.history.length;
