@@ -6,7 +6,6 @@ import {
   parsePlayedBody,
   parsePlayersBody,
   parseYear,
-  toCounts,
 } from "../played";
 import { privateNoCache, refusalResponse } from "../result";
 import type { AppEnv, PlayedStore } from "../types";
@@ -15,8 +14,7 @@ import { readJson } from "../validate";
 /**
  * Played games: everyone's (`/played`) and the signed-in member's own
  * (`/me/played`); all need an approved user (checked in app.ts). Responses
- * carry `played` (bgg id arrays) and the legacy `counts` (every count 1) for
- * clients from the previous release; requests take either shape.
+ * carry `played` (bgg id arrays, or a boolean for a single set).
  */
 export function playedRoutes(played: PlayedStore) {
   const routes = new Hono<AppEnv>();
@@ -27,12 +25,7 @@ export function playedRoutes(played: PlayedStore) {
     const all = await played.getAll(year);
     if (!all) return c.json({ error: "unknown_year" }, 404);
     privateNoCache(c);
-    return c.json({
-      played: all,
-      counts: Object.fromEntries(
-        Object.entries(all).map(([id, games]) => [id, toCounts(games)]),
-      ),
-    });
+    return c.json({ played: all });
   });
 
   routes.post("/played/:year/:bggId", async (c) => {
@@ -55,7 +48,7 @@ export function playedRoutes(played: PlayedStore) {
     const games = await played.get(c.get("user")!.discordId, year);
     if (!games) return c.json({ error: "unknown_year" }, 404);
     privateNoCache(c);
-    return c.json({ played: games, counts: toCounts(games) });
+    return c.json({ played: games });
   });
 
   routes.put("/me/played/:year/:bggId", async (c) => {
@@ -73,7 +66,7 @@ export function playedRoutes(played: PlayedStore) {
       parsed.value,
     );
     if (!result.ok) return refusalResponse(c, result);
-    return c.json({ played: parsed.value, count: parsed.value ? 1 : 0 });
+    return c.json({ played: parsed.value });
   });
 
   routes.post("/me/played/:year/import", async (c) => {
@@ -88,7 +81,7 @@ export function playedRoutes(played: PlayedStore) {
       parsed.value,
     );
     if (!result.ok) return refusalResponse(c, result);
-    return c.json({ played: result.value, counts: toCounts(result.value) });
+    return c.json({ played: result.value });
   });
 
   return routes;

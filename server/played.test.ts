@@ -3,13 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_IMPORT_ENTRIES,
   MAX_MARK_MEMBERS,
-  MAX_PLAYED_COUNT,
   parseBggId,
   parseImportBody,
   parsePlayedBody,
   parsePlayersBody,
   parseYear,
-  toCounts,
 } from "./played";
 
 describe("parseYear", () => {
@@ -51,10 +49,6 @@ describe("parsePlayedBody", () => {
   it.each([
     [{ played: true }, true],
     [{ played: false }, false],
-    [{ count: 0 }, false],
-    [{ count: 1 }, true],
-    [{ count: 5 }, true],
-    [{ count: MAX_PLAYED_COUNT }, true],
   ])("accepts %j as %j", (body, value) => {
     expect(parsePlayedBody(body)).toEqual({ ok: true, value });
   });
@@ -66,13 +60,8 @@ describe("parsePlayedBody", () => {
     [{ played: null }],
     [{ played: true, extra: 1 }],
     [{ played: true, count: 1 }],
-    [{ count: -1 }],
-    [{ count: MAX_PLAYED_COUNT + 1 }],
-    [{ count: 1.5 }],
-    [{ count: "3" }],
-    [{ count: true }],
-    [{ count: null }],
-    [{ count: NaN }],
+    [{ count: 0 }],
+    [{ count: 1 }],
     [{}],
     [{ count: 1, extra: true }],
     [{ other: 1 }],
@@ -94,29 +83,21 @@ describe("parseImportBody", () => {
     });
   });
 
-  it("parses legacy counts into played ids", () => {
-    expect(parseImportBody({ counts: { "11": 3, "200": 1 } })).toEqual({
+  it("accepts an empty games list", () => {
+    expect(parseImportBody({ games: [] })).toEqual({
       ok: true,
-      value: new Set([11, 200]),
+      value: new Set(),
     });
-  });
-
-  it.each([{ games: [] }, { counts: {} }])("accepts an empty %j", (body) => {
-    expect(parseImportBody(body)).toEqual({ ok: true, value: new Set() });
   });
 
   it("accepts exactly the maximum number of entries", () => {
     const ids = Array.from({ length: MAX_IMPORT_ENTRIES }, (_, i) => i + 1);
     expect(parseImportBody({ games: ids.map(String) }).ok).toBe(true);
-    const counts = Object.fromEntries(ids.map((id) => [id, 1]));
-    expect(parseImportBody({ counts }).ok).toBe(true);
   });
 
   it("rejects more than the maximum number of entries", () => {
     const ids = Array.from({ length: MAX_IMPORT_ENTRIES + 1 }, (_, i) => i + 1);
     expect(parseImportBody({ games: ids.map(String) })).toEqual({ ok: false });
-    const counts = Object.fromEntries(ids.map((id) => [id, 1]));
-    expect(parseImportBody({ counts })).toEqual({ ok: false });
   });
 
   it("counts duplicates toward the maximum", () => {
@@ -135,16 +116,8 @@ describe("parseImportBody", () => {
     [{ games: null }],
     [{ games: [], extra: 1 }],
     [{ games: [], counts: {} }],
-    [{ counts: { abc: 1 } }],
-    [{ counts: { "0": 1 } }],
-    [{ counts: { "11": 0 } }],
-    [{ counts: { "11": MAX_PLAYED_COUNT + 1 } }],
-    [{ counts: { "11": 1.5 } }],
-    [{ counts: { "11": "2" } }],
-    [{ counts: { "11": true } }],
-    [{ counts: [1] }],
-    [{ counts: null }],
-    [{ counts: {}, extra: 1 }],
+    [{ counts: {} }],
+    [{ counts: { "11": 1, "200": 3 } }],
     [{}],
     [{ other: {} }],
     [[]],
@@ -152,13 +125,6 @@ describe("parseImportBody", () => {
     ["x"],
   ])("rejects %j", (body) => {
     expect(parseImportBody(body)).toEqual({ ok: false });
-  });
-});
-
-describe("toCounts", () => {
-  it("maps every played id to a count of 1", () => {
-    expect(toCounts(["11", "200"])).toEqual({ "11": 1, "200": 1 });
-    expect(toCounts([])).toEqual({});
   });
 });
 

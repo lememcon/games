@@ -11,7 +11,7 @@ const UNKNOWN_MEMBER = refuse(422, "unknown_member");
 
 type Tx = Parameters<Parameters<StoreDb["transaction"]>[0]>[0];
 
-/** A row means played; its count is ignored (the previous release may write above 1). */
+/** A row means played. */
 export function createPlayedStore(db: StoreDb): PlayedStore {
   const yearExists = async (year: number, q: StoreDb | Tx = db) =>
     (
@@ -67,7 +67,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
         if (!(await gameExists(bggId))) return UNKNOWN_GAME;
         await db
           .insert(playedCount)
-          .values({ discordId, year, bggId, count: 1 })
+          .values({ discordId, year, bggId })
           .onConflictDoNothing();
       } else {
         await db
@@ -104,7 +104,6 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
               discordId,
               year,
               bggId,
-              count: 1,
             })),
           )
           .onConflictDoNothing();
@@ -117,9 +116,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
       if (bggIds.size > 0)
         await db
           .insert(playedCount)
-          .values(
-            [...bggIds].map((bggId) => ({ discordId, year, bggId, count: 1 })),
-          )
+          .values([...bggIds].map((bggId) => ({ discordId, year, bggId })))
           .onConflictDoNothing();
       return { ok: true, value: await read(discordId, year) };
     },

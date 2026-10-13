@@ -95,7 +95,6 @@ describe("GET /api/played", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
     expect(await res.json()).toEqual({
       played: { [KEL]: ["11", "12"], [PAT]: ["11"] },
-      counts: { [KEL]: { "11": 1, "12": 1 }, [PAT]: { "11": 1 } },
     });
   });
 
@@ -104,7 +103,7 @@ describe("GET /api/played", () => {
     const res = await app.request("/api/played?year=2026", {
       headers: as("member"),
     });
-    expect(await res.json()).toEqual({ played: {}, counts: {} });
+    expect(await res.json()).toEqual({ played: {} });
   });
 
   it("400s a missing or malformed year and 404s an unknown one", async () => {
@@ -138,7 +137,7 @@ describe("GET /api/me/played", () => {
     expect(calls).toEqual([]);
   });
 
-  it("returns the signed-in member's played games in both shapes", async () => {
+  it("returns the signed-in member's played games", async () => {
     const { app, rows } = makeApp();
     rows.set(`${KEL}:2025`, new Set([200, 11]));
     const res = await app.request("/api/me/played?year=2025", {
@@ -146,17 +145,11 @@ describe("GET /api/me/played", () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
-    expect(await res.json()).toEqual({
-      played: ["11", "200"],
-      counts: { "11": 1, "200": 1 },
-    });
+    expect(await res.json()).toEqual({ played: ["11", "200"] });
     const other = await app.request("/api/me/played?year=2025", {
       headers: as("other"),
     });
-    expect(await other.json()).toEqual({
-      played: ["11"],
-      counts: { "11": 1 },
-    });
+    expect(await other.json()).toEqual({ played: ["11"] });
   });
 
   it("returns empty played games for a year with none", async () => {
@@ -164,7 +157,7 @@ describe("GET /api/me/played", () => {
     const res = await app.request("/api/me/played?year=2026", {
       headers: as("member"),
     });
-    expect(await res.json()).toEqual({ played: [], counts: {} });
+    expect(await res.json()).toEqual({ played: [] });
   });
 
   it("400s a missing or malformed year and 404s an unknown one", async () => {
@@ -215,7 +208,7 @@ describe("PUT /api/me/played/:year/:bggId", () => {
       put({ played: true }, as("member")),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ played: true, count: 1 });
+    expect(await res.json()).toEqual({ played: true });
     expect(rows.get(`${KEL}:2025`)).toEqual(new Set([12]));
     expect(rows.get(`${PAT}:2025`)).toEqual(new Set([11]));
   });
@@ -227,19 +220,7 @@ describe("PUT /api/me/played/:year/:bggId", () => {
     await app.request(url, put({ played: true }, as("member")));
     expect(rows.get(`${KEL}:2025`)).toEqual(new Set([11]));
     const res = await app.request(url, put({ played: false }, as("member")));
-    expect(await res.json()).toEqual({ played: false, count: 0 });
-    expect(rows.get(`${KEL}:2025`)).toEqual(new Set());
-  });
-
-  it("accepts the legacy count body: above zero plays, zero unplays", async () => {
-    const { app, rows } = makeApp();
-    const url = "/api/me/played/2025/11";
-    const res = await app.request(url, put({ count: 4 }, as("member")));
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ played: true, count: 1 });
-    expect(rows.get(`${KEL}:2025`)).toEqual(new Set([11]));
-    const off = await app.request(url, put({ count: 0 }, as("member")));
-    expect(await off.json()).toEqual({ played: false, count: 0 });
+    expect(await res.json()).toEqual({ played: false });
     expect(rows.get(`${KEL}:2025`)).toEqual(new Set());
   });
 
@@ -253,9 +234,8 @@ describe("PUT /api/me/played/:year/:bggId", () => {
       ["/api/me/played/2025/11", { played: 1 }, "invalid_body"],
       ["/api/me/played/2025/11", { played: null }, "invalid_body"],
       ["/api/me/played/2025/11", { played: true, count: 1 }, "invalid_body"],
-      ["/api/me/played/2025/11", { count: 1000 }, "invalid_body"],
-      ["/api/me/played/2025/11", { count: -1 }, "invalid_body"],
-      ["/api/me/played/2025/11", { count: "1" }, "invalid_body"],
+      ["/api/me/played/2025/11", { count: 1 }, "invalid_body"],
+      ["/api/me/played/2025/11", { count: 0 }, "invalid_body"],
       ["/api/me/played/2025/11", {}, "invalid_body"],
     ];
     for (const [url, body, error] of cases) {
@@ -310,7 +290,7 @@ describe("POST /api/me/played/:year/import", () => {
     expect(calls).toEqual([]);
   });
 
-  it("adds the games and returns the merged played games in both shapes", async () => {
+  it("adds the games and returns the merged played games", async () => {
     const { app, rows } = makeApp();
     rows.set(`${KEL}:2025`, new Set([11]));
     const res = await app.request(
@@ -318,24 +298,8 @@ describe("POST /api/me/played/:year/import", () => {
       post({ games: ["11", "12", "12"] }, as("member")),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      played: ["11", "12"],
-      counts: { "11": 1, "12": 1 },
-    });
+    expect(await res.json()).toEqual({ played: ["11", "12"] });
     expect(rows.get(`${PAT}:2025`)).toEqual(new Set([11]));
-  });
-
-  it("accepts the legacy counts body", async () => {
-    const { app } = makeApp();
-    const res = await app.request(
-      "/api/me/played/2025/import",
-      post({ counts: { "11": 7, "12": 1 } }, as("member")),
-    );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      played: ["11", "12"],
-      counts: { "11": 1, "12": 1 },
-    });
   });
 
   it("400s bad year and body", async () => {
@@ -351,8 +315,8 @@ describe("POST /api/me/played/:year/import", () => {
       { games: [11] },
       { games: "11" },
       { games: [], counts: {} },
-      { counts: { "11": 0 } },
-      { counts: { x: 1 } },
+      { counts: {} },
+      { counts: { "11": 1, "12": 3 } },
       {},
     ]) {
       const res = await app.request(

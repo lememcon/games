@@ -280,9 +280,9 @@ describe("getProfile", () => {
     await importScores(2025, [row({ player: "amy" })]);
     await importScores(2026, [row({ player: "bob" })]);
     await client.query(
-      `INSERT INTO played_count (discord_id, year, bgg_id, count)
-       VALUES ($1, 2025, 1, 3), ($1, 2026, 1, 2), ($1, 2025, 2, 1),
-              ($2, 2025, 1, 1), ($2, 2025, 3, 1), ($2, 2025, 4, 5)`,
+      `INSERT INTO played_count (discord_id, year, bgg_id)
+       VALUES ($1, 2025, 1), ($1, 2026, 1), ($1, 2025, 2),
+              ($2, 2025, 1), ($2, 2025, 3), ($2, 2025, 4)`,
       [ALEX, JO],
     );
     expect(await store.getProfile(ALEX)).toMatchObject({

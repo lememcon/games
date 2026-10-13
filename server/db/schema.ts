@@ -14,8 +14,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { MAX_PLAYED_COUNT } from "../played";
-
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -234,7 +232,7 @@ export const score = pgTable(
   ],
 );
 
-/** A member's play count for a game in a year; absent means zero. */
+/** A member played a game in a year; absent means not played. */
 export const playedCount = pgTable(
   "played_count",
   {
@@ -245,14 +243,9 @@ export const playedCount = pgTable(
       .notNull()
       .references(() => year.year, { onDelete: "cascade" }),
     bggId: integer("bgg_id").notNull(),
-    count: integer("count").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.discordId, table.year, table.bggId] }),
-    check(
-      "played_count_count_check",
-      sql`${table.count} between 1 and ${sql.raw(String(MAX_PLAYED_COUNT))}`,
-    ),
   ],
 );
 
