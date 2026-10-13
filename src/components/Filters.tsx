@@ -1,13 +1,17 @@
+import { useEffect, useRef, useState } from "react";
+
 import {
   Button,
   Checkbox,
-  CopyButton,
   Group,
   SegmentedControl,
+  Stack,
   Text,
+  TextInput,
 } from "@mantine/core";
 
 import PlayerFilter from "@/components/PlayerFilter";
+import { copyText } from "@/lib/clipboard";
 import { SORT_MODES, parseSortMode } from "@/lib/games";
 import type { SortMode } from "@/types";
 
@@ -23,6 +27,62 @@ interface FiltersProps {
   total: number;
   shareUrl: string;
 }
+
+const COPIED_MS = 1000;
+
+// Copies the share URL; if the browser refuses, shows the URL to copy by hand.
+const CopyLinkButton = ({ url }: { url: string }) => {
+  const [copied, setCopied] = useState(false);
+  const [failedFor, setFailedFor] = useState<string | null>(null);
+  // The fallback field is only valid for the URL it was shown for.
+  const failed = failedFor === url;
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(timer.current);
+    };
+  }, []);
+
+  const copy = async () => {
+    clearTimeout(timer.current);
+    const ok = await copyText(url);
+    if (!mounted.current) return;
+    setCopied(ok);
+    setFailedFor(ok ? null : url);
+    if (ok) {
+      timer.current = setTimeout(() => setCopied(false), COPIED_MS);
+    }
+  };
+
+  return (
+    <Stack gap="xs" align="flex-end">
+      <Button
+        variant="light"
+        size="compact-sm"
+        color={failed ? "red" : undefined}
+        onClick={copy}
+      >
+        {copied ? "Copied" : "Copy link"}
+      </Button>
+      <Text size="xs" c="red" aria-live="polite">
+        {failed ? "Copy failed" : ""}
+      </Text>
+      {failed && (
+        <TextInput
+          readOnly
+          size="xs"
+          aria-label="Share link"
+          value={url}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+      )}
+    </Stack>
+  );
+};
 
 // The sticky filter bar: pick who's at the table, hide what they've played, and
 // keep a live count of how many games survive the filters in view.
@@ -61,13 +121,7 @@ const Filters = ({
           onChange={(event) => onHidePlayedChange(event.currentTarget.checked)}
           label="Hide games played by selected players"
         />
-        <CopyButton value={shareUrl}>
-          {({ copied, copy }) => (
-            <Button variant="light" size="compact-sm" onClick={copy}>
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-          )}
-        </CopyButton>
+        <CopyLinkButton url={shareUrl} />
       </Group>
     </Group>
   </div>

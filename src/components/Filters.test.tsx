@@ -1,5 +1,6 @@
+import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Filters from "@/components/Filters";
 import { PALETTE } from "@/lib/colors";
@@ -23,7 +24,18 @@ const defaults = {
   shareUrl: "https://games.example/2025?players=alice",
 };
 
+const stubClipboard = (writeText: () => Promise<void>) =>
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
+
 describe("Filters", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it("toggles hide-played through onHidePlayedChange", async () => {
     const user = userEvent.setup();
     const onHidePlayedChange = vi.fn();
@@ -106,5 +118,62 @@ describe("Filters", () => {
 
     expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
     expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+
+  it("shows the link for manual copying when copying fails", async () => {
+    const user = userEvent.setup();
+    stubClipboard(() => Promise.reject(new Error("denied")));
+    Object.defineProperty(document, "execCommand", {
+      value: () => false,
+      configurable: true,
+      writable: true,
+    });
+    const { getByRole, getByText } = renderWithMantine(
+      <Filters {...defaults} />,
+    );
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+
+    expect(getByText("Copy failed")).toBeInTheDocument();
+    const field = getByRole("textbox", { name: "Share link" });
+    expect(field).toHaveValue(defaults.shareUrl);
+
+    await user.click(field);
+    expect((field as HTMLInputElement).selectionEnd).toBe(
+      defaults.shareUrl.length,
+    );
+  });
+
+  it("resets the label after a moment", async () => {
+    vi.useFakeTimers();
+    stubClipboard(() => Promise.resolve());
+    const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+    await act(async () => {
+      getByRole("button", { name: "Copy link" }).click();
+    });
+    expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
+  it("ignores a copy that settles after unmount", async () => {
+    let resolve: () => void = () => {};
+    stubClipboard(() => new Promise<void>((r) => (resolve = r)));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { getByRole, unmount } = renderWithMantine(<Filters {...defaults} />);
+
+    await act(async () => {
+      getByRole("button", { name: "Copy link" }).click();
+    });
+    unmount();
+    await act(async () => {
+      resolve();
+    });
+
+    expect(error).not.toHaveBeenCalled();
   });
 });
