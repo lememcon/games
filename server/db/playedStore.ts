@@ -2,10 +2,11 @@ import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { AllPlayedGames, PlayedStore } from "../types";
-import { appUser, playedCount, year as yearTable } from "./schema";
+import { appUser, game, playedCount, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const UNKNOWN_YEAR = refuse(404, "unknown_year");
+const UNKNOWN_GAME = refuse(404, "unknown_game");
 const UNKNOWN_MEMBER = refuse(422, "unknown_member");
 
 type Tx = Parameters<Parameters<StoreDb["transaction"]>[0]>[0];
@@ -18,6 +19,14 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
         .select({ year: yearTable.year })
         .from(yearTable)
         .where(eq(yearTable.year, year))
+    ).length > 0;
+
+  const gameExists = async (bggId: number, q: StoreDb | Tx = db) =>
+    (
+      await q
+        .select({ bggId: game.bggId })
+        .from(game)
+        .where(eq(game.bggId, bggId))
     ).length > 0;
 
   const read = async (discordId: string, year: number) =>
@@ -55,6 +64,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
     async set(discordId, year, bggId, played) {
       if (!(await yearExists(year))) return UNKNOWN_YEAR;
       if (played) {
+        if (!(await gameExists(bggId))) return UNKNOWN_GAME;
         await db
           .insert(playedCount)
           .values({ discordId, year, bggId, count: 1 })
@@ -76,6 +86,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
     async markPlayed(discordIds, year, bggId) {
       return db.transaction(async (tx) => {
         if (!(await yearExists(year, tx))) return UNKNOWN_YEAR;
+        if (!(await gameExists(bggId, tx))) return UNKNOWN_GAME;
         const [{ members }] = await tx
           .select({ members: count() })
           .from(appUser)

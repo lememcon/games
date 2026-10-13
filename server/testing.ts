@@ -304,6 +304,8 @@ export function fakePlayed(
     played?: Record<string, number[]>;
     /** Approved members, for `markPlayed`; absent means every id is known. */
     members?: string[];
+    /** Known bgg ids; absent means every game is known. */
+    games?: number[];
   } = {},
 ) {
   const years = new Set(initial.years ?? [2025]);
@@ -340,6 +342,8 @@ export function fakePlayed(
     set: async (discordId, year, bggId, isPlayed) => {
       calls.push({ discordId, year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");
+      if (isPlayed && initial.games && !initial.games.includes(bggId))
+        return refuse(404, "unknown_game");
       const ids = bucket(discordId, year);
       if (isPlayed) ids.add(bggId);
       else ids.delete(bggId);
@@ -348,6 +352,8 @@ export function fakePlayed(
     markPlayed: async (discordIds, year, bggId) => {
       calls.push({ discordId: [...discordIds].join(","), year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");
+      if (initial.games && !initial.games.includes(bggId))
+        return refuse(404, "unknown_game");
       if (
         initial.members &&
         [...discordIds].some((id) => !initial.members!.includes(id))

@@ -365,7 +365,11 @@ export interface PlayedStore {
   getAll(year: number): Promise<AllPlayedGames | null>;
   /** Null when the year is unknown. */
   get(discordId: string, year: number): Promise<PlayedGames | null>;
-  /** Marks a game played or unplayed. Refuses with 404 `unknown_year`. */
+  /**
+   * Marks a game played or unplayed. Refuses with 404 `unknown_year`, and
+   * 404 `unknown_game` when marking played a game that is not in the game
+   * table (unmarking skips that check so stale marks can be cleared).
+   */
   set(
     discordId: string,
     year: number,
@@ -374,7 +378,8 @@ export interface PlayedStore {
   ): Promise<MutationResult<null>>;
   /**
    * Marks a game played for every member in one transaction and returns
-   * everyone's played games for the year. Refuses with 404 `unknown_year` and
+   * everyone's played games for the year. Refuses with 404 `unknown_year`, 404
+   * `unknown_game` (bgg id not in the game table) and
    * 422 `unknown_member` (any id is not an approved member; nothing is written).
    */
   markPlayed(
