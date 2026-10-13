@@ -1,5 +1,8 @@
+import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { MantineProvider } from "@mantine/core";
 
 import Filters from "@/components/Filters";
 import { PALETTE } from "@/lib/colors";
@@ -23,7 +26,39 @@ const defaults = {
   shareUrl: "https://games.example/2025?players=alice",
 };
 
+const originalClipboard = Object.getOwnPropertyDescriptor(
+  navigator,
+  "clipboard",
+);
+const originalExec = (document as { execCommand?: unknown }).execCommand;
+
+const stubExec = (value: () => boolean) =>
+  Object.defineProperty(document, "execCommand", {
+    value,
+    configurable: true,
+    writable: true,
+  });
+
+const stubClipboard = (writeText: () => Promise<void>) =>
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
+
 describe("Filters", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    if (originalClipboard)
+      Object.defineProperty(navigator, "clipboard", originalClipboard);
+    else delete (navigator as { clipboard?: unknown }).clipboard;
+    Object.defineProperty(document, "execCommand", {
+      value: originalExec,
+      configurable: true,
+      writable: true,
+    });
+  });
+
   it("toggles hide-played through onHidePlayedChange", async () => {
     const user = userEvent.setup();
     const onHidePlayedChange = vi.fn();
@@ -105,6 +140,102 @@ describe("Filters", () => {
     await user.click(getByRole("button", { name: "Copy link" }));
 
     expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
+    expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+
+  it("shows the link for manual copying when copying fails", async () => {
+    const user = userEvent.setup();
+    stubClipboard(() => Promise.reject(new Error("denied")));
+    stubExec(() => false);
+    const { getByRole, getByText } = renderWithMantine(
+      <Filters {...defaults} />,
+    );
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+
+    expect(getByText("Copy failed")).toBeInTheDocument();
+    const field = getByRole("textbox", { name: "Share link" });
+    expect(field).toHaveValue(defaults.shareUrl);
+
+    await user.click(field);
+    expect((field as HTMLInputElement).selectionEnd).toBe(
+      defaults.shareUrl.length,
+    );
+  });
+
+  it("resets the label after a moment", async () => {
+    vi.useFakeTimers();
+    stubClipboard(() => Promise.resolve());
+    const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+    await act(async () => {
+      getByRole("button", { name: "Copy link" }).click();
+    });
+    expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
+  it("ignores a copy that settles after unmount", async () => {
+    vi.useFakeTimers();
+    let resolve: () => void = () => {};
+    stubClipboard(() => new Promise<void>((r) => (resolve = r)));
+    const { getByRole, unmount } = renderWithMantine(<Filters {...defaults} />);
+
+    await act(async () => {
+      getByRole("button", { name: "Copy link" }).click();
+    });
+    unmount();
+    await act(async () => {
+      resolve();
+    });
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("clears the failure when the share link changes", async () => {
+    const user = userEvent.setup();
+    stubClipboard(() => Promise.reject(new Error("denied")));
+    stubExec(() => false);
+    const { getByRole, queryByRole, queryByText, rerender } = renderWithMantine(
+      <Filters {...defaults} />,
+    );
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+    expect(queryByText("Copy failed")).toBeInTheDocument();
+
+    rerender(
+      <MantineProvider>
+        <Filters {...defaults} shareUrl="https://games.example/other" />
+      </MantineProvider>,
+    );
+
+    expect(queryByText("Copy failed")).toBeNull();
+    expect(queryByRole("textbox", { name: "Share link" })).toBeNull();
+  });
+
+  it("clears a failure after a later successful copy", async () => {
+    const user = userEvent.setup();
+    let ok = false;
+    stubClipboard(() =>
+      ok ? Promise.resolve() : Promise.reject(new Error("denied")),
+    );
+    stubExec(() => false);
+    const { getByRole, queryByRole, queryByText } = renderWithMantine(
+      <Filters {...defaults} />,
+    );
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+    expect(queryByText("Copy failed")).toBeInTheDocument();
+
+    ok = true;
+    await user.click(getByRole("button", { name: "Copy link" }));
+
+    expect(queryByText("Copy failed")).toBeNull();
+    expect(queryByRole("textbox", { name: "Share link" })).toBeNull();
     expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
 });
