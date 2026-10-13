@@ -81,6 +81,19 @@ describe("copyText", () => {
     expect(document.activeElement).toBe(button);
   });
 
+  it("copes with a non-HTMLElement active element", async () => {
+    setClipboard(undefined);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("tabindex", "0");
+    document.body.appendChild(svg);
+    svg.focus();
+    expect(document.activeElement).toBe(svg);
+    setExec(vi.fn().mockReturnValue(true));
+
+    expect(await copyText("hi")).toBe(true);
+    expect(document.querySelector("textarea")).toBeNull();
+  });
+
   it("returns false when execCommand reports failure", async () => {
     setClipboard(undefined);
     setExec(vi.fn().mockReturnValue(false));

@@ -32,9 +32,10 @@ const COPIED_MS = 1000;
 
 // Copies the share URL; if the browser refuses, shows the URL to copy by hand.
 const CopyLinkButton = ({ url }: { url: string }) => {
-  const [copied, setCopied] = useState(false);
+  const [copiedFor, setCopiedFor] = useState<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null);
-  // The fallback field is only valid for the URL it was shown for.
+  // Copied/failed state is only valid for the URL it was set for.
+  const copied = copiedFor === url;
   const failed = failedFor === url;
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mounted = useRef(true);
@@ -51,10 +52,11 @@ const CopyLinkButton = ({ url }: { url: string }) => {
     clearTimeout(timer.current);
     const ok = await copyText(url);
     if (!mounted.current) return;
-    setCopied(ok);
+    setCopiedFor(ok ? url : null);
     setFailedFor(ok ? null : url);
     if (ok) {
-      timer.current = setTimeout(() => setCopied(false), COPIED_MS);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopiedFor(null), COPIED_MS);
     }
   };
 
