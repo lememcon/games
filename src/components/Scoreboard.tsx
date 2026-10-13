@@ -142,7 +142,12 @@ function Scoreboard({ user }: ScoreboardProps) {
   }, [year]);
 
   // A shared link only applies to the page it was opened on.
+  // The home and legacy redirects keep the query, so the filters ride along.
+  const redirecting =
+    (route.kind === "home" || route.kind === "legacyGame") &&
+    !(yearsKnown && defaultYear === null);
   useEffect(() => {
+    if (redirecting) return;
     if (!isYearList || (yearsKnown && year === null)) pending.current = null;
   });
 
@@ -302,11 +307,15 @@ function Scoreboard({ user }: ScoreboardProps) {
           ) : defaultYear === null ? (
             noScores
           ) : route.kind === "home" ? (
-            <Redirect key="home" to={yearPath(defaultYear)} replace />
+            <Redirect
+              key="home"
+              to={yearPath(defaultYear) + window.location.search}
+              replace
+            />
           ) : route.kind === "legacyGame" ? (
             <Redirect
               key="legacy"
-              to={gamePath(defaultYear, route.id)}
+              to={gamePath(defaultYear, route.id) + window.location.search}
               replace
             />
           ) : year === null ? (
