@@ -10,14 +10,17 @@ import {
   Title,
 } from "@mantine/core";
 
-import useGames from "@/hooks/useGames";
+import type { GamesState } from "@/hooks/useGames";
 import useMyVetoes from "@/hooks/useMyVetoes";
 import { gameOptions } from "@/lib/games";
 
 // The member's own vetoes, with undo and add.
-const ProfileVetoes = () => {
+interface ProfileVetoesProps {
+  games: GamesState;
+}
+
+const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
   const myVetoes = useMyVetoes();
-  const games = useGames();
   const [picked, setPicked] = useState<string | null>(null);
 
   const veto = async () => {

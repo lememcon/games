@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 
 import MyPlayerRange from "@/components/MyPlayerRange";
-import useGames from "@/hooks/useGames";
+import type { GamesState } from "@/hooks/useGames";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import {
   formatBounds,
@@ -25,11 +25,11 @@ import {
 
 interface ProfileOverridesProps {
   discordId: string;
+  games: GamesState;
 }
 
 // The member's own player count overrides, with edit, reset and add.
-const ProfileOverrides = ({ discordId }: ProfileOverridesProps) => {
-  const games = useGames();
+const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
   const overrides = usePlayerOverrides();
   const [picked, setPicked] = useState<string | null>(null);
   const [min, setMin] = useState<number | string>("");

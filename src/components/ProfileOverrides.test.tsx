@@ -22,13 +22,13 @@ const gm = vi.hoisted(() => ({
   state: { games: {} as GamesData, loading: false, error: false },
 }));
 vi.mock("@/hooks/usePlayerOverrides", () => ({ default: () => ov.state }));
-vi.mock("@/hooks/useGames", () => ({ default: () => gm.state }));
 
 const bounds = (min: number, max: number): { players: Bounds } => ({
   players: { min, max },
 });
 
-const render = () => renderWithMantine(<ProfileOverrides discordId="d1" />);
+const render = () =>
+  renderWithMantine(<ProfileOverrides discordId="d1" games={gm.state} />);
 
 describe("ProfileOverrides", () => {
   beforeEach(() => {
@@ -228,7 +228,7 @@ describe("ProfileOverrides", () => {
     ov.state.all = { d1: { "1": { min: 5, max: 6 } } };
     rerender(
       <MantineProvider>
-        <ProfileOverrides discordId="d1" />
+        <ProfileOverrides discordId="d1" games={gm.state} />
       </MantineProvider>,
     );
     expect(screen.getByRole("textbox", { name: minName })).toHaveValue("5");

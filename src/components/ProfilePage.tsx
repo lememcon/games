@@ -17,6 +17,7 @@ import ProfileOverrides from "@/components/ProfileOverrides";
 import ProfilePlayed from "@/components/ProfilePlayed";
 import ProfileVetoes from "@/components/ProfileVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
+import useGames from "@/hooks/useGames";
 import { MAX_DISPLAY_NAME, displayNameError } from "@/lib/profile";
 import type { ApprovedUser } from "@/types";
 
@@ -30,6 +31,7 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
   const [value, setValue] = useState(user.displayName ?? "");
   const [saved, setSaved] = useState(false);
   const { save, saving, error } = useDisplayName(onSaved);
+  const games = useGames();
   const invalid = displayNameError(value);
 
   const submit = async (displayName: string | null) => {
@@ -89,8 +91,8 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
           {error}
         </Alert>
       )}
-      <ProfileOverrides discordId={user.discordId} />
-      <ProfileVetoes />
+      <ProfileOverrides discordId={user.discordId} games={games} />
+      <ProfileVetoes games={games} />
       <ProfilePlayed />
     </Stack>
   );

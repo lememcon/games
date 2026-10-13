@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { GamesData } from "@/types";
 
-interface GamesState {
+export interface GamesState {
   games: GamesData;
   loading: boolean;
   error: boolean;
