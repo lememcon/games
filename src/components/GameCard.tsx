@@ -4,6 +4,7 @@ import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
 import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
+import VetoToggle from "@/components/VetoToggle";
 import { PALETTE, medalColor } from "@/lib/colors";
 import { formatBounds } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
@@ -18,6 +19,10 @@ interface GameCardProps {
   bounds: Bounds | null;
   played: boolean;
   onToggle: () => void;
+  vetoed?: boolean;
+  vetoDisabled?: boolean;
+  // Omitted to hide the veto button.
+  onVeto?: () => void;
   // Name of the least happy scorer, shown on the top result only.
   leastHappy?: string | null;
 }
@@ -34,6 +39,9 @@ const GameCard = ({
   bounds,
   played,
   onToggle,
+  vetoed = false,
+  vetoDisabled,
+  onVeto,
   leastHappy,
 }: GameCardProps) => {
   const chip = medalColor(rank) ?? PALETTE[(rank - 1) % PALETTE.length];
@@ -89,6 +97,14 @@ const GameCard = ({
               played={played}
               onToggle={onToggle}
             />
+            {onVeto && (
+              <VetoToggle
+                game={game.name}
+                vetoed={vetoed}
+                disabled={vetoDisabled}
+                onToggle={onVeto}
+              />
+            )}
           </div>
         </div>
       </div>

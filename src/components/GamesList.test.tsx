@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import GamesList from "@/components/GamesList";
+import type { VetoesState } from "@/hooks/useVetoes";
 import { renderWithMantine } from "@/test/utils";
 import type { GamesData, SelectedGame } from "@/types";
 
@@ -164,5 +165,82 @@ describe("GamesList", () => {
     expect(
       slot.compareDocumentPosition(rowGame) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  describe("vetoes", () => {
+    const makeVetoes = (over: Partial<VetoesState> = {}): VetoesState => ({
+      all: { d1: new Set(["100", "400"]) },
+      saving: false,
+      error: null,
+      veto: vi.fn(),
+      unveto: vi.fn(),
+      ...over,
+    });
+
+    it("shows each game's pressed state for the member", () => {
+      const { getByRole } = renderList({
+        vetoes: makeVetoes(),
+        discordId: "d1",
+      });
+
+      const pressed = (g: string) =>
+        getByRole("button", { name: `Veto: ${g}` }).getAttribute(
+          "aria-pressed",
+        );
+      expect(pressed("Root")).toBe("true");
+      expect(pressed("Chess")).toBe("false");
+      expect(pressed("Nim")).toBe("true");
+    });
+
+    it("vetoes on the podium and unvetoes on rows by numeric id", async () => {
+      const user = userEvent.setup();
+      const vetoes = makeVetoes();
+      const { getByRole } = renderList({ vetoes, discordId: "d1" });
+
+      await user.click(getByRole("button", { name: "Veto: Chess" }));
+      expect(vetoes.veto).toHaveBeenCalledWith(200);
+      await user.click(getByRole("button", { name: "Veto: Root" }));
+      expect(vetoes.unveto).toHaveBeenCalledWith(100);
+      await user.click(getByRole("button", { name: "Veto: Nim" }));
+      expect(vetoes.unveto).toHaveBeenCalledWith(400);
+    });
+
+    it("disables the buttons while saving", () => {
+      const { getByRole } = renderList({
+        vetoes: makeVetoes({ saving: true }),
+        discordId: "d1",
+      });
+
+      expect(getByRole("button", { name: "Veto: Chess" })).toBeDisabled();
+    });
+
+    it("hides the button for games without a numeric id", () => {
+      const { queryByRole } = renderList({
+        games: [{ ...games[0], id: "abc" }],
+        vetoes: makeVetoes(),
+        discordId: "d1",
+      });
+
+      expect(queryByRole("button", { name: /^Veto:/ })).toBeNull();
+    });
+
+    it("shows no buttons without a member or vetoes", () => {
+      const a = renderList({ vetoes: makeVetoes() });
+      expect(a.queryByRole("button", { name: /^Veto:/ })).toBeNull();
+      a.unmount();
+      const b = renderList({ discordId: "d1" });
+      expect(b.queryByRole("button", { name: /^Veto:/ })).toBeNull();
+    });
+
+    it("shows the error once", () => {
+      const { getAllByRole } = renderList({
+        vetoes: makeVetoes({ error: "Nope" }),
+        discordId: "d1",
+      });
+
+      const alerts = getAllByRole("alert");
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]).toHaveTextContent("Nope");
+    });
   });
 });

@@ -5,6 +5,7 @@ import { useMantineTheme } from "@mantine/core";
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
 import ScorePopover from "@/components/ScorePopover";
+import VetoToggle from "@/components/VetoToggle";
 import { formatBounds } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
 import type { Bounds, SelectedGame } from "@/types";
@@ -19,6 +20,10 @@ interface GameRowProps {
   bounds: Bounds | null;
   played: boolean;
   onToggle: () => void;
+  vetoed?: boolean;
+  vetoDisabled?: boolean;
+  // Omitted to hide the veto button.
+  onVeto?: () => void;
 }
 
 // The compact chase unit: a mini horizontal card keeping the tray language
@@ -35,6 +40,9 @@ const GameRow = ({
   bounds,
   played,
   onToggle,
+  vetoed = false,
+  vetoDisabled,
+  onVeto,
 }: GameRowProps) => {
   const theme = useMantineTheme();
   const chip = score_color(theme, normalized_score(game.score, selectedMax));
@@ -73,7 +81,17 @@ const GameRow = ({
         />
       </div>
 
-      <PlayedToggle game={game.name} played={played} onToggle={onToggle} />
+      <div className="tray-row__actions">
+        <PlayedToggle game={game.name} played={played} onToggle={onToggle} />
+        {onVeto && (
+          <VetoToggle
+            game={game.name}
+            vetoed={vetoed}
+            disabled={vetoDisabled}
+            onToggle={onVeto}
+          />
+        )}
+      </div>
     </div>
   );
 };
