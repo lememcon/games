@@ -127,6 +127,31 @@ describe("usePlayedCounts", () => {
     expect(isPlayed(result, "100")).toBe(true);
   });
 
+  it("shows a confirmed game as played without sending a write", async () => {
+    const { result, puts } = await loaded();
+
+    act(() => result.current[3]("100"));
+
+    expect(isPlayed(result, "100")).toBe(true);
+    expect(puts()).toHaveLength(0);
+
+    toggle(result, "100");
+
+    expect(isPlayed(result, "100")).toBe(false);
+    expect(puts()).toHaveLength(1);
+    expect(puts()[0].body).toEqual({ played: false });
+  });
+
+  it("ignores a confirmed game before the played games have loaded", () => {
+    const f = makeFetch();
+    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+
+    act(() => result.current[3]("100"));
+
+    expect(isPlayed(result, "100")).toBe(false);
+    expect(result.current[2]).toBeNull();
+  });
+
   it("unmarks a played game", async () => {
     const { result, puts } = await loaded(["100"]);
 

@@ -68,7 +68,12 @@ function flush(
 const usePlayedCounts = (
   year: string,
   fetchImpl: typeof fetch = fetch,
-): [(id: string) => boolean, (id: string) => void, Counts | null] => {
+): [
+  (id: string) => boolean,
+  (id: string) => void,
+  Counts | null,
+  (id: string) => void,
+] => {
   const [shown, setShown] = useState<{ year: string; counts: Counts | null }>({
     year,
     counts: null,
@@ -147,11 +152,20 @@ const usePlayedCounts = (
     [fetchImpl],
   );
 
+  // Shows a game as played that the server already has, so nothing is sent.
+  const markConfirmed = useCallback((id: string) => {
+    const s = session.current;
+    if (!s?.ready) return;
+    s.desired = withPlayed(s.desired, id, true);
+    s.confirmed = withPlayed(s.confirmed, id, true);
+    setShown({ year: s.year, counts: s.desired });
+  }, []);
+
   // Null until the played games for this year are in; {} once loaded and empty.
   const counts = shown.year === year ? shown.counts : null;
   const isPlayed = useCallback((id: string) => !!counts?.[id], [counts]);
 
-  return [isPlayed, toggle, counts];
+  return [isPlayed, toggle, counts, markConfirmed];
 };
 
 export default usePlayedCounts;
