@@ -1,13 +1,4 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  isNotNull,
-  notExists,
-  sql,
-  sum,
-} from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, notExists, sql } from "drizzle-orm";
 
 import {
   collapseMemberScores,
@@ -146,17 +137,39 @@ export async function getGames(db: StoreDb): Promise<GamesMap> {
 }
 
 /**
- * Sum of every recorded score row per game and year (not collapsed per member
- * like getScores for approved viewers); names no players.
+ * Sum of scores per game and year, collapsed per approved member like
+ * getScores for approved viewers (best row only), for every viewer including
+ * signed-out ones; names no players.
  */
 export async function getYearTotals(db: StoreDb): Promise<YearTotal[]> {
-  const total = sum(score.score).mapWith(Number);
   const rows = await db
-    .select({ year: score.year, bggId: score.bggId, total })
+    .select({
+      id: score.id,
+      year: score.year,
+      bggId: score.bggId,
+      score: score.score,
+      rank: score.rank,
+      owner: appUser.discordId,
+    })
     .from(score)
-    .groupBy(score.year, score.bggId)
-    .orderBy(asc(score.year), asc(score.bggId));
-  return rows.map((r) => ({ year: r.year, bgg_id: r.bggId, total: r.total }));
+    .innerJoin(player, eq(player.id, score.playerId))
+    .leftJoin(
+      appUser,
+      and(
+        eq(appUser.discordId, player.discordId),
+        eq(appUser.status, "approved"),
+      ),
+    );
+  const totals = new Map<string, YearTotal>();
+  for (const r of collapseMemberScores(rows)) {
+    const key = `${r.year}|${r.bggId}`;
+    const cur = totals.get(key) ?? { year: r.year, bgg_id: r.bggId, total: 0 };
+    cur.total += r.score;
+    totals.set(key, cur);
+  }
+  return [...totals.values()].sort(
+    (a, b) => a.year - b.year || a.bgg_id - b.bgg_id,
+  );
 }
 
 /** Named games with no score row in any year, sorted by name. */
