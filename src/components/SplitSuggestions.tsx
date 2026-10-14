@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Collapse, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 
+import GroupRank from "@/components/GroupRank";
 import LeastHappy from "@/components/LeastHappy";
 import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
@@ -162,6 +163,9 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
                           />
                         </div>
                       )}
+                      <div className="tray-row__meta">
+                        <GroupRank game={game} />
+                      </div>
                     </div>
                     <div className="tray-row__score">
                       <ScorePopover
