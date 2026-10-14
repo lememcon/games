@@ -24,12 +24,19 @@ const PlayerName = ({ name, discordId, image }: PlayerNameProps) => {
     <span
       style={{
         display: "inline-flex",
-        alignItems: "center",
+        alignItems: "baseline",
         gap: 6,
         whiteSpace: "nowrap",
       }}
     >
-      <Avatar src={image} name={name} alt="" size={20} radius="xl" />
+      <Avatar
+        src={image}
+        name={name}
+        alt=""
+        size={20}
+        radius="xl"
+        style={{ alignSelf: "center" }}
+      />
       <Link
         href={`/players/${discordId}`}
         style={{

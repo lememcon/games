@@ -56,6 +56,15 @@ describe("PlayerName", () => {
     expect(container).toHaveTextContent("A");
   });
 
+  it("aligns the link to the text baseline and centers the avatar", () => {
+    const { getByRole } = renderWithMantine(
+      <PlayerName name="alice" discordId="42" />,
+    );
+    const link = getByRole("link", { name: "alice" });
+    expect(link.parentElement).toHaveStyle({ alignItems: "baseline" });
+    expect(link.previousElementSibling).toHaveStyle({ alignSelf: "center" });
+  });
+
   it("shows no avatar for an unlinked player", () => {
     const { container } = renderWithMantine(
       <PlayerName name="alice" image="https://x/a.png" />,
