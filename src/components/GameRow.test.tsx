@@ -91,6 +91,26 @@ describe("GameRow", () => {
     expect(chipBg(10, "Wingspan")).toBe(chipBg(10, "Root"));
   });
 
+  it("shows the least happy player and score beside the bounds", () => {
+    const { getByText } = renderRow({ leastHappy: "bob" });
+
+    const line = getByText(/least happy/);
+    expect(line).toHaveTextContent("least happy: bob (30.0)");
+    expect(line.parentElement).toContainElement(getByText("2-4"));
+  });
+
+  it("shows no least happy line by default or when null", () => {
+    expect(renderRow().queryByText(/least happy/)).toBeNull();
+    expect(
+      renderRow({ leastHappy: null }).queryByText(/least happy/),
+    ).toBeNull();
+  });
+
+  it("shows the least happy line even without bounds", () => {
+    const { getByText } = renderRow({ bounds: null, leastHappy: "bob" });
+    expect(getByText(/least happy/)).toBeInTheDocument();
+  });
+
   it("omits the bounds when bounds is null", () => {
     const { queryByText } = renderRow({ bounds: null });
     expect(queryByText("2-4")).not.toBeInTheDocument();

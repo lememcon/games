@@ -100,7 +100,9 @@ describe("GameCard", () => {
   it("shows the least happy player when given one", () => {
     const { getByText } = renderCard({ leastHappy: "bob" });
 
-    expect(getByText(/least happy/)).toBeInTheDocument();
+    expect(getByText(/least happy/)).toHaveTextContent(
+      "least happy: bob (56.7)",
+    );
     expect(getByText("bob")).toBeInTheDocument();
   });
 

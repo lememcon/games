@@ -86,7 +86,6 @@ const GamesList = ({
 
   const podium = games.slice(0, 3);
   const rest = games.slice(3);
-  const leastHappy = games.length > 0 ? leastHappyPlayer(games[0]) : null;
 
   const vetoProps = (game: SelectedGame) => {
     const bggId = Number(game.id);
@@ -140,7 +139,7 @@ const GamesList = ({
             bounds={boundsFor(gameData, game)}
             played={isPlayed(game.id)}
             onToggle={() => onToggle(game.id)}
-            leastHappy={i === 0 ? leastHappy : null}
+            leastHappy={leastHappyPlayer(game)}
             {...vetoProps(game)}
             {...selectProps(game)}
           />
@@ -162,6 +161,7 @@ const GamesList = ({
               bounds={boundsFor(gameData, game)}
               played={isPlayed(game.id)}
               onToggle={() => onToggle(game.id)}
+              leastHappy={leastHappyPlayer(game)}
               {...vetoProps(game)}
               {...selectProps(game)}
             />

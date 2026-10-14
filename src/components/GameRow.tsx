@@ -2,6 +2,7 @@ import { Link } from "wouter";
 
 import { Checkbox, Text, useMantineTheme } from "@mantine/core";
 
+import LeastHappy from "@/components/LeastHappy";
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
 import ScorePopover from "@/components/ScorePopover";
@@ -31,6 +32,8 @@ interface GameRowProps {
   checked?: boolean;
   selectDisabled?: boolean;
   onSelect?: () => void;
+  // Name of the least happy scorer, shown beside the bounds.
+  leastHappy?: string | null;
 }
 
 // The compact chase unit: a mini horizontal card keeping the tray language
@@ -55,6 +58,7 @@ const GameRow = ({
   checked = false,
   selectDisabled = false,
   onSelect,
+  leastHappy,
 }: GameRowProps) => {
   const theme = useMantineTheme();
   const chip = score_color(theme, normalized_score(game.score, selectedMax));
@@ -85,9 +89,18 @@ const GameRow = ({
         <Link href={gamePath(year, game.id)} className="tray-name">
           {game.name}
         </Link>
-        {bounds && (
+        {(bounds || leastHappy) && (
           <div className="tray-row__meta">
-            <span className="tray-meta">{formatBounds(bounds)}</span>
+            {bounds && (
+              <span className="tray-meta">{formatBounds(bounds)}</span>
+            )}
+            {leastHappy && (
+              <LeastHappy
+                game={game}
+                name={leastHappy}
+                individualMax={individualMax}
+              />
+            )}
           </div>
         )}
         <PlayedByList playedBy={game.playedBy} />

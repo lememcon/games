@@ -2,9 +2,9 @@ import { Link } from "wouter";
 
 import { Checkbox, Text } from "@mantine/core";
 
+import LeastHappy from "@/components/LeastHappy";
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
-import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
 import VetoToggle from "@/components/VetoToggle";
 import { PALETTE, medalColor } from "@/lib/colors";
@@ -32,7 +32,7 @@ interface GameCardProps {
   checked?: boolean;
   selectDisabled?: boolean;
   onSelect?: () => void;
-  // Name of the least happy scorer, shown on the top result only.
+  // Name of the least happy scorer, shown with their score.
   leastHappy?: string | null;
 }
 
@@ -102,14 +102,11 @@ const GameCard = ({
         />
 
         {leastHappy && (
-          <div className="tray-meta">
-            least happy:{" "}
-            <PlayerName
-              name={leastHappy}
-              discordId={game.players[leastHappy]?.discordId}
-              image={game.players[leastHappy]?.discordImage}
-            />
-          </div>
+          <LeastHappy
+            game={game}
+            name={leastHappy}
+            individualMax={individualMax}
+          />
         )}
 
         <PlayedByList playedBy={game.playedBy} />
