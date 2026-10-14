@@ -25,9 +25,17 @@ describe("SignIn", () => {
     expect(button.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
+  it("describes the site", () => {
+    renderWithMantine(<SignIn />);
+    expect(screen.getByText(/Rank and filter board-game scores/)).toBeVisible();
+    expect(
+      screen.getByText("Sign in with Discord to see the scores."),
+    ).toBeVisible();
+  });
+
   it("frames the large logo", () => {
     const { container } = renderWithMantine(<SignIn />);
-    expect(container.querySelector('img[alt=""]')).toHaveClass(
+    expect(container.querySelector("img.tray-logo")).toHaveClass(
       "tray-logo",
       "tray-logo--lg",
     );

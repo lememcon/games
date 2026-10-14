@@ -11,6 +11,7 @@ import {
 } from "@mantine/core";
 
 import logo from "@/assets/logo.png";
+import FloatingCovers from "@/components/FloatingCovers";
 import usePageMeta from "@/hooks/usePageMeta";
 import { signInWithDiscord } from "@/lib/auth";
 import { describeAuthError } from "@/lib/authError";
@@ -59,56 +60,71 @@ const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
   };
 
   return (
-    <Center mih="70vh" px="md">
-      <Paper withBorder shadow="md" radius="lg" p="xl" w="100%" maw={400}>
-        <Stack align="center" gap="md">
-          <img
-            src={logo}
-            width={120}
-            height={136}
-            alt=""
-            className="tray-logo tray-logo--lg"
-          />
-          <Title order={2} ta="center">
-            Sign in to LememCon
-          </Title>
-          <Text c="dimmed" ta="center">
-            Sign in with Discord to see the scores.
-          </Text>
-          {authError && (
-            <Alert
-              w="100%"
-              color="red"
-              role="alert"
-              title={authError.title}
-              withCloseButton
-              closeButtonLabel="Dismiss"
-              onClose={() => {
-                setDismissed(true);
-                onDismissError?.();
-              }}
-            >
-              {authError.message}
-            </Alert>
-          )}
-          <Button
-            fullWidth
-            size="md"
-            color="#5865F2"
-            leftSection={<DiscordIcon />}
-            onClick={handleSignIn}
-            loading={busy}
-          >
-            Sign in with Discord
-          </Button>
-          {failed && (
-            <Text c="red" role="alert">
-              Couldn&apos;t start sign-in. Try again.
+    <div className="signin-page">
+      <FloatingCovers />
+      <Center mih="100vh" px="md">
+        <Paper
+          className="signin-card"
+          withBorder
+          shadow="md"
+          radius="lg"
+          p="xl"
+          w="100%"
+          maw={400}
+        >
+          <Stack align="center" gap="md">
+            <img
+              src={logo}
+              width={120}
+              height={136}
+              alt=""
+              className="tray-logo tray-logo--lg"
+            />
+            <Title order={2} ta="center">
+              Sign in to LememCon
+            </Title>
+            <Text ta="center">
+              Rank and filter board-game scores from LememCon to decide what to
+              play next.
             </Text>
-          )}
-        </Stack>
-      </Paper>
-    </Center>
+            <Text c="dimmed" ta="center">
+              Sign in with Discord to see the scores.
+            </Text>
+            {authError && (
+              <Alert
+                w="100%"
+                color="red"
+                role="alert"
+                title={authError.title}
+                withCloseButton
+                closeButtonLabel="Dismiss"
+                onClose={() => {
+                  setDismissed(true);
+                  onDismissError?.();
+                }}
+              >
+                {authError.message}
+              </Alert>
+            )}
+            <Button
+              fullWidth
+              size="md"
+              color="#5865F2"
+              leftSection={<DiscordIcon />}
+              onClick={handleSignIn}
+              loading={busy}
+            >
+              Sign in with Discord
+            </Button>
+            {failed && (
+              <Text c="red" role="alert">
+                Couldn&apos;t start sign-in. Try again.
+              </Text>
+            )}
+          </Stack>
+        </Paper>
+      </Center>
+    </div>
   );
 };
 
