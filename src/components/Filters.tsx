@@ -13,6 +13,7 @@ import {
 import PlayerFilter from "@/components/PlayerFilter";
 import { copyText } from "@/lib/clipboard";
 import { SORT_MODES, parseSortMode } from "@/lib/games";
+import { canShareLink, shareLink } from "@/lib/share";
 import type { SortMode } from "@/types";
 
 interface FiltersProps {
@@ -30,7 +31,9 @@ interface FiltersProps {
 
 const COPIED_MS = 1000;
 
-// Copies the share URL; if the browser refuses, shows the URL to copy by hand.
+// Shares the URL through the native share sheet when the browser has one (falling
+// back to copying if sharing fails), and always offers Copy link; if copying is
+// refused, shows the URL to copy by hand.
 const CopyLinkButton = ({ url }: { url: string }) => {
   const [copiedFor, setCopiedFor] = useState<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null);
@@ -39,6 +42,8 @@ const CopyLinkButton = ({ url }: { url: string }) => {
   const failed = failedFor === url;
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mounted = useRef(true);
+  const sharing = useRef(false);
+  const [sharePending, setSharePending] = useState(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -60,16 +65,44 @@ const CopyLinkButton = ({ url }: { url: string }) => {
     }
   };
 
+  const payload: ShareData = { title: document.title, url };
+  const canShare = canShareLink(payload);
+
+  const share = async () => {
+    if (sharing.current) return;
+    sharing.current = true;
+    setSharePending(true);
+    try {
+      const result = await shareLink(payload);
+      if (result === "failed") await copy();
+    } finally {
+      sharing.current = false;
+      if (mounted.current) setSharePending(false);
+    }
+  };
+
   return (
     <Stack gap="xs" align="flex-end">
-      <Button
-        variant="light"
-        size="compact-sm"
-        color={failed ? "red" : undefined}
-        onClick={copy}
-      >
-        {copied ? "Copied" : "Copy link"}
-      </Button>
+      <Group gap="xs" justify="flex-end">
+        {canShare && (
+          <Button
+            variant="filled"
+            size="compact-sm"
+            disabled={sharePending}
+            onClick={share}
+          >
+            Share
+          </Button>
+        )}
+        <Button
+          variant="light"
+          size="compact-sm"
+          color={failed ? "red" : undefined}
+          onClick={copy}
+        >
+          {copied ? "Copied" : "Copy link"}
+        </Button>
+      </Group>
       <Text size="xs" c="red" aria-live="polite">
         {failed ? "Copy failed" : ""}
       </Text>
