@@ -50,7 +50,7 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
         <Text size="sm">You haven&apos;t vetoed any games.</Text>
       )}
       {myVetoes.vetoes.length > 0 && (
-        <Stack gap={4}>
+        <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
           {myVetoes.vetoes.map((v) => (
             <Group key={v.bggId} justify="space-between" wrap="nowrap">
               <Text>{v.name ?? `Game ${v.bggId}`}</Text>

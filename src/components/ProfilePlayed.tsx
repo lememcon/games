@@ -79,7 +79,7 @@ const ProfilePlayed = () => {
           ) : Object.keys(played).length === 0 ? (
             <Text size="sm">You haven&apos;t marked any games this year.</Text>
           ) : (
-            <Stack gap={4}>
+            <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
               {playedGames(played, names).map((g) => (
                 <Group key={g.id} justify="space-between" wrap="nowrap">
                   <Text>{g.name}</Text>
