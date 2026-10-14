@@ -17,6 +17,7 @@ import { useMarkPlayed } from "@/hooks/useAllPlayed";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
+import usePageMeta from "@/hooks/usePageMeta";
 import usePlayed from "@/hooks/usePlayed";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useVetoes from "@/hooks/useVetoes";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/games";
 import images from "@/lib/images";
 import { markPlayedOptions } from "@/lib/markPlayed";
+import { scoreboardMeta } from "@/lib/pageMeta";
 import { PlayerColorProvider } from "@/lib/playerColors";
 import {
   buildFilterSearch,
@@ -87,6 +89,21 @@ function Scoreboard({ user }: ScoreboardProps) {
     ? storedYear
     : (years[years.length - 1] ?? null);
   const data = useData(year);
+  const dataReady = !data.loading && !data.error;
+  usePageMeta(
+    scoreboardMeta({
+      routeYear: route.kind === "year" ? route.year : null,
+      gameId: route.kind === "year" ? route.gameId : undefined,
+      // The year is known and its scores and game details are in.
+      loaded: year !== null && dataReady && !gamesLoading && !gamesError,
+      yearKnown: year !== null,
+      yearsLoading,
+      gameName:
+        route.kind === "year" && route.gameId !== undefined
+          ? data.by_id[route.gameId]?.[0]?.game
+          : undefined,
+    }),
+  );
   const [players, setPlayers] = useLocalState<string[]>("players", []);
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
@@ -201,7 +218,6 @@ function Scoreboard({ user }: ScoreboardProps) {
   // loaded (so unknown names can be dropped), then replace the saved filters.
   const pending = useRef(parseFilterSearch(window.location.search));
   const isYearList = route.kind === "year" && route.gameId === undefined;
-  const dataReady = !data.loading && !data.error;
 
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
   // the useLocalState setters change identity every render.

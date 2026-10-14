@@ -15,10 +15,12 @@ import {
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useMemberPlayed from "@/hooks/useMemberPlayed";
+import usePageMeta from "@/hooks/usePageMeta";
 import useProfile from "@/hooks/useProfile";
 import useYears from "@/hooks/useYears";
 import { buildSelectedGames } from "@/lib/games";
 import images from "@/lib/images";
+import { pageMeta, recapMeta } from "@/lib/pageMeta";
 import { RECAP_TOP, buildRecap } from "@/lib/recap";
 import { gamePath, isYear } from "@/lib/routes";
 import type { RecapFacts, RecapGame } from "@/types";
@@ -100,6 +102,14 @@ const Loaded = ({
   const { games, loading: gamesLoading, error: gamesError } = useGames();
   const profile = useProfile(discordId);
   const played = useMemberPlayed(discordId, year, earlierYears);
+
+  usePageMeta(
+    profile.status === "not_found"
+      ? pageMeta({ title: "Profile not found" })
+      : profile.status === "ready"
+        ? recapMeta(profile.profile.name, discordId, year)
+        : pageMeta({ title: "Year in review" }),
+  );
 
   const recap = useMemo(() => {
     if (played.status !== "ready" || data.loading || data.error) return null;

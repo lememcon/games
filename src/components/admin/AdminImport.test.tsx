@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminImport from "@/components/admin/AdminImport";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
 const rows = [
@@ -274,5 +275,15 @@ describe("AdminImport", () => {
     await userEvent.type(screen.getByLabelText("Year"), "{Backspace}8");
     expect(screen.queryByText("Year 2027 already exists.")).toBeNull();
     expect(screen.getByRole("button", { name: "Import 2028" })).toBeEnabled();
+  });
+});
+
+afterEach(resetHead);
+
+describe("AdminImport page metadata", () => {
+  it("titles the page and claims no canonical", () => {
+    renderWithMantine(<AdminImport />);
+    expect(document.title).toBe("Import data | Lememcon Games");
+    expect(headValue('link[rel="canonical"]', "href")).toBeNull();
   });
 });

@@ -11,8 +11,10 @@ import {
 } from "@mantine/core";
 
 import logo from "@/assets/logo.png";
+import usePageMeta from "@/hooks/usePageMeta";
 import { signInWithDiscord } from "@/lib/auth";
 import { describeAuthError } from "@/lib/authError";
+import { pageMeta } from "@/lib/pageMeta";
 
 const DiscordIcon = () => (
   <svg
@@ -33,10 +35,13 @@ interface SignInProps {
   onDismissError?: () => void;
 }
 
+const META = pageMeta({ title: "Sign in", path: "/" });
+
 const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  usePageMeta(META);
 
   const showAuthError = errorCode !== null && !dismissed && !failed;
   const authError = showAuthError ? describeAuthError(errorCode) : null;

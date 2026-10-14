@@ -119,3 +119,7 @@ export const sharePath = (year: string | number, filters: FilterState) =>
 // A member's year in review.
 export const recapPath = (discordId: string, year: string | number): string =>
   `/players/${encodeURIComponent(discordId)}/recap/${year}`;
+
+// A member's public profile.
+export const playerPath = (discordId: string): string =>
+  `/players/${encodeURIComponent(discordId)}`;

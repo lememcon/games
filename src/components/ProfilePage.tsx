@@ -18,6 +18,8 @@ import ProfilePlayed from "@/components/ProfilePlayed";
 import ProfileVetoes from "@/components/ProfileVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
 import useGames from "@/hooks/useGames";
+import usePageMeta from "@/hooks/usePageMeta";
+import { pageMeta } from "@/lib/pageMeta";
 import { MAX_DISPLAY_NAME, displayNameError } from "@/lib/profile";
 import type { ApprovedUser } from "@/types";
 
@@ -27,8 +29,11 @@ interface ProfilePageProps {
   onSaved: () => void;
 }
 
+const META = pageMeta({ title: "Your profile" });
+
 const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
   const [value, setValue] = useState(user.displayName ?? "");
+  usePageMeta(META);
   const [saved, setSaved] = useState(false);
   const { save, saving, error } = useDisplayName(onSaved);
   const games = useGames();

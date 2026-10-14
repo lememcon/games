@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import PendingApproval from "@/components/PendingApproval";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
 const signOut = vi.hoisted(() => vi.fn());
@@ -50,5 +51,15 @@ describe("PendingApproval", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /Couldn.t sign out/,
     );
+  });
+});
+
+afterEach(resetHead);
+
+describe("PendingApproval page metadata", () => {
+  it("titles the page and claims no canonical", () => {
+    renderWithMantine(<PendingApproval name="Sam" onCheckAgain={vi.fn()} />);
+    expect(document.title).toBe("Waiting for approval | Lememcon Games");
+    expect(headValue('link[rel="canonical"]', "href")).toBeNull();
   });
 });

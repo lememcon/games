@@ -1,9 +1,10 @@
 import { screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import YearRecap from "@/components/YearRecap";
 import type { MemberPlayedState } from "@/hooks/useMemberPlayed";
 import type { ProfileState } from "@/hooks/useProfile";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { Data, PlayerGameScore } from "@/types";
 
@@ -340,5 +341,42 @@ describe("YearRecap", () => {
     expect(
       screen.getByRole("heading", { name: "Ana's 2025 in review" }),
     ).toBeInTheDocument();
+  });
+});
+
+afterEach(resetHead);
+
+describe("YearRecap page metadata", () => {
+  const canonical = () => headValue('link[rel="canonical"]', "href");
+
+  it("uses a generic title while loading and on error", () => {
+    h.profile = { status: "loading" };
+    const { unmount } = show();
+    expect(document.title).toBe("Year in review | Lememcon Games");
+    expect(canonical()).toBeNull();
+    unmount();
+
+    h.profile = { status: "error" };
+    show();
+    expect(document.title).toBe("Year in review | Lememcon Games");
+    expect(canonical()).toBeNull();
+  });
+
+  it("titles a missing profile", () => {
+    h.profile = { status: "not_found" };
+    show();
+    expect(document.title).toBe("Profile not found | Lememcon Games");
+    expect(canonical()).toBeNull();
+  });
+
+  it("names a loaded recap and links its canonical", () => {
+    show();
+    expect(document.title).toBe("Ana's 2025 in review | Lememcon Games");
+    expect(headValue('meta[name="description"]')).toBe(
+      "Ana's LememCon 2025 in review.",
+    );
+    expect(canonical()).toBe(
+      "https://games.lememcon.com/players/me/recap/2025",
+    );
   });
 });

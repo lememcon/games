@@ -14,11 +14,20 @@ import {
 
 import StatTile from "@/components/StatTile";
 import TopGamesByYear from "@/components/TopGamesByYear";
+import usePageMeta from "@/hooks/usePageMeta";
 import useProfile from "@/hooks/useProfile";
+import { pageMeta, playerMeta } from "@/lib/pageMeta";
 import { recapPath } from "@/lib/routes";
 
 const PublicProfile = ({ discordId }: { discordId: string }) => {
   const state = useProfile(discordId);
+  usePageMeta(
+    state.status === "ready"
+      ? playerMeta(state.profile.name, discordId)
+      : pageMeta({
+          title: state.status === "not_found" ? "Profile not found" : "Player",
+        }),
+  );
 
   if (state.status === "loading") return <Loader mt="md" />;
   if (state.status === "not_found") {
