@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, Redirect, useLocation } from "wouter";
+import { Link, Redirect, useLocation, useSearch } from "wouter";
 
 import { AppShell, Button, Skeleton, Stack, Text, Title } from "@mantine/core";
 
@@ -152,28 +152,57 @@ function Scoreboard({ user }: ScoreboardProps) {
     if (!isYearList || (yearsKnown && year === null)) pending.current = null;
   });
 
-  useEffect(() => {
-    const shared = pending.current;
-    if (shared === null || year === null || !dataReady) return;
-    pending.current = null;
-    setPlayers(
-      shared.players.filter((name) => Object.hasOwn(data.by_player, name)),
-    );
-    setHidePlayed(shared.hidePlayed);
-    setSortMode(shared.sort);
-  });
+  // Back/forward changes only the query. useSearch re-renders on it (its value
+  // is decoded, so it is never parsed); the raw location is what gets compared.
+  useSearch();
+  const lastSearch = useRef(window.location.search);
+  const applied = useRef<string | null>(null);
 
-  // Keep the address bar in step with the filters, replacing the history entry.
+  // Apply shared filters once the scores are loaded, then keep the address bar
+  // in step with the filters, replacing the history entry. One effect, so the
+  // sync never runs against filters that are about to be replaced.
   useEffect(() => {
-    if (pending.current !== null || year === null || !isYearList || !dataReady)
-      return;
-    const query = buildFilterSearch({
-      players,
-      hidePlayed,
-      sort: sortMode,
-    });
-    if (query !== window.location.search) {
-      setLocation(location + query, { replace: true });
+    const raw = window.location.search;
+    if (raw !== lastSearch.current) {
+      lastSearch.current = raw;
+      if (isYearList) {
+        const next = parseFilterSearch(raw);
+        // A query equal to what the filters would write is our own replace.
+        if (
+          next &&
+          raw !== buildFilterSearch({ players, hidePlayed, sort: sortMode })
+        ) {
+          pending.current = next;
+        }
+      }
+    }
+    if (year === null || !dataReady) return;
+    const current = buildFilterSearch({ players, hidePlayed, sort: sortMode });
+    const shared = pending.current;
+    if (shared !== null) {
+      pending.current = null;
+      const names = shared.players.filter((name) =>
+        Object.hasOwn(data.by_player, name),
+      );
+      setPlayers(names);
+      setHidePlayed(shared.hidePlayed);
+      setSortMode(shared.sort);
+      const next = buildFilterSearch({ ...shared, players: names });
+      if (next !== current) {
+        applied.current = current;
+        return;
+      }
+    }
+    if (!isYearList) return;
+    // A second run before the new filters render (StrictMode) still holds the
+    // old ones: it must not write their query back.
+    const stale = applied.current === current;
+    applied.current = null;
+    if (stale) return;
+    if (current !== window.location.search) {
+      setLocation(location + current, { replace: true });
+      // Our own write is not navigation.
+      lastSearch.current = window.location.search;
     }
   });
 
