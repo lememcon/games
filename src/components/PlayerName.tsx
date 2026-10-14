@@ -25,7 +25,7 @@ const PlayerName = ({ name, discordId, image }: PlayerNameProps) => {
       style={{
         display: "inline-flex",
         alignItems: "baseline",
-        gap: 6,
+        gap: "calc(var(--mantine-spacing-xs) / 2)",
         whiteSpace: "nowrap",
       }}
     >

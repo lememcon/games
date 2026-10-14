@@ -21,7 +21,7 @@ const GameDetailHeader = ({
       display: "flex",
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: "1em",
+      marginBottom: "var(--mantine-spacing-md)",
       alignItems: "flex-start",
     }}
   >
