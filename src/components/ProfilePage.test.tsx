@@ -11,10 +11,14 @@ const hook = vi.hoisted(() => ({
   error: null as string | null,
   saving: false,
   onSaved: undefined as (() => void) | undefined,
+  useGames: vi.fn(),
+  games: { games: { "1": { name: "Root" } }, loading: false, error: false },
 }));
 vi.mock("@/components/ProfileOverrides", () => ({
-  default: ({ discordId }: { discordId: string }) => (
-    <div>overrides for {discordId}</div>
+  default: ({ discordId, games }: { discordId: string; games: unknown }) => (
+    <div>
+      overrides for {discordId} {games === hook.games ? "shared" : "other"}
+    </div>
   ),
 }));
 vi.mock("@/components/ColorPicker", () => ({
@@ -23,10 +27,18 @@ vi.mock("@/components/ColorPicker", () => ({
   ),
 }));
 vi.mock("@/components/ProfileVetoes", () => ({
-  default: () => <div>vetoes section</div>,
+  default: ({ games }: { games: unknown }) => (
+    <div>vetoes section {games === hook.games ? "shared" : "other"}</div>
+  ),
 }));
 vi.mock("@/components/ProfilePlayed", () => ({
   default: () => <div>played section</div>,
+}));
+vi.mock("@/hooks/useGames", () => ({
+  default: () => {
+    hook.useGames();
+    return hook.games;
+  },
 }));
 vi.mock("@/hooks/useDisplayName", () => ({
   default: (onSaved: () => void) => {
@@ -54,6 +66,14 @@ describe("ProfilePage", () => {
     hook.save.mockReset();
     hook.error = null;
     hook.saving = false;
+    hook.useGames.mockClear();
+  });
+
+  it("fetches games once and shares them with both sections", () => {
+    renderPage();
+    expect(hook.useGames).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
+    expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
   });
 
   it("shows the Discord name, a blank input and the public profile link", () => {
@@ -156,8 +176,8 @@ describe("ProfilePage", () => {
 
   it("composes the overrides and vetoes sections", () => {
     renderPage();
-    expect(screen.getByText("overrides for 9")).toBeInTheDocument();
-    expect(screen.getByText("vetoes section")).toBeInTheDocument();
+    expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
+    expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
     expect(screen.getByText("played section")).toBeInTheDocument();
   });
 });

@@ -20,9 +20,13 @@ const gamesState = vi.hoisted(() => ({
   games: {} as GamesData,
 }));
 vi.mock("@/hooks/useMyVetoes", () => ({ default: () => vetoes.state }));
-vi.mock("@/hooks/useGames", () => ({
-  default: () => ({ games: gamesState.games, loading: false, error: false }),
-}));
+
+const render = () =>
+  renderWithMantine(
+    <ProfileVetoes
+      games={{ games: gamesState.games, loading: false, error: false }}
+    />,
+  );
 
 describe("ProfileVetoes", () => {
   beforeEach(() => {
@@ -42,11 +46,11 @@ describe("ProfileVetoes", () => {
   });
 
   it("shows an empty state, but not while loading", () => {
-    const { unmount } = renderWithMantine(<ProfileVetoes />);
+    const { unmount } = render();
     expect(screen.getByText("You haven't vetoed any games.")).toBeVisible();
     unmount();
     vetoes.state.loading = true;
-    renderWithMantine(<ProfileVetoes />);
+    render();
     expect(screen.queryByText("You haven't vetoed any games.")).toBeNull();
   });
 
@@ -55,7 +59,7 @@ describe("ProfileVetoes", () => {
       { bggId: 2, name: "Azul" },
       { bggId: 9, name: null },
     ];
-    renderWithMantine(<ProfileVetoes />);
+    render();
     expect(screen.getByText("Azul")).toBeInTheDocument();
     expect(screen.getByText("Game 9")).toBeInTheDocument();
     await userEvent.click(
@@ -65,7 +69,7 @@ describe("ProfileVetoes", () => {
   });
 
   it("adds a veto from the picker", async () => {
-    renderWithMantine(<ProfileVetoes />);
+    render();
     expect(screen.getByRole("button", { name: "Veto" })).toBeDisabled();
     await userEvent.click(
       screen.getByRole("combobox", { name: "Game to veto" }),
@@ -79,7 +83,7 @@ describe("ProfileVetoes", () => {
 
   it("does not offer games already vetoed", async () => {
     vetoes.state.vetoes = [{ bggId: 2, name: "Azul" }];
-    renderWithMantine(<ProfileVetoes />);
+    render();
     await userEvent.click(
       screen.getByRole("combobox", { name: "Game to veto" }),
     );
@@ -94,7 +98,7 @@ describe("ProfileVetoes", () => {
   it("disables the controls while saving", () => {
     vetoes.state.vetoes = [{ bggId: 2, name: "Azul" }];
     vetoes.state.saving = true;
-    renderWithMantine(<ProfileVetoes />);
+    render();
     expect(
       screen.getByRole("combobox", { name: "Game to veto" }),
     ).toBeDisabled();
@@ -106,7 +110,7 @@ describe("ProfileVetoes", () => {
 
   it("shows an error such as unknown_game", () => {
     vetoes.state.error = "That game no longer exists.";
-    renderWithMantine(<ProfileVetoes />);
+    render();
     expect(screen.getByRole("alert")).toHaveTextContent("no longer exists");
   });
 });
