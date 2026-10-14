@@ -429,6 +429,7 @@ function Scoreboard({ user }: ScoreboardProps) {
               ) : (
                 <>
                   <GamesList
+                    key={`${year}|${players.join(",")}|${hidePlayed}|${sortMode}`}
                     afterPodium={splitSuggestions}
                     games={games}
                     year={year}

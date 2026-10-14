@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
 import { vetoesByMember } from "@/lib/games";
+import { bulkFailureMessage } from "@/lib/selection";
 import { vetoesApi } from "@/lib/vetoesApi";
 
 const MESSAGES: Record<string, string> = {
@@ -28,6 +29,7 @@ const useVetoes = (fetchImpl: typeof fetch = fetch) => {
   const [all, setAll] = useState(EMPTY);
   const [saving, setSaving] = useState<ReadonlySet<number>>(new Set());
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const latest = useRef(0);
 
   useEffect(() => {
@@ -72,9 +74,43 @@ const useVetoes = (fetchImpl: typeof fetch = fetch) => {
     if (message) setErrors((prev) => ({ ...prev, [bggId]: message }));
   };
 
+  // Vetoes many games with one refetch. Failures are reported together in
+  // bulkError rather than per game; resolves with the ids that did not save.
+  const vetoMany = async (bggIds: number[]): Promise<number[]> => {
+    if (bggIds.length === 0) return [];
+    const api = vetoesApi(fetchImpl);
+    setSaving((prev) => new Set([...prev, ...bggIds]));
+    setBulkError(null);
+    const results = await Promise.allSettled(bggIds.map((id) => api.set(id)));
+    const failed = bggIds.filter((_, i) => results[i].status === "rejected");
+    let message: string | null = null;
+    if (failed.length === bggIds.length) {
+      const first = results.find((r) => r.status === "rejected");
+      message = describe(first?.reason);
+    } else if (failed.length > 0) {
+      message = bulkFailureMessage(failed.length, bggIds.length);
+    }
+    const mine = ++latest.current;
+    try {
+      const d = await api.list();
+      if (mine === latest.current) setAll(vetoesByMember(d.vetoes));
+    } catch {
+      if (mine === latest.current) message ??= GENERIC_ERROR;
+    }
+    setSaving((prev) => {
+      const next = new Set(prev);
+      bggIds.forEach((id) => next.delete(id));
+      return next;
+    });
+    setBulkError(message);
+    return failed;
+  };
+
   return {
     all,
     saving,
+    bulkError,
+    vetoMany,
     error: errors,
     isSaving: (bggId: number) => saving.has(bggId),
     errorFor: (bggId: number): string | null => errors[bggId] ?? null,

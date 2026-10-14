@@ -143,4 +143,26 @@ describe("GameRow", () => {
     const { queryByRole } = renderRow({ onVeto: () => {} });
     expect(queryByRole("alert")).toBeNull();
   });
+
+  it("shows a select checkbox and hides the buttons when selectable", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const { getByRole, queryByRole } = renderRow({
+      selectable: true,
+      checked: true,
+      onSelect,
+      onVeto: () => {},
+    });
+    const box = getByRole("checkbox", { name: "Select Root" });
+    expect(box).toBeChecked();
+    await user.click(box);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(queryByRole("button", { name: /^Veto:/ })).toBeNull();
+    expect(queryByRole("button", { name: /^Played:|played/i })).toBeNull();
+    expect(getByRole("link", { name: "Root" })).toBeInTheDocument();
+  });
+
+  it("has no checkbox when not selectable", () => {
+    expect(renderRow().queryByRole("checkbox")).toBeNull();
+  });
 });
