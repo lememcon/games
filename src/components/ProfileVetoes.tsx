@@ -36,6 +36,11 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
         These are left out of suggestions for any group that includes you, in
         every year.
       </Text>
+      {games.error && (
+        <Alert color="red" role="alert">
+          Couldn&apos;t load the game list.
+        </Alert>
+      )}
       {myVetoes.error && (
         <Alert color="red" role="alert">
           {myVetoes.error}
@@ -73,7 +78,7 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
           )}
           value={picked}
           onChange={setPicked}
-          disabled={myVetoes.saving}
+          disabled={myVetoes.saving || games.error}
         />
         <Button loading={myVetoes.saving} disabled={!picked} onClick={veto}>
           Veto

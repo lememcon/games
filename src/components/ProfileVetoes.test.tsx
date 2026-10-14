@@ -21,10 +21,10 @@ const gamesState = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/useMyVetoes", () => ({ default: () => vetoes.state }));
 
-const render = () =>
+const render = (error = false) =>
   renderWithMantine(
     <ProfileVetoes
-      games={{ games: gamesState.games, loading: false, error: false }}
+      games={{ games: gamesState.games, loading: false, error }}
     />,
   );
 
@@ -112,5 +112,27 @@ describe("ProfileVetoes", () => {
     vetoes.state.error = "That game no longer exists.";
     render();
     expect(screen.getByRole("alert")).toHaveTextContent("no longer exists");
+  });
+
+  it("shows a load error and disables the picker when games fail", () => {
+    gamesState.games = {};
+    render(true);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Couldn't load the game list.",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Game to veto" }),
+    ).toBeDisabled();
+  });
+
+  it("shows no alert when games load fine", () => {
+    render();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows both the games error and the veto error", () => {
+    vetoes.state.error = "That game no longer exists.";
+    render(true);
+    expect(screen.getAllByRole("alert")).toHaveLength(2);
   });
 });
