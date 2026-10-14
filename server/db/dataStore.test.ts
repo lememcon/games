@@ -166,7 +166,7 @@ describe("data store", () => {
     const expected = [];
     for (const year of [2025, 2026]) {
       const sums = new Map<number, number>();
-      for (const r of (await store.getScores(year))!)
+      for (const r of (await store.getScores(year, true))!)
         sums.set(r.bgg_id, (sums.get(r.bgg_id) ?? 0) + r.score);
       for (const [bgg_id, total] of [...sums].sort((a, b) => a[0] - b[0]))
         expected.push({ year, bgg_id, total });
@@ -390,6 +390,92 @@ describe("display names", () => {
       ["Dual", "Azul", 2],
     ]);
     expect(await store.getScores(2091)).toHaveLength(3);
+  });
+
+  describe("year totals", () => {
+    const totalsFor = async (year: number) =>
+      (await store.getYearTotals())
+        .filter((t) => t.year === year)
+        .map((t) => [t.bgg_id, t.total]);
+    const approve = (id: string) =>
+      client.query(
+        `INSERT INTO app_user (discord_id, status) VALUES ($1, 'approved')`,
+        [id],
+      );
+    const link = (id: string, pattern: string) =>
+      client.query(`UPDATE player SET discord_id = $1 WHERE name LIKE $2`, [
+        id,
+        pattern,
+      ]);
+
+    it("returns nothing for a year with no scores", async () => {
+      expect(await totalsFor(2080)).toEqual([]);
+    });
+
+    it("counts only an approved member's best row, rank before score", async () => {
+      await approve("700000000000000001");
+      await store.importData(
+        upload(2081, [
+          row({ player: "tot1a", rank: 2, score: 50 }),
+          row({ player: "tot1b", rank: 1, score: 7 }),
+        ]),
+        context,
+      );
+      await link("700000000000000001", "tot1%");
+      expect(await totalsFor(2081)).toEqual([[1, 7]]);
+    });
+
+    it("breaks ties by rank, then score, then lowest id", async () => {
+      await approve("700000000000000002");
+      await store.importData(
+        upload(2082, [
+          row({ player: "tot2a", rank: 1, score: 5 }),
+          row({ player: "tot2b", rank: 1, score: 9 }),
+          row({ bgg_id: 2, game: "Azul", player: "tot2a", rank: 1, score: 4 }),
+          row({ bgg_id: 2, game: "Azul", player: "tot2b", rank: 1, score: 4 }),
+        ]),
+        context,
+      );
+      await link("700000000000000002", "tot2%");
+      expect(await totalsFor(2082)).toEqual([
+        [1, 9],
+        [2, 4],
+      ]);
+    });
+
+    it("sums a pending member's names, unlinked players and other members", async () => {
+      await client.query(
+        `INSERT INTO app_user (discord_id, status) VALUES ('700000000000000003', 'pending')`,
+      );
+      await approve("700000000000000004");
+      await approve("700000000000000005");
+      await store.importData(
+        upload(2083, [
+          row({ player: "tot3a", rank: 2, score: 5 }),
+          row({ player: "tot3b", rank: 1, score: 9 }),
+          row({ player: "tot3loose", rank: 3, score: 1 }),
+          row({ player: "tot4", rank: 4, score: 2 }),
+          row({ player: "tot5", rank: 5, score: 3 }),
+          row({ bgg_id: 2, game: "Azul", player: "tot4", score: 100 }),
+        ]),
+        context,
+      );
+      await store.importData(
+        upload(2084, [row({ player: "tot4", score: 1000 })]),
+        context,
+      );
+      await link("700000000000000003", "tot3%");
+      await client.query(
+        `UPDATE player SET discord_id = '700000000000000003' WHERE name IN ('tot3a','tot3b')`,
+      );
+      await link("700000000000000004", "tot4");
+      await link("700000000000000005", "tot5");
+      expect(await totalsFor(2083)).toEqual([
+        [1, 20],
+        [2, 100],
+      ]);
+      expect(await totalsFor(2084)).toEqual([[1, 1000]]);
+    });
   });
 
   it("falls back to the data-file name for an approved member with no login", async () => {

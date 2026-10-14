@@ -238,7 +238,7 @@ export interface DataStore {
     resolveNames?: boolean,
   ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;
-  /** Summed scores per game and year, ordered by year then game. */
+  /** Summed scores per game and year, collapsed per approved member for every viewer; ordered by year then game. */
   getYearTotals(): Promise<YearTotal[]>;
   /** Named games with no score row in any year, by name. */
   listUnplayedGames(): Promise<UnplayedGame[]>;
