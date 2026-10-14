@@ -131,16 +131,40 @@ function Scoreboard({ user }: ScoreboardProps) {
     id: number;
     name: string;
   } | null>(null);
-  const [barHeld, setBarHeld] = useState(false);
+  // Hover and focus hold the timer separately, so leaving with the mouse does
+  // not resume it while focus is still inside the bar.
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const barHeld = hovered || focused;
   const undoRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const autoFocus = useRef(false);
+  // Bumped whenever the bar is cleared, so a slow veto that resolves later
+  // cannot bring back a bar the member has since moved past.
+  const vetoSeq = useRef(0);
   useEffect(() => {
     if (!lastVetoed) return;
+    // Only take focus when it is not somewhere the member moved it on purpose.
+    const active = document.activeElement;
+    if (
+      active &&
+      active !== document.body &&
+      !listRef.current?.contains(active)
+    ) {
+      return;
+    }
     // Focus moved here by us does not hold the timer; the member's does.
     autoFocus.current = true;
     undoRef.current?.focus();
     autoFocus.current = false;
   }, [lastVetoed]);
+  // Leaving the list or the year drops the bar, so it is not stale on return.
+  const vetoScope = `${year}|${"gameId" in route ? route.gameId : ""}`;
+  const [barScope, setBarScope] = useState(vetoScope);
+  if (barScope !== vetoScope) {
+    setBarScope(vetoScope);
+    setLastVetoed(null);
+  }
   useEffect(() => {
     if (!lastVetoed || barHeld) return;
     const timer = setTimeout(() => setLastVetoed(null), UNDO_MS);
@@ -149,16 +173,24 @@ function Scoreboard({ user }: ScoreboardProps) {
   const listVetoes = {
     ...vetoes,
     veto: (id: number, name: string) => {
+      const seq = ++vetoSeq.current;
       setLastVetoed(null);
-      setBarHeld(false);
+      setHovered(false);
+      setFocused(false);
       void vetoes.veto(id).then((ok) => {
-        if (ok) setLastVetoed({ id, name });
+        if (ok && seq === vetoSeq.current) setLastVetoed({ id, name });
       });
     },
   };
+  // A vetoed game is filtered out of the list, so a failed undo keeps the bar
+  // to show its error there.
   const undo = async (id: number) => {
+    vetoSeq.current++;
+    if (await vetoes.unveto(id)) setLastVetoed(null);
+  };
+  const dismiss = () => {
+    vetoSeq.current++;
     setLastVetoed(null);
-    await vetoes.unveto(id);
   };
   const playerVetoes = useMemo(
     () => playerCountsByName(data.by_player, vetoes.all),
@@ -445,12 +477,12 @@ function Scoreboard({ user }: ScoreboardProps) {
               <div
                 role="status"
                 aria-live="polite"
-                onMouseEnter={() => setBarHeld(true)}
-                onMouseLeave={() => setBarHeld(false)}
-                onFocus={() => !autoFocus.current && setBarHeld(true)}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                onFocus={() => !autoFocus.current && setFocused(true)}
                 onBlur={(e) => {
                   if (!e.currentTarget.contains(e.relatedTarget)) {
-                    setBarHeld(false);
+                    setFocused(false);
                   }
                 }}
               >
@@ -466,14 +498,15 @@ function Scoreboard({ user }: ScoreboardProps) {
                       >
                         Undo
                       </Button>
-                      <Button
-                        size="xs"
-                        variant="default"
-                        onClick={() => setLastVetoed(null)}
-                      >
+                      <Button size="xs" variant="default" onClick={dismiss}>
                         Dismiss
                       </Button>
                     </div>
+                    {vetoes.errorFor(lastVetoed.id) && (
+                      <Text c="red" size="sm" role="alert">
+                        {vetoes.errorFor(lastVetoed.id)}
+                      </Text>
+                    )}
                   </div>
                 )}
               </div>
@@ -501,19 +534,21 @@ function Scoreboard({ user }: ScoreboardProps) {
                 </>
               ) : (
                 <>
-                  <GamesList
-                    key={`${year}|${players.join(",")}|${hidePlayed}|${sortMode}`}
-                    afterPodium={splitSuggestions}
-                    games={games}
-                    year={year}
-                    selectedMax={selectedMax}
-                    individualMax={individualMax}
-                    gameData={game_data}
-                    isPlayed={isPlayed}
-                    onToggle={handleToggle}
-                    vetoes={listVetoes}
-                    discordId={user.discordId}
-                  />
+                  <div ref={listRef}>
+                    <GamesList
+                      key={`${year}|${players.join(",")}|${hidePlayed}|${sortMode}`}
+                      afterPodium={splitSuggestions}
+                      games={games}
+                      year={year}
+                      selectedMax={selectedMax}
+                      individualMax={individualMax}
+                      gameData={game_data}
+                      isPlayed={isPlayed}
+                      onToggle={handleToggle}
+                      vetoes={listVetoes}
+                      discordId={user.discordId}
+                    />
+                  </div>
                   {markingDialog}
                   <YearTrends
                     totals={yearTotals}
