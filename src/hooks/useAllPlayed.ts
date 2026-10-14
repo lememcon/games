@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { toPlayedMaps, type PlayedMap } from "@/lib/played";
 import type { AllPlayedResponse, MarkPlayedResponse } from "@/types";
 
@@ -11,15 +11,26 @@ const EMPTY: AllPlayed = {};
 // Every member's played games for a year (discord id, then bgg id), fetched
 // once per year, plus `markPlayed(bggId, discordIds)` to set a game played for
 // several members at once. An empty year ("") skips the request, and a failure
-// leaves the map empty so nothing is hidden.
+// leaves the map empty so nothing is hidden. The third item is a message when
+// the load failed unexpectedly (not signed in, not approved or an unknown year
+// stay silent), for the current year only.
 export const useMarkPlayed = (
   year: string,
   fetchImpl: typeof fetch = fetch,
-): [AllPlayed, (bggId: string, discordIds: string[]) => Promise<void>] => {
+): [
+  AllPlayed,
+  (bggId: string, discordIds: string[]) => Promise<void>,
+  string | null,
+] => {
   const [loaded, setLoaded] = useState<{ year: string; played: AllPlayed }>({
     year: "",
     played: EMPTY,
   });
+
+  const [errorState, setErrorState] = useState<{
+    year: string;
+    message: string;
+  } | null>(null);
 
   // The current year, and whether a POST response already set it (so a GET
   // still in flight must not overwrite that newer result).
@@ -30,13 +41,25 @@ export const useMarkPlayed = (
     yearRef.current = year;
     marked.current = false;
     if (year === "") return;
+    // A new load starts without the last one's error.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setErrorState(null);
     let cancelled = false;
     apiFetch<AllPlayedResponse>(`/played?year=${year}`, {}, fetchImpl)
       .then(({ played }) => {
         if (cancelled || marked.current) return;
+        setErrorState(null);
         setLoaded({ year, played: toPlayedMaps(played) });
       })
-      .catch(() => {});
+      .catch((e: unknown) => {
+        if (cancelled || marked.current) return;
+        const expected =
+          e instanceof ApiError &&
+          (e.status === 401 || e.status === 403 || e.status === 404);
+        if (!expected) {
+          setErrorState({ year, message: "Couldn't load who has played." });
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -53,12 +76,17 @@ export const useMarkPlayed = (
       );
       if (yearRef.current !== year) return;
       marked.current = true;
+      setErrorState(null);
       setLoaded({ year, played: toPlayedMaps(played) });
     },
     [year, fetchImpl],
   );
 
-  return [loaded.year === year ? loaded.played : EMPTY, markPlayed];
+  return [
+    loaded.year === year ? loaded.played : EMPTY,
+    markPlayed,
+    errorState?.year === year ? errorState.message : null,
+  ];
 };
 
 // Read-only: just the played maps.

@@ -62,6 +62,7 @@ const state = vi.hoisted(() => ({
   vetoErrors: {} as Record<number, string>,
   vetoSaving: new Set<number>(),
   playedError: null as string | null,
+  allPlayedError: null as string | null,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
 vi.mock("@/hooks/useData", () => ({
@@ -122,7 +123,7 @@ vi.mock("@/hooks/useVetoes", () => ({
 vi.mock("@/hooks/useAllPlayed", () => ({
   useMarkPlayed: (year: string) => {
     state.useAllPlayed(year);
-    return [state.allPlayed, state.markPlayed];
+    return [state.allPlayed, state.markPlayed, state.allPlayedError];
   },
 }));
 
@@ -158,6 +159,7 @@ describe("Scoreboard", () => {
     state.vetoErrors = {};
     state.vetoSaving = new Set();
     state.playedError = null;
+    state.allPlayedError = null;
     state.unplayed = [];
   });
   afterEach(() => {
@@ -212,6 +214,16 @@ describe("Scoreboard", () => {
     const { getByRole } = render();
 
     expect(getByRole("alert")).toHaveTextContent("Couldn't save. Try again.");
+  });
+
+  it("shows an all-played load error", () => {
+    at("/2026");
+    state.allPlayedError = "Couldn't load who has played.";
+    const { getByRole } = render();
+
+    expect(getByRole("alert")).toHaveTextContent(
+      "Couldn't load who has played.",
+    );
   });
 
   it("clears the player filter and navigates when a year is picked", async () => {

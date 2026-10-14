@@ -53,14 +53,117 @@ describe("useAllPlayed", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("stays empty when the request fails", async () => {
+  it("shows a message and stays empty when the request fails", async () => {
     const fetchImpl = vi.fn(async () =>
-      json({ error: "forbidden" }, 403),
+      json({ error: "x" }, 500),
     ) as unknown as typeof fetch;
-    const { result } = renderHook(() => useAllPlayed("2025", fetchImpl));
+    const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
+
+    await waitFor(() =>
+      expect(result.current[2]).toBe("Couldn't load who has played."),
+    );
+    expect(result.current[0]).toEqual({});
+  });
+
+  it("shows a message when the network fails", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("network");
+    }) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
+
+    await waitFor(() =>
+      expect(result.current[2]).toBe("Couldn't load who has played."),
+    );
+  });
+
+  it.each([401, 403, 404])("stays silent on a %i", async (status) => {
+    const fetchImpl = vi.fn(async () =>
+      json({ error: "x" }, status),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
 
     await waitFor(() => expect(fetchImpl).toHaveBeenCalled());
-    expect(result.current).toEqual({});
+    await act(async () => {});
+    expect(result.current[0]).toEqual({});
+    expect(result.current[2]).toBeNull();
+  });
+
+  it("has no message without a year", () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayed("", fetchImpl));
+
+    expect(result.current[2]).toBeNull();
+  });
+
+  it("drops the message when the year changes to one that loads", async () => {
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) =>
+      String(url).endsWith("2025")
+        ? json({ error: "x" }, 500)
+        : json({ played: played("2026") }),
+    ) as unknown as typeof fetch;
+    const { result, rerender } = renderHook(
+      ({ y }) => useMarkPlayed(y, fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    await waitFor(() => expect(result.current[2]).not.toBeNull());
+
+    rerender({ y: "2026" });
+    expect(result.current[2]).toBeNull();
+    await waitFor(() => expect(result.current[0]).toEqual(playedMaps("2026")));
+    expect(result.current[2]).toBeNull();
+  });
+
+  it("clears the message when the same year loads again", async () => {
+    const failing = vi.fn(async () =>
+      json({ error: "x" }, 500),
+    ) as unknown as typeof fetch;
+    const ok = vi.fn(async () =>
+      json({ played: played("2025") }),
+    ) as unknown as typeof fetch;
+    const { result, rerender } = renderHook(
+      ({ f }) => useMarkPlayed("2025", f),
+      { initialProps: { f: failing } },
+    );
+    await waitFor(() => expect(result.current[2]).not.toBeNull());
+
+    rerender({ f: ok });
+    await waitFor(() => expect(result.current[2]).toBeNull());
+    await waitFor(() => expect(result.current[0]).toEqual(playedMaps("2025")));
+  });
+
+  it("ignores a failure that arrives after a response was marked", async () => {
+    let load: (r: Response) => void = () => {};
+    const fetchImpl = vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? Promise.resolve(json({ played: { d1: ["12"] } }))
+        : new Promise<Response>((resolve) => (load = resolve)),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
+
+    await act(() => result.current[1]("12", ["d1"]));
+    await act(async () => load(json({ error: "x" }, 500)));
+
+    expect(result.current[2]).toBeNull();
+    expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+  });
+
+  it("ignores a failure that arrives after the year changed", async () => {
+    let failOld: (r: Response) => void = () => {};
+    const fetchImpl = vi.fn((url: RequestInfo | URL) =>
+      String(url).endsWith("2025")
+        ? new Promise<Response>((resolve) => (failOld = resolve))
+        : Promise.resolve(json({ played: played("2026") })),
+    ) as unknown as typeof fetch;
+    const { result, rerender } = renderHook(
+      ({ y }) => useMarkPlayed(y, fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+
+    rerender({ y: "2026" });
+    await waitFor(() => expect(result.current[0]).toEqual(playedMaps("2026")));
+    await act(async () => failOld(json({ error: "x" }, 500)));
+
+    expect(result.current[2]).toBeNull();
   });
 
   it("drops the old year's played games and ignores its late response", async () => {
@@ -160,11 +263,12 @@ describe("useMarkPlayed", () => {
           : json({ error: "x" }, 500),
     ) as unknown as typeof fetch;
     const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current[2]).not.toBeNull());
 
     await act(() => result.current[1]("12", ["d1"]));
 
     expect(result.current[0]).toEqual({ d1: { "12": 1 } });
+    expect(result.current[2]).toBeNull();
   });
 
   it("ignores a response that arrives after the year changed", async () => {
