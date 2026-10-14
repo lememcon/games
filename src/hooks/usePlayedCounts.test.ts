@@ -251,7 +251,7 @@ describe("usePlayedCounts", () => {
     expect(result.current[2]).toBeNull();
   });
 
-  it.each([401, 404])(
+  it.each([401, 403, 404])(
     "shows no error when the load gets a %i",
     async (status) => {
       const f = makeFetch();
@@ -259,10 +259,64 @@ describe("usePlayedCounts", () => {
 
       await answer(f.calls[0], status);
 
-      expect(result.current[4]).toBeNull();
+      await waitFor(() => expect(result.current[4]).toBeNull());
       expect(result.current[2]).toBeNull();
     },
   );
+
+  it("scopes a load error to its year and clears it on return", async () => {
+    const f = makeFetch();
+    const { result, rerender } = renderHook(
+      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    await answer(f.calls[0], 500);
+    await waitFor(() =>
+      expect(result.current[4]).toBe("Couldn't load your played games."),
+    );
+
+    rerender({ y: "2026" });
+    expect(result.current[4]).toBeNull();
+
+    rerender({ y: "2025" });
+    expect(result.current[4]).toBeNull();
+    await answer(f.calls[2], 500);
+    await waitFor(() =>
+      expect(result.current[4]).toBe("Couldn't load your played games."),
+    );
+  });
+
+  it("clears a load error once a retry succeeds", async () => {
+    const f = makeFetch();
+    const { result, rerender } = renderHook(
+      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    await answer(f.calls[0], 500);
+    await waitFor(() => expect(result.current[4]).not.toBeNull());
+
+    rerender({ y: "2026" });
+    rerender({ y: "2025" });
+    await answer(f.calls[2], 200, { played: ["100"] });
+
+    await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
+    expect(result.current[4]).toBeNull();
+  });
+
+  it("sets no error when a cancelled load fails", async () => {
+    const f = makeFetch();
+    const { result, rerender } = renderHook(
+      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    rerender({ y: "2026" });
+
+    await answer(f.calls[0], 500);
+
+    expect(result.current[4]).toBeNull();
+    rerender({ y: "2025" });
+    expect(result.current[4]).toBeNull();
+  });
 
   it("rolls a failed first mark back to unplayed", async () => {
     const { result, puts } = await loaded();

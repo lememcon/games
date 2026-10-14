@@ -90,6 +90,9 @@ const usePlayedCounts = (
       session.current = null;
       return;
     }
+    // A new load starts without the last one's error.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setErrorState(null);
     const s: Session = {
       year,
       cancelled: false,
@@ -110,10 +113,11 @@ const usePlayedCounts = (
         );
         counts = toPlayedMap(body.played);
       } catch (e) {
-        // Not signed in or an unknown year is expected: nothing played, no
-        // edits, no message. Anything else is a failure worth showing.
+        // Not signed in, not approved or an unknown year is expected: nothing
+        // played, no edits, no message. Anything else is a failure worth showing.
         const expected =
-          e instanceof ApiError && (e.status === 401 || e.status === 404);
+          e instanceof ApiError &&
+          (e.status === 401 || e.status === 403 || e.status === 404);
         if (!expected && !s.cancelled) {
           setErrorState({ year, message: "Couldn't load your played games." });
         }
