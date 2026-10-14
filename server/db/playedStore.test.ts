@@ -27,9 +27,14 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec(
-    `DELETE FROM played_count; DELETE FROM year; DELETE FROM app_user; DELETE FROM game;
+    `DELETE FROM played_count; DELETE FROM score; DELETE FROM player; DELETE FROM year;
+     DELETE FROM app_user; DELETE FROM game;
      INSERT INTO year (year) VALUES (2025), (2026);
-     INSERT INTO game (bgg_id) VALUES (11), (12), (13), (30), (99), (200);`,
+     INSERT INTO game (bgg_id) VALUES (11), (12), (13), (30), (77), (99), (200);
+     INSERT INTO player (id, name) VALUES (1, 'Pat');
+     INSERT INTO score (year, bgg_id, player_id, score, rank)
+       SELECT y, g, 1, 10, 1 FROM (VALUES (2025), (2026)) AS ys(y),
+         (VALUES (11), (12), (13), (30), (99), (200)) AS gs(g);`,
   );
   const users = createUserStore(db);
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
@@ -99,15 +104,23 @@ describe("set", () => {
     expect(await rowCount()).toBe(0);
   });
 
-  it("refuses an unknown game, writes nothing, and still unmarks it", async () => {
-    expect(await store.set(ALEX, 2025, 4040, true)).toEqual({
-      ok: false,
-      status: 404,
+  it("refuses a game with no score in the year, writes nothing, and still unmarks it", async () => {
+    await client.exec("DELETE FROM score WHERE year = 2026 AND bgg_id = 99");
+    for (const bggId of [4040, 77]) {
+      expect(await store.set(ALEX, 2025, bggId, true)).toEqual({
+        ok: false,
+        status: 404,
+        error: "unknown_game",
+      });
+    }
+    expect(await store.set(ALEX, 2026, 99, true)).toMatchObject({
       error: "unknown_game",
     });
+    expect((await store.set(ALEX, 2025, 99, true)).ok).toBe(true);
+    await store.set(ALEX, 2025, 99, false);
     expect(await rowCount()).toBe(0);
-    await insert(ALEX, 2025, 4040);
-    expect((await store.set(ALEX, 2025, 4040, false)).ok).toBe(true);
+    await insert(ALEX, 2026, 99);
+    expect((await store.set(ALEX, 2026, 99, false)).ok).toBe(true);
     expect(await rowCount()).toBe(0);
   });
 
@@ -151,6 +164,14 @@ describe("importPlayed", () => {
     await store.importPlayed(ALEX, 2025, new Set([12]));
     expect(await store.get(JO, 2025)).toEqual(["11"]);
     expect(await store.get(ALEX, 2026)).toEqual([]);
+  });
+
+  it("skips games with no score in the year", async () => {
+    await client.exec("DELETE FROM score WHERE year = 2026 AND bgg_id = 99");
+    expect(
+      await store.importPlayed(ALEX, 2026, new Set([11, 99, 77, 4040])),
+    ).toEqual({ ok: true, value: ["11"] });
+    expect(await rowCount()).toBe(1);
   });
 
   it("refuses an unknown year", async () => {
@@ -280,11 +301,17 @@ describe("markPlayed", () => {
     expect(await rowCount()).toBe(0);
   });
 
-  it("refuses an unknown game and writes nothing", async () => {
+  it("refuses a game with no score in the year and writes nothing", async () => {
     await approve(ALEX, JO);
-    expect(
-      await store.markPlayed(new Set([ALEX, JO]), 2025, 4040),
-    ).toMatchObject({ ok: false, status: 404, error: "unknown_game" });
+    await client.exec("DELETE FROM score WHERE year = 2026 AND bgg_id = 99");
+    for (const [year, bggId] of [
+      [2025, 4040],
+      [2025, 77],
+      [2026, 99],
+    ])
+      expect(
+        await store.markPlayed(new Set([ALEX, JO]), year, bggId),
+      ).toMatchObject({ ok: false, status: 404, error: "unknown_game" });
     expect(await rowCount()).toBe(0);
   });
 

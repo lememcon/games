@@ -304,8 +304,8 @@ export function fakePlayed(
     played?: Record<string, number[]>;
     /** Approved members, for `markPlayed`; absent means every id is known. */
     members?: string[];
-    /** Known bgg ids; absent means every game is known. */
-    games?: number[];
+    /** Scored bgg ids by year; absent means every game is in every year. */
+    games?: Record<number, number[]>;
   } = {},
 ) {
   const years = new Set(initial.years ?? [2025]);
@@ -317,6 +317,8 @@ export function fakePlayed(
     ]),
   );
   const calls: { discordId: string; year: number; bggId?: number }[] = [];
+  const inYear = (year: number, bggId: number) =>
+    !initial.games || (initial.games[year] ?? []).includes(bggId);
   const bucket = (discordId: string, year: number) => {
     const key = `${discordId}:${year}`;
     if (!rows.has(key)) rows.set(key, new Set());
@@ -342,8 +344,7 @@ export function fakePlayed(
     set: async (discordId, year, bggId, isPlayed) => {
       calls.push({ discordId, year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");
-      if (isPlayed && initial.games && !initial.games.includes(bggId))
-        return refuse(404, "unknown_game");
+      if (isPlayed && !inYear(year, bggId)) return refuse(404, "unknown_game");
       const ids = bucket(discordId, year);
       if (isPlayed) ids.add(bggId);
       else ids.delete(bggId);
@@ -352,8 +353,7 @@ export function fakePlayed(
     markPlayed: async (discordIds, year, bggId) => {
       calls.push({ discordId: [...discordIds].join(","), year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");
-      if (initial.games && !initial.games.includes(bggId))
-        return refuse(404, "unknown_game");
+      if (!inYear(year, bggId)) return refuse(404, "unknown_game");
       if (
         initial.members &&
         [...discordIds].some((id) => !initial.members!.includes(id))
@@ -366,7 +366,7 @@ export function fakePlayed(
       calls.push({ discordId, year });
       if (!years.has(year)) return refuse(404, "unknown_year");
       const ids = bucket(discordId, year);
-      for (const id of incoming) ids.add(id);
+      for (const id of incoming) if (inYear(year, id)) ids.add(id);
       return { ok: true, value: list(ids) };
     },
   };
