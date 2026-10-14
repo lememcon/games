@@ -1,4 +1,4 @@
-import { act } from "@testing-library/react";
+import { act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -49,8 +49,15 @@ const stubClipboard = (writeText: () => Promise<void>) =>
     configurable: true,
   });
 
+const originalShare = Object.getOwnPropertyDescriptor(navigator, "share");
+
+const stubShare = (value: unknown) =>
+  Object.defineProperty(navigator, "share", { value, configurable: true });
+
 describe("Filters", () => {
   afterEach(() => {
+    if (originalShare) Object.defineProperty(navigator, "share", originalShare);
+    else delete (navigator as { share?: unknown }).share;
     vi.useRealTimers();
     vi.restoreAllMocks();
     if (originalClipboard)
@@ -264,5 +271,135 @@ describe("Filters", () => {
     expect(queryByText("Copy failed")).toBeNull();
     expect(queryByRole("textbox", { name: "Share link" })).toBeNull();
     expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+
+  describe("Share button", () => {
+    it("is absent without navigator.share", () => {
+      const { queryByRole } = renderWithMantine(<Filters {...defaults} />);
+      expect(queryByRole("button", { name: "Share" })).toBeNull();
+    });
+
+    it("is shown when navigator.share exists", () => {
+      stubShare(vi.fn());
+      const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+      expect(getByRole("button", { name: "Share" })).toBeInTheDocument();
+    });
+
+    it("shares the title and share url", async () => {
+      const user = userEvent.setup();
+      const share = vi.fn().mockResolvedValue(undefined);
+      stubShare(share);
+      const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+      await user.click(getByRole("button", { name: "Share" }));
+
+      expect(share).toHaveBeenCalledWith({
+        title: document.title,
+        url: defaults.shareUrl,
+      });
+    });
+
+    it("stays silent when the user cancels", async () => {
+      const user = userEvent.setup();
+      stubShare(vi.fn().mockRejectedValue(new DOMException("x", "AbortError")));
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole, queryByText } = renderWithMantine(
+        <Filters {...defaults} />,
+      );
+
+      await user.click(getByRole("button", { name: "Share" }));
+
+      await waitFor(() =>
+        expect(getByRole("button", { name: "Share" })).toBeEnabled(),
+      );
+      expect(queryByText("Copy failed")).toBeNull();
+      expect(writeText).not.toHaveBeenCalled();
+    });
+
+    it("stays silent on InvalidStateError", async () => {
+      const user = userEvent.setup();
+      stubShare(
+        vi.fn().mockRejectedValue(new DOMException("x", "InvalidStateError")),
+      );
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole, queryByText } = renderWithMantine(
+        <Filters {...defaults} />,
+      );
+
+      await user.click(getByRole("button", { name: "Share" }));
+
+      await waitFor(() =>
+        expect(getByRole("button", { name: "Share" })).toBeEnabled(),
+      );
+      expect(queryByText("Copy failed")).toBeNull();
+      expect(writeText).not.toHaveBeenCalled();
+    });
+
+    it("ignores a second tap while a share is pending", async () => {
+      const user = userEvent.setup();
+      let resolve: () => void = () => {};
+      const share = vi.fn(() => new Promise<void>((r) => (resolve = r)));
+      stubShare(share);
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+      const button = getByRole("button", { name: "Share" });
+      await user.click(button);
+      await user.click(button);
+      expect(share).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolve();
+      });
+      await waitFor(() => expect(button).toBeEnabled());
+      expect(writeText).not.toHaveBeenCalled();
+    });
+
+    it("falls back to copying when sharing fails", async () => {
+      const user = userEvent.setup();
+      stubShare(vi.fn().mockRejectedValue(new Error("nope")));
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole, findByRole } = renderWithMantine(
+        <Filters {...defaults} />,
+      );
+
+      await user.click(getByRole("button", { name: "Share" }));
+
+      expect(
+        await findByRole("button", { name: "Copied" }),
+      ).toBeInTheDocument();
+      expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
+    });
+
+    it("shows the link when sharing and copying both fail", async () => {
+      const user = userEvent.setup();
+      stubShare(vi.fn().mockRejectedValue(new Error("nope")));
+      stubClipboard(() => Promise.reject(new Error("denied")));
+      stubExec(() => false);
+      const { getByRole, findByText, findByRole } = renderWithMantine(
+        <Filters {...defaults} />,
+      );
+
+      await user.click(getByRole("button", { name: "Share" }));
+
+      expect(await findByText("Copy failed")).toBeInTheDocument();
+      expect(await findByRole("textbox", { name: "Share link" })).toHaveValue(
+        defaults.shareUrl,
+      );
+    });
+
+    it("keeps Copy link working", async () => {
+      const user = userEvent.setup();
+      const share = vi.fn();
+      stubShare(share);
+      const writeText = vi.spyOn(navigator.clipboard, "writeText");
+      const { getByRole } = renderWithMantine(<Filters {...defaults} />);
+
+      await user.click(getByRole("button", { name: "Copy link" }));
+
+      expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
+      expect(share).not.toHaveBeenCalled();
+      expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    });
   });
 });
