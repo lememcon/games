@@ -112,7 +112,11 @@ const MyPlayerRange = ({
           </Badge>
         )}
       </Group>
-      <Text size="xs" c="dimmed" mt={4}>
+      <Text
+        size="xs"
+        c="dimmed"
+        style={{ marginTop: "calc(var(--mantine-spacing-xs) / 2)" }}
+      >
         Allowed now: {formatBounds(allowed)}
       </Text>
       {invalid && (

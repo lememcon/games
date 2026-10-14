@@ -16,7 +16,7 @@ const Score = ({ score, max }: { score: number; max: number }) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 4,
+        gap: "calc(var(--mantine-spacing-xs) / 2)",
         fontFamily: "var(--mantine-font-family-monospace)",
         fontVariantNumeric: "tabular-nums",
       }}

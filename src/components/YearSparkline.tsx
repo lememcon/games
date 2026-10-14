@@ -22,7 +22,7 @@ const YearSparkline = ({ series }: YearSparklineProps) => {
     .join(", ")}`;
 
   return (
-    <div style={{ marginTop: "1em" }}>
+    <div style={{ marginTop: "var(--mantine-spacing-md)" }}>
       <Text size="sm" c="dimmed">
         Total score by year
       </Text>

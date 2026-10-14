@@ -83,7 +83,10 @@ const Game = ({
           onChange={(on) => (on ? vetoes.veto(bggId) : vetoes.unveto(bggId))}
         />
       )}
-      <BackButton href={backHref} style={{ marginTop: "2em" }} />
+      <BackButton
+        href={backHref}
+        style={{ marginTop: "var(--mantine-spacing-lg)" }}
+      />
     </div>
   );
 };
