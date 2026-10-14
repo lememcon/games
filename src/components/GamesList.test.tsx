@@ -81,22 +81,21 @@ const scored = (name: string, ranks: [string, number][]): SelectedGame => ({
 });
 
 describe("GamesList", () => {
-  it("names the least happy player on the top card only", () => {
-    const { getAllByText } = renderList({
-      games: [
-        scored("One", [
+  it("names the least happy player and score on every card and row", () => {
+    const { getAllByText, getByText } = renderList({
+      games: ["One", "Two", "Three", "Four", "Five"].map((n, i) =>
+        scored(n, [
           ["amy", 1],
-          ["bo", 3],
+          [`bo${i}`, 3],
         ]),
-        scored("Two", [
-          ["amy", 1],
-          ["bo", 3],
-        ]),
-      ],
+      ),
     });
 
-    expect(getAllByText(/least happy/)).toHaveLength(1);
-    expect(getAllByText("bo")).toHaveLength(1);
+    expect(getAllByText(/least happy/)).toHaveLength(5);
+    for (let i = 0; i < 5; i++) {
+      const line = getByText(`bo${i}`).closest(".tray-meta");
+      expect(line).toHaveTextContent(`least happy: bo${i} (5.0)`);
+    }
   });
 
   it("shows no badge with fewer than two scorers", () => {
