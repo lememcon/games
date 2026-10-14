@@ -136,7 +136,7 @@ const PlayerLinksPanel = () => {
   const linkedCount = players.length - unlinked.length;
 
   return (
-    <Stack mt="xl">
+    <Stack mt="md">
       <Title order={2}>Player links</Title>
       <Text>
         {linkedCount} of {players.length} players linked to {members.length}{" "}

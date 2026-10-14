@@ -48,7 +48,7 @@ const BggDataPanel = () => {
   };
 
   return (
-    <Stack mt="xl">
+    <Stack mt="md">
       <Title order={2}>Board Game Geek data</Title>
       <BggKeyCard
         info={key.info}
