@@ -22,6 +22,16 @@ const game = (
   playedBy: [],
 });
 
+const scored = (
+  g: SelectedGame,
+  scores: [string, number, number][],
+): SelectedGame => ({
+  ...g,
+  players: Object.fromEntries(
+    scores.map(([name, rank, score]) => [name, { name, rank, score }]),
+  ),
+});
+
 const split = (delta: number | null, perPlayer = 43.75): GameSplit => ({
   perPlayer,
   delta,
@@ -173,5 +183,53 @@ describe("SplitSuggestions", () => {
     ) as HTMLElement;
     expect(row.querySelector(".tray-cover")).toBeNull();
     expect(row.querySelector("a")).toBeNull();
+  });
+
+  it("names the least happy member and score on expanded rows", async () => {
+    const s = split(null);
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [
+      ["Kelsin", 1, 90],
+      ["Waymost", 2, 60],
+    ]);
+    const utils = renderSplits([s]);
+    await expand(utils);
+    const lines = utils.getAllByText(/least happy:/);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent("least happy: Waymost (60.0)");
+  });
+
+  it("picks the worst rank among three group players", async () => {
+    const s = split(null);
+    s.groups[0].players = ["Kelsin", "Waymost", "Ann"];
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [
+      ["Kelsin", 2, 80],
+      ["Waymost", 5, 40],
+      ["Ann", 3, 70],
+    ]);
+    const utils = renderSplits([s]);
+    await expand(utils);
+    expect(utils.getAllByText(/least happy:/)[0]).toHaveTextContent(
+      "least happy: Waymost (40.0)",
+    );
+  });
+
+  it("omits the line with fewer than two scorers", async () => {
+    const s = split(null);
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [["Kelsin", 1, 90]]);
+    const utils = renderSplits([s]);
+    await expand(utils);
+    expect(utils.queryByText(/least happy:/)).toBeNull();
+  });
+
+  it("omits the line from the collapsed summary", () => {
+    const s = split(null);
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [
+      ["Kelsin", 1, 90],
+      ["Waymost", 2, 60],
+    ]);
+    const { getByTestId } = renderSplits([s]);
+    expect(
+      within(getByTestId("split-summary")).queryByText(/least happy:/),
+    ).toBeNull();
   });
 });
