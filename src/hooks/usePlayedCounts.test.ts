@@ -224,6 +224,46 @@ describe("usePlayedCounts", () => {
     expect(puts()).toHaveLength(1);
   });
 
+  it("sets a save error on a failed write and clears it on the next toggle", async () => {
+    const { result, puts } = await loaded(["100"]);
+    expect(result.current[4]).toBeNull();
+
+    toggle(result, "100");
+    await answer(puts()[0], 500);
+    await waitFor(() =>
+      expect(result.current[4]).toBe("Couldn't save. Try again."),
+    );
+    expect(isPlayed(result, "100")).toBe(true);
+
+    toggle(result, "100");
+    expect(result.current[4]).toBeNull();
+  });
+
+  it("sets a load error on a server failure", async () => {
+    const f = makeFetch();
+    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+
+    await answer(f.calls[0], 500);
+
+    await waitFor(() =>
+      expect(result.current[4]).toBe("Couldn't load your played games."),
+    );
+    expect(result.current[2]).toBeNull();
+  });
+
+  it.each([401, 404])(
+    "shows no error when the load gets a %i",
+    async (status) => {
+      const f = makeFetch();
+      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+
+      await answer(f.calls[0], status);
+
+      expect(result.current[4]).toBeNull();
+      expect(result.current[2]).toBeNull();
+    },
+  );
+
   it("rolls a failed first mark back to unplayed", async () => {
     const { result, puts } = await loaded();
 

@@ -28,7 +28,7 @@ const ProfilePlayed = () => {
   const [picked, setPicked] = useState<string | null>(null);
   const year = chosen || defaultYear(years, new Date());
   const data = useData(year || null);
-  const [, toggle, counts] = usePlayedCounts(year);
+  const [, toggle, counts, , playedError] = usePlayedCounts(year);
 
   const names = gameNamesById(data.scores);
   const loaded = counts !== null;
@@ -84,6 +84,11 @@ const ProfilePlayed = () => {
                 </Group>
               ))}
             </Stack>
+          )}
+          {playedError && (
+            <Text c="red" size="sm" role="alert">
+              {playedError}
+            </Text>
           )}
           {data.loading && <Loader size="sm" aria-label="Loading games" />}
           {data.error && <Text size="sm">Couldn&apos;t load games.</Text>}

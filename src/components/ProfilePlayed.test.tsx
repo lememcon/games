@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
     scores: [] as PlayerGameScore[],
   },
   counts: null as Record<string, 1> | null,
+  error: null as string | null,
   toggle: vi.fn(),
   dataYear: vi.fn(),
   countsYear: vi.fn(),
@@ -30,7 +31,13 @@ vi.mock("@/hooks/useData", () => ({
 vi.mock("@/hooks/usePlayedCounts", () => ({
   default: (year: string) => {
     state.countsYear(year);
-    return [(id: string) => !!state.counts?.[id], state.toggle, state.counts];
+    return [
+      (id: string) => !!state.counts?.[id],
+      state.toggle,
+      state.counts,
+      () => {},
+      state.error,
+    ];
   },
 }));
 
@@ -48,6 +55,7 @@ describe("ProfilePlayed", () => {
       scores: [row(1, "Root"), row(2, "Azul"), row(3, "Catan")],
     };
     state.counts = { "2": 1 };
+    state.error = null;
     state.toggle.mockReset();
     state.dataYear.mockReset();
     state.countsYear.mockReset();
@@ -168,6 +176,14 @@ describe("ProfilePlayed", () => {
     expect(
       screen.getByRole("combobox", { name: "Game to add" }),
     ).toBeDisabled();
+  });
+
+  it("shows a played games error", () => {
+    state.error = "Couldn't load your played games.";
+    renderWithMantine(<ProfilePlayed />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Couldn't load your played games.",
+    );
   });
 
   it("waits for played counts", () => {

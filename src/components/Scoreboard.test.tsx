@@ -59,6 +59,7 @@ const state = vi.hoisted(() => ({
   veto: vi.fn(),
   unveto: vi.fn(),
   vetoError: null as string | null,
+  playedError: null as string | null,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
 vi.mock("@/hooks/useData", () => ({
@@ -83,6 +84,7 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
       state.togglePlayed,
       state.own,
       state.markConfirmed,
+      state.playedError,
     ];
   },
 }));
@@ -147,6 +149,7 @@ describe("Scoreboard", () => {
     state.veto = vi.fn();
     state.unveto = vi.fn();
     state.vetoError = null;
+    state.playedError = null;
     state.unplayed = [];
   });
   afterEach(() => {
@@ -193,6 +196,14 @@ describe("Scoreboard", () => {
     // Belfort aggregates 50 + 30 = 80; normalized against selectedMax
     // (100 * 2 players = 200) that renders as 40.
     expect(getByText("40")).toBeInTheDocument();
+  });
+
+  it("shows a played load or save error", () => {
+    at("/2026");
+    state.playedError = "Couldn't save. Try again.";
+    const { getByRole } = render();
+
+    expect(getByRole("alert")).toHaveTextContent("Couldn't save. Try again.");
   });
 
   it("clears the player filter and navigates when a year is picked", async () => {
