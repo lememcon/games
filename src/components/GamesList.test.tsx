@@ -170,8 +170,10 @@ describe("GamesList", () => {
   describe("vetoes", () => {
     const makeVetoes = (over: Partial<VetoesState> = {}): VetoesState => ({
       all: { d1: new Set(["100", "400"]) },
-      saving: false,
-      error: null,
+      saving: new Set<number>(),
+      error: {},
+      isSaving: () => false,
+      errorFor: () => null,
       veto: vi.fn(),
       unveto: vi.fn(),
       ...over,
@@ -205,13 +207,15 @@ describe("GamesList", () => {
       expect(vetoes.unveto).toHaveBeenCalledWith(400);
     });
 
-    it("disables the buttons while saving", () => {
+    it("disables only the game being saved", () => {
       const { getByRole } = renderList({
-        vetoes: makeVetoes({ saving: true }),
+        vetoes: makeVetoes({ isSaving: (id) => id === 200 }),
         discordId: "d1",
       });
 
       expect(getByRole("button", { name: "Veto: Chess" })).toBeDisabled();
+      expect(getByRole("button", { name: "Veto: Root" })).toBeEnabled();
+      expect(getByRole("button", { name: "Veto: Nim" })).toBeEnabled();
     });
 
     it("hides the button for games without a numeric id", () => {
@@ -232,15 +236,19 @@ describe("GamesList", () => {
       expect(b.queryByRole("button", { name: /^Veto:/ })).toBeNull();
     });
 
-    it("shows the error once", () => {
-      const { getAllByRole } = renderList({
-        vetoes: makeVetoes({ error: "Nope" }),
+    it("shows an error under the card that failed", () => {
+      const { getByRole, getAllByRole } = renderList({
+        vetoes: makeVetoes({ errorFor: (id) => (id === 200 ? "Nope" : null) }),
         discordId: "d1",
       });
 
       const alerts = getAllByRole("alert");
       expect(alerts).toHaveLength(1);
       expect(alerts[0]).toHaveTextContent("Nope");
+      const card = getByRole("button", { name: "Veto: Chess" }).closest(
+        ".tray-card",
+      );
+      expect(card).toContainElement(alerts[0]);
     });
   });
 });

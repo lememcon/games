@@ -133,4 +133,14 @@ describe("GameRow", () => {
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toBeDisabled();
   });
+
+  it("shows the veto error beside the button", () => {
+    const { getByRole } = renderRow({ onVeto: () => {}, vetoError: "Nope" });
+    expect(getByRole("alert")).toHaveTextContent("Nope");
+  });
+
+  it("shows no alert without a veto error", () => {
+    const { queryByRole } = renderRow({ onVeto: () => {} });
+    expect(queryByRole("alert")).toBeNull();
+  });
 });

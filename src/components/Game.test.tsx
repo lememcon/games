@@ -269,8 +269,10 @@ describe("Game", () => {
   describe("veto switch", () => {
     const vetoes = (all = {}, extra = {}) => ({
       all,
-      saving: false,
-      error: null,
+      saving: new Set<number>(),
+      error: {},
+      isSaving: vi.fn(() => false),
+      errorFor: vi.fn((): string | null => null),
       veto: vi.fn(),
       unveto: vi.fn(),
       ...extra,
@@ -301,6 +303,21 @@ describe("Game", () => {
       expect(toggle).toBeChecked();
       await userEvent.click(toggle);
       expect(state.unveto).toHaveBeenCalledWith(11);
+    });
+
+    it("locks the switch and shows the error for this game only", () => {
+      const state = vetoes(
+        {},
+        {
+          isSaving: vi.fn((id: number) => id === 11),
+          errorFor: vi.fn((id: number) => (id === 11 ? "Nope" : null)),
+        },
+      );
+      const { getByRole } = view(state);
+      expect(getByRole("switch", { name: "Not for me" })).toBeDisabled();
+      expect(getByRole("alert")).toHaveTextContent("Nope");
+      expect(state.isSaving).toHaveBeenCalledWith(11);
+      expect(state.errorFor).toHaveBeenCalledWith(11);
     });
 
     it("is hidden without the vetoes prop", () => {

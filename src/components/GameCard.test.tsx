@@ -149,4 +149,14 @@ describe("GameCard", () => {
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toBeDisabled();
   });
+
+  it("shows the veto error beside the button", () => {
+    const { getByRole } = renderCard({ onVeto: () => {}, vetoError: "Nope" });
+    expect(getByRole("alert")).toHaveTextContent("Nope");
+  });
+
+  it("shows no alert without a veto error", () => {
+    const { queryByRole } = renderCard({ onVeto: () => {} });
+    expect(queryByRole("alert")).toBeNull();
+  });
 });

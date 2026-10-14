@@ -59,7 +59,7 @@ const state = vi.hoisted(() => ({
   useVetoes: vi.fn(),
   veto: vi.fn(),
   unveto: vi.fn(),
-  vetoError: null as string | null,
+  vetoErrors: {} as Record<number, string>,
   playedError: null as string | null,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
@@ -105,8 +105,10 @@ vi.mock("@/hooks/useVetoes", () => ({
     state.useVetoes(...args);
     return {
       all: state.vetoes,
-      saving: false,
-      error: state.vetoError,
+      saving: new Set<number>(),
+      error: state.vetoErrors,
+      isSaving: () => false,
+      errorFor: (id: number) => state.vetoErrors[id] ?? null,
       veto: state.veto,
       unveto: state.unveto,
     };
@@ -149,7 +151,7 @@ describe("Scoreboard", () => {
     state.vetoes = {};
     state.veto = vi.fn();
     state.unveto = vi.fn();
-    state.vetoError = null;
+    state.vetoErrors = {};
     state.playedError = null;
     state.unplayed = [];
   });
@@ -987,7 +989,7 @@ describe("Scoreboard", () => {
 
     it("shows a veto error", () => {
       at("/2026");
-      state.vetoError = "Something went wrong";
+      state.vetoErrors = { 11: "Something went wrong" };
       const { getByRole } = render();
 
       expect(getByRole("alert")).toHaveTextContent("Something went wrong");
