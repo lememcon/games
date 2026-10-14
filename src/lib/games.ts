@@ -1,5 +1,6 @@
 import { ascend, descend, keys, prop, sort, values } from "ramda";
 
+import type { PlayedMap } from "@/lib/played";
 import type {
   Bounds,
   Data,
@@ -132,8 +133,8 @@ export const computeMaxScores = (
   return { individualMax, selectedMax };
 };
 
-// Play counts by player name, then bgg id; absent means zero.
-export type PlayerCounts = Record<string, Record<string, number>>;
+// Played games by player name, then bgg id.
+export type PlayerPlayed = Record<string, PlayedMap>;
 
 // Members' own player count ranges by player name, then bgg id.
 export type PlayerRanges = Record<string, Record<string, Bounds>>;
@@ -247,7 +248,7 @@ export const leastHappyPlayer = (game: SelectedGame): string | null => {
 };
 
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
-// (images/gameData/playerCounts injected) so it can be tested without Vite or
+// (images/gameData/playerPlayed injected) so it can be tested without Vite or
 // a rendered tree.
 interface BuildSelectedGamesArgs {
   byPlayer: Record<string, PlayerGameScore[]>;
@@ -255,7 +256,7 @@ interface BuildSelectedGamesArgs {
   gameData: GamesData;
   images: Record<string, string>;
   hidePlayed: boolean;
-  playerCounts: PlayerCounts;
+  playerPlayed: PlayerPlayed;
   // Defaults to none.
   playerRanges?: PlayerRanges;
   // Defaults to none.
@@ -270,7 +271,7 @@ export const buildSelectedGames = ({
   gameData,
   images,
   hidePlayed,
-  playerCounts,
+  playerPlayed,
   playerRanges = {},
   playerVetoes = {},
   sortMode = "total",
@@ -280,20 +281,14 @@ export const buildSelectedGames = ({
 
   const selectedPlayers = players.length > 0 ? players : keys(byPlayer);
 
-  // Who among the selected players has played a game this year, with counts.
-  const playedByFor = (id: string): Record<string, number> => {
-    const playedBy: Record<string, number> = {};
-    for (const player of selectedPlayers) {
-      const count = playerCounts[player]?.[id] ?? 0;
-      if (count > 0) playedBy[player] = count;
-    }
-    return playedBy;
-  };
+  // Who among the selected players has played a game this year.
+  const playedByFor = (id: string): string[] =>
+    selectedPlayers.filter((player) => id in (playerPlayed[player] ?? {}));
 
   // Whether a not-yet-seen game should be left out of the list entirely.
   const isExcluded = (
     id: string,
-    playedBy: Record<string, number>,
+    playedBy: string[],
     min: number,
     max: number,
   ): boolean => {
@@ -302,7 +297,7 @@ export const buildSelectedGames = ({
     // selected that falls back to everyone, and one veto must not hide the game
     // from the unfiltered list.
     if (players.some((p) => playerVetoes[p]?.has(id))) return true;
-    if (hidePlayed && Object.keys(playedBy).length > 0) return true;
+    if (hidePlayed && playedBy.length > 0) return true;
     if (numPlayers > 1 && (numPlayers < min || numPlayers > max)) return true;
     // A member in the group who narrowed this game's range to exclude the
     // group's size, whether or not they scored the game.

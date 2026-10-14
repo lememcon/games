@@ -272,7 +272,7 @@ describe("getProfile", () => {
       image: null,
       linkedPlayers: [],
       stats: null,
-      totalPlays: 0,
+      gamesPlayed: 0,
     });
   });
 
@@ -287,9 +287,9 @@ describe("getProfile", () => {
     );
     expect(await store.getProfile(ALEX)).toMatchObject({
       stats: null,
-      totalPlays: 2,
+      gamesPlayed: 2,
     });
-    expect(await store.getProfile(JO)).toMatchObject({ totalPlays: 3 });
+    expect(await store.getProfile(JO)).toMatchObject({ gamesPlayed: 3 });
   });
 
   it("reports zero plays when only score rows exist", async () => {
@@ -298,7 +298,7 @@ describe("getProfile", () => {
       row({ player: "bob", rank: 2 }),
       row({ bgg_id: 2, game: "Azul", player: "amy", rank: 1 }),
     ]);
-    expect(await store.getProfile(ALEX)).toMatchObject({ totalPlays: 0 });
+    expect(await store.getProfile(ALEX)).toMatchObject({ gamesPlayed: 0 });
   });
 
   it("prefers the display name", async () => {
@@ -351,7 +351,7 @@ describe("getProfile", () => {
           },
         ],
       },
-      totalPlays: 0,
+      gamesPlayed: 0,
     });
   });
 

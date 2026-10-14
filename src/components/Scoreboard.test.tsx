@@ -42,14 +42,14 @@ const state = vi.hoisted(() => ({
   games: {} as { games: GamesData; loading: boolean; error: boolean },
   useData: vi.fn(),
   played: {} as Record<string, number>,
-  // The member's own counts as the hook returns them; null means not loaded.
+  // The member's own played games as the hook returns them; null means not loaded.
   own: {} as Record<string, number> | null,
   allPlayed: {} as Record<string, Record<string, number>>,
-  useAllPlayedCounts: vi.fn(),
+  useAllPlayed: vi.fn(),
   markPlayed: vi.fn(),
   togglePlayed: vi.fn(),
   markConfirmed: vi.fn(),
-  usePlayedCounts: vi.fn(),
+  usePlayed: vi.fn(),
   // Everyone's own player count ranges, by discord id then bgg id.
   ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
   savePlayerRange: vi.fn(),
@@ -76,9 +76,9 @@ vi.mock("@/hooks/useUnplayedGames", () => ({
 }));
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useGames", () => ({ default: () => state.games }));
-vi.mock("@/hooks/usePlayedCounts", () => ({
+vi.mock("@/hooks/usePlayed", () => ({
   default: (year: string) => {
-    state.usePlayedCounts(year);
+    state.usePlayed(year);
     return [
       (id: string) => (state.played[id] ?? 0) > 0,
       state.togglePlayed,
@@ -112,9 +112,9 @@ vi.mock("@/hooks/useVetoes", () => ({
   },
 }));
 
-vi.mock("@/hooks/useAllPlayedCounts", () => ({
-  useMarkPlayedCounts: (year: string) => {
-    state.useAllPlayedCounts(year);
+vi.mock("@/hooks/useAllPlayed", () => ({
+  useMarkPlayed: (year: string) => {
+    state.useAllPlayed(year);
     return [state.allPlayed, state.markPlayed];
   },
 }));
@@ -159,11 +159,11 @@ describe("Scoreboard", () => {
     window.history.pushState({}, "", "/");
   });
 
-  it("gives the played counts the year only once the years have loaded", () => {
+  it("gives the played games the year only once the years have loaded", () => {
     at("/2026");
     state.years = { years: [], loading: true, error: false };
     const { rerender } = render();
-    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
+    expect(state.usePlayed).toHaveBeenLastCalledWith("");
 
     state.years = { years: ["2025", "2026"], loading: false, error: false };
     rerender(
@@ -171,7 +171,7 @@ describe("Scoreboard", () => {
         <Scoreboard user={member} />
       </MantineProvider>,
     );
-    expect(state.usePlayedCounts).toHaveBeenLastCalledWith("2026");
+    expect(state.usePlayed).toHaveBeenLastCalledWith("2026");
   });
 
   it("renders the game detail on /:year/games/:id", () => {
@@ -902,9 +902,9 @@ describe("Scoreboard", () => {
       localStorage.setItem("hide_played", "true");
     });
 
-    it("fetches everyone's counts for the viewed year", () => {
+    it("fetches everyone's played games for the viewed year", () => {
       render();
-      expect(state.useAllPlayedCounts).toHaveBeenLastCalledWith("2026");
+      expect(state.useAllPlayed).toHaveBeenLastCalledWith("2026");
     });
 
     it("hides a game another selected player has played", () => {
@@ -923,7 +923,7 @@ describe("Scoreboard", () => {
       expect(getByText("Belfort")).toBeInTheDocument();
     });
 
-    it("lets the member's own edits override their fetched counts", () => {
+    it("lets the member's own edits override their fetched played games", () => {
       state.allPlayed = { "1": { "11": 1 } };
       state.data = {
         ...linked,
@@ -1078,7 +1078,7 @@ describe("Scoreboard", () => {
       );
       expect(state.useData).not.toHaveBeenCalledWith("1999");
       expect(state.useData).toHaveBeenLastCalledWith(null);
-      expect(state.usePlayedCounts).toHaveBeenLastCalledWith("");
+      expect(state.usePlayed).toHaveBeenLastCalledWith("");
       expect(localStorage.getItem("year")).toBeNull();
       expect(path()).toBe("/1999");
     });

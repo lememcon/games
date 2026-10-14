@@ -327,7 +327,7 @@ export interface Profile {
   /** Null when no player is linked. */
   stats: ProfileStats | null;
   /** Distinct games this member marked played, across all years. */
-  totalPlays: number;
+  gamesPlayed: number;
 }
 
 /** All SQL for display names and profiles lives behind this interface (server/db/profileStore.ts). */

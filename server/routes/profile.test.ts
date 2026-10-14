@@ -45,7 +45,7 @@ const profile: Profile = {
       },
     ],
   },
-  totalPlays: 12,
+  gamesPlayed: 12,
 };
 
 function makeApp(members: string[] = [KEL]) {
@@ -243,11 +243,11 @@ describe("GET /api/profiles/:discordId", () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual([
       "discordId",
+      "gamesPlayed",
       "image",
       "linkedPlayers",
       "name",
       "stats",
-      "totalPlays",
     ]);
     expect(body).toEqual(profile);
   });

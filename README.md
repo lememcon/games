@@ -112,7 +112,7 @@ src/
   App.tsx            Routes, theme, and top-level state wiring
   main.tsx           React entry point
   components/        UI components (table, rows, filters, detail views, ...)
-  hooks/             useData, useLocalState, usePlayedCounts
+  hooks/             useData, useLocalState, usePlayed
   lib/games.ts       Pure games-list aggregation and score math
   assets/            games.json, cover images, styles, logo
   test/              Vitest setup and shared render helpers

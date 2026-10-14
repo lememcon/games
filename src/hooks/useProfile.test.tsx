@@ -10,7 +10,7 @@ const profile: Profile = {
   image: null,
   linkedPlayers: [],
   stats: null,
-  totalPlays: 0,
+  gamesPlayed: 0,
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });

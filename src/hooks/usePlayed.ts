@@ -3,9 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { toPlayedMap, type PlayedMap } from "@/lib/played";
 import { clearLegacyCounts, readLegacyPlayed } from "@/lib/playedMigration";
-import type { PlayedCountsResponse } from "@/types";
-
-type Counts = PlayedMap;
+import type { PlayedResponse } from "@/types";
 
 // Everything one year's load and edits share. A new one replaces it when the
 // year changes, and the old one stops acting (`cancelled`).
@@ -15,16 +13,16 @@ interface Session {
   // Edits are ignored until the server's played games (and any import) are in.
   ready: boolean;
   // What the member sees; toggles compute from it so rapid clicks flip it.
-  desired: Counts;
+  desired: PlayedMap;
   // The last value the server acknowledged, for rolling back.
-  confirmed: Counts;
+  confirmed: PlayedMap;
   // At most one write per game is in flight.
   inFlight: Set<string>;
 }
 
-const withPlayed = (counts: Counts, id: string, played: boolean): Counts => {
-  if (played) return { ...counts, [id]: 1 };
-  const { [id]: _removed, ...rest } = counts;
+const withPlayed = (map: PlayedMap, id: string, played: boolean): PlayedMap => {
+  if (played) return { ...map, [id]: 1 };
+  const { [id]: _removed, ...rest } = map;
   return rest;
 };
 
@@ -34,7 +32,7 @@ function flush(
   s: Session,
   id: string,
   fetchImpl: typeof fetch,
-  onRollback: (counts: Counts) => void,
+  onRollback: (played: PlayedMap) => void,
 ) {
   const want = id in s.desired;
   if (s.inFlight.has(id) || want === id in s.confirmed) return;
@@ -65,19 +63,22 @@ function flush(
 
 // The signed-in member's played games for a year, kept on the server. Edits show
 // at once and are written as absolute flags, one request per game at a time.
-const usePlayedCounts = (
+const usePlayed = (
   year: string,
   fetchImpl: typeof fetch = fetch,
 ): [
   (id: string) => boolean,
   (id: string) => void,
-  Counts | null,
+  PlayedMap | null,
   (id: string) => void,
   string | null,
 ] => {
-  const [shown, setShown] = useState<{ year: string; counts: Counts | null }>({
+  const [shown, setShown] = useState<{
+    year: string;
+    played: PlayedMap | null;
+  }>({
     year,
-    counts: null,
+    played: null,
   });
   const [errorState, setErrorState] = useState<{
     year: string;
@@ -104,14 +105,14 @@ const usePlayedCounts = (
     session.current = s;
 
     const load = async () => {
-      let counts: Counts;
+      let played: PlayedMap;
       try {
-        const body = await apiFetch<PlayedCountsResponse>(
+        const body = await apiFetch<PlayedResponse>(
           `/me/played?year=${year}`,
           {},
           fetchImpl,
         );
-        counts = toPlayedMap(body.played);
+        played = toPlayedMap(body.played);
       } catch (e) {
         // Not signed in, not approved or an unknown year is expected: nothing
         // played, no edits, no message. Anything else is a failure worth showing.
@@ -128,12 +129,12 @@ const usePlayedCounts = (
       const legacy = readLegacyPlayed(year);
       if (legacy) {
         try {
-          const body = await apiFetch<PlayedCountsResponse>(
+          const body = await apiFetch<PlayedResponse>(
             `/me/played/${year}/import`,
             { method: "POST", body: { games: legacy } },
             fetchImpl,
           );
-          counts = toPlayedMap(body.played);
+          played = toPlayedMap(body.played);
           if (s.cancelled) return;
           clearLegacyCounts(year);
         } catch (e) {
@@ -144,11 +145,11 @@ const usePlayedCounts = (
         }
       }
 
-      s.confirmed = counts;
-      s.desired = counts;
+      s.confirmed = played;
+      s.desired = played;
       s.ready = true;
       setErrorState(null);
-      setShown({ year, counts });
+      setShown({ year, played });
     };
     void load();
 
@@ -163,9 +164,9 @@ const usePlayedCounts = (
       if (!s?.ready) return;
       s.desired = withPlayed(s.desired, id, !(id in s.desired));
       setErrorState(null);
-      setShown({ year: s.year, counts: s.desired });
-      flush(s, id, fetchImpl, (counts) => {
-        setShown({ year: s.year, counts });
+      setShown({ year: s.year, played: s.desired });
+      flush(s, id, fetchImpl, (played) => {
+        setShown({ year: s.year, played });
         setErrorState({ year: s.year, message: "Couldn't save. Try again." });
       });
     },
@@ -178,16 +179,16 @@ const usePlayedCounts = (
     if (!s?.ready) return;
     s.desired = withPlayed(s.desired, id, true);
     s.confirmed = withPlayed(s.confirmed, id, true);
-    setShown({ year: s.year, counts: s.desired });
+    setShown({ year: s.year, played: s.desired });
   }, []);
 
   // Null until the played games for this year are in; {} once loaded and empty.
-  const counts = shown.year === year ? shown.counts : null;
-  const isPlayed = useCallback((id: string) => !!counts?.[id], [counts]);
+  const played = shown.year === year ? shown.played : null;
+  const isPlayed = useCallback((id: string) => !!played?.[id], [played]);
 
   const error = errorState?.year === year ? errorState.message : null;
 
-  return [isPlayed, toggle, counts, markConfirmed, error];
+  return [isPlayed, toggle, played, markConfirmed, error];
 };
 
-export default usePlayedCounts;
+export default usePlayed;

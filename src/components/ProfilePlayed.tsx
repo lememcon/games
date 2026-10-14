@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 
 import useData from "@/hooks/useData";
-import usePlayedCounts from "@/hooks/usePlayedCounts";
+import usePlayed from "@/hooks/usePlayed";
 import useYears from "@/hooks/useYears";
 import {
   addOptions,
@@ -28,10 +28,10 @@ const ProfilePlayed = () => {
   const [picked, setPicked] = useState<string | null>(null);
   const year = chosen || defaultYear(years, new Date());
   const data = useData(year || null);
-  const [, toggle, counts, , playedError] = usePlayedCounts(year);
+  const [, toggle, played, , playedError] = usePlayed(year);
 
   const names = gameNamesById(data.scores);
-  const loaded = counts !== null;
+  const loaded = played !== null;
   const canAdd = loaded && !data.loading && !data.error;
 
   const add = () => {
@@ -66,11 +66,11 @@ const ProfilePlayed = () => {
           />
           {!loaded ? (
             <Text size="sm">Loading played games...</Text>
-          ) : Object.keys(counts).length === 0 ? (
+          ) : Object.keys(played).length === 0 ? (
             <Text size="sm">You haven&apos;t marked any games this year.</Text>
           ) : (
             <Stack gap={4}>
-              {playedGames(counts, names).map((g) => (
+              {playedGames(played, names).map((g) => (
                 <Group key={g.id} justify="space-between" wrap="nowrap">
                   <Text>{g.name}</Text>
                   <Button
@@ -97,7 +97,7 @@ const ProfilePlayed = () => {
               aria-label="Game to add"
               placeholder="Search games..."
               searchable
-              data={addOptions(names, counts ?? {})}
+              data={addOptions(names, played ?? {})}
               value={picked}
               onChange={setPicked}
               disabled={!canAdd}

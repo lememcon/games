@@ -109,16 +109,16 @@ const Loaded = ({
       gameData: games,
       images,
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     }).slice(0, RECAP_TOP);
-    const { [year]: counts, ...earlierCounts } = played.byYear;
+    const { [year]: yearPlayed, ...earlierPlayed } = played.byYear;
     return buildRecap({
       top,
-      counts,
-      earlierCounts,
+      played: yearPlayed,
+      earlierPlayed,
       scores: data.scores,
       discordId,
-      allCounts: played.allCounts,
+      allPlayed: played.allPlayed,
       games,
     });
   }, [played, data, games, year, discordId]);

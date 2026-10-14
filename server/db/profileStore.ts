@@ -142,7 +142,7 @@ export function createProfileStore(
           )
         : null;
 
-      const [{ plays: totalPlays }] = await db
+      const [{ plays: gamesPlayed }] = await db
         .select({
           plays: sql<number>`count(distinct ${playedCount.bggId})::int`,
         })
@@ -157,7 +157,7 @@ export function createProfileStore(
           .map((p) => p.name)
           .sort((a, b) => a.localeCompare(b)),
         stats: toProfileStats(scores),
-        totalPlays,
+        gamesPlayed,
       };
     },
   };

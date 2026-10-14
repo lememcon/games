@@ -23,6 +23,7 @@ import {
   validateOverride,
   vetoesByMember,
   worstRank,
+  type PlayerPlayed,
   type PlayerRanges,
 } from "@/lib/games";
 import type {
@@ -147,7 +148,7 @@ describe("player count bounds", () => {
         gameData: { 100: root },
         images: {},
         hidePlayed: false,
-        playerCounts: {},
+        playerPlayed: {},
       }).map((g) => g.name);
     expect(names(3)).toEqual([]);
     expect(names(4)).toEqual(["Root"]);
@@ -175,7 +176,7 @@ describe("player count bounds", () => {
         gameData: meta,
         images: {},
         hidePlayed: false,
-        playerCounts: {},
+        playerPlayed: {},
       })
         .flatMap((s) => s.groups)
         .flatMap((g) => g.games.map((x) => x.name));
@@ -304,7 +305,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(games.map((g) => [g.name, g.score])).toEqual([
@@ -327,7 +328,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.score).toBe(50);
@@ -341,7 +342,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.players).toEqual({
@@ -368,7 +369,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.players.alice.discordId).toBe("7");
@@ -393,7 +394,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.players.alice.discordImage).toBe("https://cdn.example/a.png");
@@ -407,7 +408,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(games).toEqual([]);
@@ -420,7 +421,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(games.map((g) => g.name)).toEqual(["Root"]);
@@ -430,7 +431,7 @@ describe("buildSelectedGames", () => {
   describe("hidePlayed", () => {
     const run = (
       players: string[],
-      playerCounts: Record<string, Record<string, number>>,
+      playerPlayed: PlayerPlayed,
       hidePlayed = true,
     ) =>
       buildSelectedGames({
@@ -439,7 +440,7 @@ describe("buildSelectedGames", () => {
         gameData,
         images: {},
         hidePlayed,
-        playerCounts,
+        playerPlayed,
       });
 
     it("hides a game any selected player has played", () => {
@@ -451,9 +452,9 @@ describe("buildSelectedGames", () => {
     });
 
     it("ignores plays by players who are not selected", () => {
-      const games = run(["alice"], { bob: { "100": 4 } });
+      const games = run(["alice"], { bob: { "100": 1 } });
       expect(games.map((g) => g.name)).toEqual(["Root", "Chess"]);
-      expect(games[0].playedBy).toEqual({});
+      expect(games[0].playedBy).toEqual([]);
     });
 
     it("counts every player when none are selected", () => {
@@ -461,7 +462,7 @@ describe("buildSelectedGames", () => {
       expect(games.map((g) => g.name)).toEqual(["Chess"]);
     });
 
-    it("never hides for players without counts", () => {
+    it("never hides for players without played games", () => {
       expect(run([], {}).map((g) => g.name)).toEqual(["Root", "Chess"]);
     });
 
@@ -470,14 +471,10 @@ describe("buildSelectedGames", () => {
       expect(games.map((g) => g.name)).toEqual(["Root", "Chess"]);
     });
 
-    it("lists who played each game, with counts above zero", () => {
-      const games = run(
-        [],
-        { alice: { "100": 3, "200": 0 }, bob: { "100": 1 } },
-        false,
-      );
-      expect(games[0].playedBy).toEqual({ alice: 3, bob: 1 });
-      expect(games[1].playedBy).toEqual({});
+    it("lists who played each game, in selected-player order", () => {
+      const games = run([], { alice: { "100": 1 }, bob: { "100": 1 } }, false);
+      expect(games[0].playedBy).toEqual(["alice", "bob"]);
+      expect(games[1].playedBy).toEqual([]);
     });
   });
 
@@ -494,7 +491,7 @@ describe("buildSelectedGames", () => {
       gameData,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(games).toEqual([]);
@@ -510,7 +507,7 @@ describe("buildSelectedGames", () => {
       },
       images,
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.image).toBe("root.jpg");
@@ -525,7 +522,7 @@ describe("buildSelectedGames", () => {
       },
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.image).toBe("https://example.com/root.jpg");
@@ -538,7 +535,7 @@ describe("buildSelectedGames", () => {
       gameData: { 100: { image: "custom", ext: ".jpg" } },
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
     });
 
     expect(root.image).toBeUndefined();
@@ -573,8 +570,8 @@ describe("playerCountsByName", () => {
     };
 
     expect(
-      playerCountsByName(linked, { d1: { "100": 2 }, d2: { "100": 9 } }),
-    ).toEqual({ alice: { "100": 2 } });
+      playerCountsByName(linked, { d1: { "100": 1 }, d2: { "100": 1 } }),
+    ).toEqual({ alice: { "100": 1 } });
   });
 });
 
@@ -670,7 +667,7 @@ describe("member player count ranges", () => {
       gameData: meta,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerRanges,
     }).map((g) => g.name);
 
@@ -695,7 +692,7 @@ describe("member player count ranges", () => {
       gameData: meta,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerRanges: garret4,
     }).map((g) => g.name);
     expect(result).toEqual(["Chess"]);
@@ -723,7 +720,7 @@ describe("member player count ranges", () => {
         gameData: small,
         images: {},
         hidePlayed: false,
-        playerCounts: {},
+        playerPlayed: {},
         playerRanges: garret4,
       }),
     ).toEqual([]);
@@ -750,7 +747,7 @@ describe("member player count ranges", () => {
       gameData: meta,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerRanges: garret4,
     });
     // Root fits the other side only, but a split needs a game for each side.
@@ -770,7 +767,7 @@ describe("member player count ranges", () => {
       gameData: meta,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerRanges: garret4,
     });
     const withGarret = best.groups.find((g) => g.players.includes("Garret"))!;
@@ -790,7 +787,7 @@ describe("member player count ranges", () => {
       gameData: meta,
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerRanges: garret4,
     });
     expect(splits.length).toBeGreaterThan(0);
@@ -848,7 +845,7 @@ describe("suggestSplits", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       ...extra,
     });
   const all = (score: number) =>
@@ -961,7 +958,7 @@ describe("suggestSplits", () => {
   it("hides a played game only in the groups holding a player who played it", () => {
     const splits = run(
       { X: all(50), Y: all(10), Z: all(5) },
-      { hidePlayed: true, playerCounts: { Kelsin: { "1": 1 } } },
+      { hidePlayed: true, playerPlayed: { Kelsin: { "1": 1 } } },
     );
     const groups = splits.flatMap((s) => s.groups);
     const names = (g: (typeof groups)[number]) => g.games.map((x) => x.name);
@@ -1040,7 +1037,7 @@ const mk = (
       { name: player, rank, score },
     ]),
   ),
-  playedBy: {},
+  playedBy: [],
 });
 
 const names = (games: SelectedGame[]) => games.map((g) => g.name);
@@ -1247,7 +1244,7 @@ describe("buildSelectedGames sort modes", () => {
         gameData: {},
         images: {},
         hidePlayed: false,
-        playerCounts: {},
+        playerPlayed: {},
         sortMode,
       }),
     );
@@ -1272,7 +1269,7 @@ describe("buildSelectedGames sort modes", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       sortMode: "lowest",
     });
     // Nobody scored with cara, so the group's rules would exclude nothing here.
@@ -1304,7 +1301,7 @@ describe("suggestSplits sort modes", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       sortMode,
     });
 
@@ -1448,7 +1445,7 @@ describe("member vetoes", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerVetoes,
       ...extra,
     })
@@ -1480,7 +1477,7 @@ describe("member vetoes", () => {
     expect(
       names(["Ann", "Bo"], ann, {
         hidePlayed: true,
-        playerCounts: { Bo: { "2": 1 } },
+        playerPlayed: { Bo: { "2": 1 } },
       }),
     ).toEqual([]);
     expect(
@@ -1498,7 +1495,7 @@ describe("member vetoes", () => {
       gameData: {},
       images: {},
       hidePlayed: false,
-      playerCounts: {},
+      playerPlayed: {},
       playerVetoes: ann,
     });
     expect(splits.length).toBeGreaterThan(0);

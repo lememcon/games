@@ -1,4 +1,5 @@
 import { gameLabel } from "@/lib/games";
+import type { PlayedMap } from "@/lib/played";
 import type {
   GamesData,
   PlayerGameScore,
@@ -15,51 +16,46 @@ export const RECAP_TOP = 10;
 const TOP_PICKS_SHOWN = 3;
 const ONLY_YOU_SHOWN = 5;
 
-type Counts = Record<string, number>;
-
 export interface BuildRecapArgs {
   // The first RECAP_TOP of buildSelectedGames for the year, best first.
   top: SelectedGame[];
-  // The member's counts that year, by bgg id.
-  counts: Counts;
-  // The member's counts for each earlier year, by year.
-  earlierCounts: Record<string, Counts>;
+  // The member's played games that year, by bgg id.
+  played: PlayedMap;
+  // The member's played games for each earlier year, by year.
+  earlierPlayed: Record<string, PlayedMap>;
   // The year's score rows (member rows by discord_id, game names by bgg_id).
   scores: PlayerGameScore[];
   discordId: string;
-  // Every member's counts that year: discord id, then bgg id.
-  allCounts: Record<string, Counts>;
+  // Every member's played games that year: discord id, then bgg id.
+  allPlayed: Record<string, PlayedMap>;
   // The game catalog; names new picks that have no score row.
   games: GamesData;
 }
 
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-const playedIds = (counts: Counts): string[] =>
-  Object.keys(counts).filter((id) => counts[id] > 0);
-
-const hasData = (counts: Counts): boolean => Object.keys(counts).length > 0;
+const hasData = (played: PlayedMap): boolean => Object.keys(played).length > 0;
 
 const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 
 export const buildRecap = ({
   top,
-  counts,
-  earlierCounts,
+  played,
+  earlierPlayed,
   scores,
   discordId,
-  allCounts,
+  allPlayed,
   games,
 }: BuildRecapArgs): Recap => {
-  const played = playedIds(counts);
+  const ids = Object.keys(played);
 
   const unplayedTop = top
     .map((g, i) => ({ bggId: Number(g.id), game: g.name, rank: i + 1 }))
-    .filter((g) => !((counts[g.bggId] ?? 0) > 0));
+    .filter((g) => !(g.bggId in played));
 
   // Years with data, nearest first.
-  const earlier = Object.keys(earlierCounts)
-    .filter((year) => hasData(earlierCounts[year]))
+  const earlier = Object.keys(earlierPlayed)
+    .filter((year) => hasData(earlierPlayed[year]))
     .sort((a, b) => Number(b) - Number(a));
 
   // A game name per bgg id; the empty string counts as unnamed.
@@ -75,8 +71,8 @@ export const buildRecap = ({
   const newPicks =
     earlier.length === 0
       ? null
-      : played
-          .filter((id) => earlier.every((y) => !(earlierCounts[y][id] > 0)))
+      : ids
+          .filter((id) => earlier.every((y) => !(id in earlierPlayed[y])))
           .map(
             (id) =>
               named(id) ?? { bggId: Number(id), game: gameLabel(games, id) },
@@ -84,28 +80,28 @@ export const buildRecap = ({
           .sort((a, b) => byText(a.game, b.game));
 
   return {
-    playedGames: played.length,
+    playedGames: ids.length,
     unplayedTop,
     newPicks,
     facts: buildFacts({
-      played,
+      ids,
       earlier,
-      earlierCounts,
+      earlierPlayed,
       scores,
       discordId,
-      allCounts,
+      allPlayed,
       named,
     }),
   };
 };
 
 interface FactsArgs {
-  played: string[];
+  ids: string[];
   earlier: string[];
-  earlierCounts: Record<string, Counts>;
+  earlierPlayed: Record<string, PlayedMap>;
   scores: PlayerGameScore[];
   discordId: string;
-  allCounts: Record<string, Counts>;
+  allPlayed: Record<string, PlayedMap>;
   named: (id: string) => RecapGame | null;
 }
 
@@ -117,16 +113,16 @@ const toTop = (row: PlayerGameScore): TopGame => ({
 });
 
 const buildFacts = ({
-  played,
+  ids,
   earlier,
-  earlierCounts,
+  earlierPlayed,
   scores,
   discordId,
-  allCounts,
+  allPlayed,
   named,
 }: FactsArgs): RecapFacts => {
-  const memberTotals = Object.values(allCounts)
-    .map((c) => playedIds(c).length)
+  const memberTotals = Object.values(allPlayed)
+    .map((c) => Object.keys(c).length)
     .filter((total) => total > 0);
   const groupAvgGames =
     memberTotals.length === 0 ? null : sum(memberTotals) / memberTotals.length;
@@ -144,8 +140,8 @@ const buildFacts = ({
     )[0] ?? null;
 
   const groupTotals = new Map<string, number>();
-  for (const c of Object.values(allCounts)) {
-    for (const id of playedIds(c)) {
+  for (const c of Object.values(allPlayed)) {
+    for (const id of Object.keys(c)) {
       groupTotals.set(id, (groupTotals.get(id) ?? 0) + 1);
     }
   }
@@ -158,9 +154,9 @@ const buildFacts = ({
       .sort((a, b) => b.members - a.members || byText(a.game, b.game))[0] ??
     null;
 
-  const others = Object.entries(allCounts).filter(([id]) => id !== discordId);
-  const only = played
-    .filter((id) => others.every(([, c]) => !(c[id] > 0)))
+  const others = Object.entries(allPlayed).filter(([id]) => id !== discordId);
+  const only = ids
+    .filter((id) => others.every(([, c]) => !(id in c)))
     .map(named)
     .filter((g): g is RecapGame => g !== null)
     .sort((a, b) => byText(a.game, b.game));
@@ -180,8 +176,8 @@ const buildFacts = ({
         ? null
         : {
             year: Number(previous),
-            gamesPlayed: played.length,
-            delta: played.length - playedIds(earlierCounts[previous]).length,
+            gamesPlayed: ids.length,
+            delta: ids.length - Object.keys(earlierPlayed[previous]).length,
           },
   };
 };

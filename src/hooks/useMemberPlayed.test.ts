@@ -28,7 +28,7 @@ describe("useMemberPlayed", () => {
     expect(result.current).toEqual({
       status: "ready",
       byYear: { "2025": { "1": 1 }, "2024": {} },
-      allCounts: { me: { "1": 1 }, other: { "2": 1 } },
+      allPlayed: { me: { "1": 1 }, other: { "2": 1 } },
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
