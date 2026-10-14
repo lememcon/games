@@ -93,7 +93,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   const sortMode = parseSortMode(storedSort);
   const [isPlayed, togglePlayed, ownPlayed, markConfirmed, playedError] =
     usePlayed(year ?? "");
-  const [allPlayed, markPlayed] = useMarkPlayed(year ?? "");
+  const [allPlayed, markPlayed, allPlayedError] = useMarkPlayed(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
   // A dialog opened for one year must not confirm against another.
   const [markingYear, setMarkingYear] = useState(year);
@@ -472,6 +472,11 @@ function Scoreboard({ user }: ScoreboardProps) {
               {playedError && (
                 <Text c="red" size="sm" role="alert">
                   {playedError}
+                </Text>
+              )}
+              {allPlayedError && (
+                <Text c="red" size="sm" role="alert">
+                  {allPlayedError}
                 </Text>
               )}
               <div
