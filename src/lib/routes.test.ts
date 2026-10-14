@@ -6,6 +6,7 @@ import {
   isYear,
   parseFilterSearch,
   parseScoreboardPath,
+  playerPath,
   recapPath,
   sharePath,
   yearPath,
@@ -226,5 +227,12 @@ describe("recapPath", () => {
   it("builds a member's recap path", () => {
     expect(recapPath("123", 2025)).toBe("/players/123/recap/2025");
     expect(recapPath("a b", "2025")).toBe("/players/a%20b/recap/2025");
+  });
+});
+
+describe("playerPath", () => {
+  it("builds a member's profile path", () => {
+    expect(playerPath("123")).toBe("/players/123");
+    expect(playerPath("a b")).toBe("/players/a%20b");
   });
 });

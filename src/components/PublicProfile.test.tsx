@@ -1,8 +1,9 @@
 import { screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import PublicProfile from "@/components/PublicProfile";
 import type { ProfileState } from "@/hooks/useProfile";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { Profile } from "@/types";
 
@@ -133,5 +134,41 @@ describe("PublicProfile", () => {
     });
     renderWithMantine(<PublicProfile discordId="5" />);
     expect(screen.queryByText(/in review/)).toBeNull();
+  });
+});
+
+afterEach(resetHead);
+
+describe("PublicProfile page metadata", () => {
+  const canonical = () => headValue('link[rel="canonical"]', "href");
+
+  it("uses a generic title while loading and on error", () => {
+    set({ status: "loading" });
+    const { unmount } = renderWithMantine(<PublicProfile discordId="5" />);
+    expect(document.title).toBe("Player | Lememcon Games");
+    expect(canonical()).toBeNull();
+    unmount();
+
+    set({ status: "error" });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(document.title).toBe("Player | Lememcon Games");
+    expect(canonical()).toBeNull();
+  });
+
+  it("titles a missing profile", () => {
+    set({ status: "not_found" });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(document.title).toBe("Profile not found | Lememcon Games");
+    expect(canonical()).toBeNull();
+  });
+
+  it("names a loaded profile and links its canonical", () => {
+    set({ status: "ready", profile: base });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(document.title).toBe("Kel | Lememcon Games");
+    expect(headValue('meta[name="description"]')).toBe(
+      "Kel's LememCon profile.",
+    );
+    expect(canonical()).toBe("https://games.lememcon.com/players/5");
   });
 });

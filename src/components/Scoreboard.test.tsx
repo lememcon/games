@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MantineProvider } from "@mantine/core";
 
 import Scoreboard from "@/components/Scoreboard";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser, Data, GamesData } from "@/types";
 
@@ -165,6 +166,7 @@ describe("Scoreboard", () => {
   afterEach(() => {
     // Unmount before resetting the URL, or a mounted Scoreboard redirects.
     cleanup();
+    resetHead();
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
   });
@@ -1766,6 +1768,85 @@ describe("Scoreboard", () => {
 
       expect(getByText("No games to rank")).toBeInTheDocument();
       expect(getByText("Suggested splits")).toBeInTheDocument();
+    });
+  });
+
+  describe("page metadata", () => {
+    const canonical = () => headValue('link[rel="canonical"]', "href");
+    const DEFAULT = "Lememcon Games";
+
+    it("names a year while its scores load", () => {
+      at("/2025");
+      state.data = { ...emptyData, loading: true };
+      render();
+
+      expect(document.title).toBe("2025 scores | Lememcon Games");
+      expect(canonical()).toBe("https://games.lememcon.com/2025");
+    });
+
+    it("names a loaded year", () => {
+      at("/2026");
+      render();
+
+      expect(document.title).toBe("2026 scores | Lememcon Games");
+      expect(headValue('meta[name="description"]')).toBe(
+        "Board game scores and rankings for LememCon 2026.",
+      );
+      expect(canonical()).toBe("https://games.lememcon.com/2026");
+    });
+
+    it("keeps the default with no years", () => {
+      at("/");
+      state.years = { years: [], loading: false, error: false };
+      render();
+
+      expect(document.title).toBe(DEFAULT);
+      expect(canonical()).toBeNull();
+    });
+
+    it("keeps the default on the unknown-year notice", () => {
+      at("/1999");
+      render();
+
+      expect(document.title).toBe(DEFAULT);
+      expect(canonical()).toBeNull();
+    });
+
+    it("names the year while a game loads", () => {
+      at("/2025/games/11");
+      state.games = { games: {}, loading: true, error: false };
+      render();
+
+      expect(document.title).toBe("2025 scores | Lememcon Games");
+      expect(canonical()).toBe("https://games.lememcon.com/2025");
+    });
+
+    it("names the year when the game fails to load", () => {
+      at("/2025/games/11");
+      state.data = { ...emptyData, error: true };
+      render();
+
+      expect(document.title).toBe("2025 scores | Lememcon Games");
+      expect(canonical()).toBe("https://games.lememcon.com/2025");
+    });
+
+    it("gives an unknown game the year title and its own canonical", () => {
+      at("/2025/games/999");
+      render();
+
+      expect(document.title).toBe("2025 scores | Lememcon Games");
+      expect(canonical()).toBe("https://games.lememcon.com/2025/games/999");
+    });
+
+    it("names a loaded game", () => {
+      at("/2025/games/11");
+      render();
+
+      expect(document.title).toBe("Belfort, 2025 scores | Lememcon Games");
+      expect(headValue('meta[name="description"]')).toBe(
+        "Belfort scores and rankings for LememCon 2025.",
+      );
+      expect(canonical()).toBe("https://games.lememcon.com/2025/games/11");
     });
   });
 });

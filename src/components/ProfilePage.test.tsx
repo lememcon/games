@@ -1,8 +1,9 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfilePage from "@/components/ProfilePage";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser } from "@/types";
 
@@ -179,5 +180,15 @@ describe("ProfilePage", () => {
     expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
     expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
     expect(screen.getByText("played section")).toBeInTheDocument();
+  });
+});
+
+afterEach(resetHead);
+
+describe("ProfilePage page metadata", () => {
+  it("titles the page and claims no canonical", () => {
+    renderPage();
+    expect(document.title).toBe("Your profile | Lememcon Games");
+    expect(headValue('link[rel="canonical"]', "href")).toBeNull();
   });
 });

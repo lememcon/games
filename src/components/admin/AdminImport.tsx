@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 
 import useLocalState from "@/hooks/useLocalState";
+import usePageMeta from "@/hooks/usePageMeta";
 import { ApiError, apiFetch } from "@/lib/api";
 import {
   fileYear,
@@ -20,6 +21,7 @@ import {
   prepareImport,
   problemsFrom,
 } from "@/lib/importFile";
+import { pageMeta } from "@/lib/pageMeta";
 import { yearPath } from "@/lib/routes";
 import type { ImportProblem, ImportResult } from "@/types";
 
@@ -54,6 +56,8 @@ const failure = (e: unknown, year: number | null): Outcome => {
   }
 };
 
+const META = pageMeta({ title: "Import data" });
+
 const AdminImport = () => {
   const [raw, setRaw] = useState<Record<string, unknown> | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -61,6 +65,7 @@ const AdminImport = () => {
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [, setPlayers] = useLocalState<string[]>("players", []);
+  usePageMeta(META);
 
   const prepared = useMemo(
     () => (raw ? prepareImport(raw, yearInput) : null),

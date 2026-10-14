@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminPage from "@/components/AdminPage";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { AdminUser } from "@/types";
 
@@ -226,5 +227,16 @@ describe("AdminPage", () => {
     expect(
       within(dialog).getByText(/^Ames will lose access/),
     ).toBeInTheDocument();
+  });
+});
+
+afterEach(resetHead);
+
+describe("AdminPage page metadata", () => {
+  it("titles the page and claims no canonical", () => {
+    setHook();
+    renderWithMantine(<AdminPage meId="3" />);
+    expect(document.title).toBe("Admin | Lememcon Games");
+    expect(headValue('link[rel="canonical"]', "href")).toBeNull();
   });
 });

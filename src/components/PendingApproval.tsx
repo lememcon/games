@@ -2,7 +2,9 @@ import { useState } from "react";
 
 import { Badge, Button, Group, Stack, Text, Title } from "@mantine/core";
 
+import usePageMeta from "@/hooks/usePageMeta";
 import { signOut } from "@/lib/auth";
+import { pageMeta } from "@/lib/pageMeta";
 
 interface PendingApprovalProps {
   name: string;
@@ -10,12 +12,15 @@ interface PendingApprovalProps {
   checking?: boolean;
 }
 
+const META = pageMeta({ title: "Waiting for approval" });
+
 const PendingApproval = ({
   name,
   onCheckAgain,
   checking,
 }: PendingApprovalProps) => {
   const [failed, setFailed] = useState(false);
+  usePageMeta(META);
 
   const handleSignOut = async () => {
     setFailed(false);

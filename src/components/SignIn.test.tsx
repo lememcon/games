@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import SignIn from "@/components/SignIn";
+import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
 const signInWithDiscord = vi.hoisted(() => vi.fn());
@@ -116,5 +117,17 @@ describe("SignIn", () => {
       expect(alerts).toHaveLength(1);
       expect(alerts[0]).toHaveTextContent(/Couldn.t start sign-in/);
     });
+  });
+});
+
+afterEach(resetHead);
+
+describe("SignIn page metadata", () => {
+  it("titles the page and points the canonical at the site root", () => {
+    renderWithMantine(<SignIn />);
+    expect(document.title).toBe("Sign in | Lememcon Games");
+    expect(headValue('link[rel="canonical"]', "href")).toBe(
+      "https://games.lememcon.com/",
+    );
   });
 });

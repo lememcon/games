@@ -19,6 +19,8 @@ import {
 import BggDataPanel from "@/components/admin/BggDataPanel";
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
+import usePageMeta from "@/hooks/usePageMeta";
+import { pageMeta } from "@/lib/pageMeta";
 import { splitUsers, timeAgo } from "@/lib/users";
 import type { AdminUser, Role } from "@/types";
 
@@ -63,10 +65,13 @@ const Account = ({ user }: { user: AdminUser }) => (
 
 const DiscordId = ({ id }: { id: string }) => <Code fw={700}>{id}</Code>;
 
+const META = pageMeta({ title: "Admin" });
+
 const AdminPage = ({ meId }: { meId: string }) => {
   const { users, loading, error, actionError, approve, setRole, remove } =
     useAdminUsers(undefined, meId);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  usePageMeta(META);
 
   if (loading) return <Text mt="md">Loading members...</Text>;
   if (error) {
