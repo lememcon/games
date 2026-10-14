@@ -275,4 +275,20 @@ describe("SplitSuggestions", () => {
     expect(summary).toHaveTextContent("least happy: Waymost (60.0)");
     expect(summary).not.toHaveTextContent("Kelsin (50.0)");
   });
+
+  it("shows group rank on expanded cards only", async () => {
+    const s = split(null);
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [
+      ["Kelsin", 4, 90],
+      ["Waymost", 2, 60],
+    ]);
+    const utils = renderSplits([s]);
+    expect(utils.getByTestId("split-summary")).not.toHaveTextContent(
+      "group rank",
+    );
+    await expand(utils);
+    expect(utils.getAllByText(/group rank:/)[0]).toHaveTextContent(
+      "group rank: #1 Kelsin (global 4) · #2 Waymost (global 2)",
+    );
+  });
 });
