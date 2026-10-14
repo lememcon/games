@@ -139,7 +139,11 @@ const AdminImport = () => {
           Preview: {prepared.summary}
         </Text>
       )}
-      {problem && <Alert color="red">{problem}</Alert>}
+      {problem && (
+        <Alert color="red" style={{ overflowWrap: "anywhere" }}>
+          {problem}
+        </Alert>
+      )}
       <Button
         onClick={handleSubmit}
         disabled={!prepared?.ok}
@@ -152,7 +156,7 @@ const AdminImport = () => {
       </Button>
 
       {outcome?.kind === "success" && (
-        <Alert color="green">
+        <Alert color="green" style={{ overflowWrap: "anywhere" }}>
           {outcome.result.year === null
             ? `Imported games: ${outcome.result.games.new} new, ${outcome.result.games.updated} updated.`
             : `Imported ${outcome.result.year}: ${outcome.result.scores} scores, ${outcome.result.games.new} new games, ${outcome.result.games.updated} updated.`}
@@ -174,7 +178,7 @@ const AdminImport = () => {
         </Alert>
       )}
       {outcome?.kind === "error" && (
-        <Alert color="red">
+        <Alert color="red" style={{ overflowWrap: "anywhere" }}>
           {outcome.message}
           {outcome.problems.length > 0 && (
             <List size="sm" mt="xs">
