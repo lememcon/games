@@ -48,6 +48,7 @@ const state = vi.hoisted(() => ({
   useAllPlayedCounts: vi.fn(),
   markPlayed: vi.fn(),
   togglePlayed: vi.fn(),
+  markConfirmed: vi.fn(),
   usePlayedCounts: vi.fn(),
   // Everyone's own player count ranges, by discord id then bgg id.
   ranges: {} as Record<string, Record<string, { min: number; max: number }>>,
@@ -81,6 +82,7 @@ vi.mock("@/hooks/usePlayedCounts", () => ({
       (id: string) => (state.played[id] ?? 0) > 0,
       state.togglePlayed,
       state.own,
+      state.markConfirmed,
     ];
   },
 }));
@@ -298,7 +300,8 @@ describe("Scoreboard", () => {
         expect(state.markPlayed).toHaveBeenCalledWith("11", ["1", "2"]),
       );
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-      expect(state.togglePlayed).toHaveBeenCalledWith("11");
+      expect(state.markConfirmed).toHaveBeenCalledWith("11");
+      expect(state.togglePlayed).not.toHaveBeenCalled();
     });
 
     it("does not toggle the member's own game when they are left out", async () => {

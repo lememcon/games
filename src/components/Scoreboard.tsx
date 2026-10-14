@@ -89,7 +89,9 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
   const sortMode = parseSortMode(storedSort);
-  const [isPlayed, togglePlayed, ownCounts] = usePlayedCounts(year ?? "");
+  const [isPlayed, togglePlayed, ownCounts, markConfirmed] = usePlayedCounts(
+    year ?? "",
+  );
   const [allCounts, markPlayed] = useMarkPlayedCounts(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
   // A dialog opened for one year must not confirm against another.
@@ -270,7 +272,7 @@ function Scoreboard({ user }: ScoreboardProps) {
               onClose={() => setMarkingId(null)}
               onConfirm={async (ids) => {
                 await markPlayed(markingId, ids);
-                if (ids.includes(user.discordId)) togglePlayed(markingId);
+                if (ids.includes(user.discordId)) markConfirmed(markingId);
                 setMarkingId(null);
               }}
             />

@@ -47,11 +47,10 @@ test("marking played picks the players and saves them to the server", async ({
   await page.goto("/");
   await expect(page.getByText("4 of 4 games")).toBeVisible();
 
-  const put = page.waitForRequest(
-    (req) =>
-      req.method() === "PUT" &&
-      new URL(req.url()).pathname === "/api/me/played/2024/101",
-  );
+  const puts: string[] = [];
+  page.on("request", (req) => {
+    if (req.method() === "PUT") puts.push(new URL(req.url()).pathname);
+  });
   const post = page.waitForRequest(
     (req) =>
       req.method() === "POST" &&
@@ -70,9 +69,9 @@ test("marking played picks the players and saves them to the server", async ({
   await dialog.getByRole("button", { name: "Mark 2 played" }).click();
 
   expect((await post).postDataJSON()).toEqual({ discordIds: [aliceId, bobId] });
-  expect((await put).postDataJSON()).toEqual({ played: true });
   await expect(dialog).toBeHidden();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(puts).toEqual([]);
 });
 
 test("a game that does not fit the group size is filtered out", async ({
