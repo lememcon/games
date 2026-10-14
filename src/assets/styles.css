@@ -484,6 +484,11 @@ body {
   font-size: 0.9rem;
 }
 
+.splits__least-happy {
+  flex-basis: 100%;
+  margin-top: calc(var(--mantine-spacing-xs) / 2);
+}
+
 .splits__group {
   margin-top: var(--mantine-spacing-sm);
 }

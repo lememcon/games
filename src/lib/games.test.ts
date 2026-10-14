@@ -18,6 +18,7 @@ import {
   resolveImage,
   scoreSpread,
   sortGames,
+  splitLeastHappy,
   suggestSplits,
   validateMemberOverride,
   validateOverride,
@@ -1159,6 +1160,66 @@ describe("leastHappyPlayer", () => {
   it("is null below two scorers", () => {
     expect(leastHappyPlayer(mk("G", [["a", 1, 60]]))).toBeNull();
     expect(leastHappyPlayer(mk("G", []))).toBeNull();
+  });
+});
+
+describe("splitLeastHappy", () => {
+  const group = (picked: string, games: SelectedGame[]) => ({
+    players: [],
+    picked,
+    games,
+  });
+
+  it("is the worst-ranked player across the picked games", () => {
+    const a = mk("A", [
+      ["a", 1, 90],
+      ["b", 3, 60],
+    ]);
+    const b = mk("B", [
+      ["c", 2, 80],
+      ["d", 5, 40],
+    ]);
+    expect(splitLeastHappy([group("A", [a]), group("B", [b])])).toEqual({
+      name: "d",
+      game: b,
+    });
+  });
+
+  it("ignores games that are not picked", () => {
+    const picked = mk("A", [
+      ["a", 1, 90],
+      ["b", 2, 60],
+    ]);
+    const other = mk("X", [
+      ["a", 1, 90],
+      ["z", 9, 10],
+    ]);
+    expect(splitLeastHappy([group("A", [picked, other])])).toEqual({
+      name: "b",
+      game: picked,
+    });
+  });
+
+  it("goes to the first name alphabetically on equal ranks", () => {
+    const a = mk("A", [
+      ["a", 1, 90],
+      ["zed", 4, 60],
+    ]);
+    const b = mk("B", [
+      ["c", 1, 80],
+      ["amy", 4, 40],
+    ]);
+    expect(splitLeastHappy([group("A", [a]), group("B", [b])])).toEqual({
+      name: "amy",
+      game: b,
+    });
+  });
+
+  it("is null when no picked game has two scorers or a match", () => {
+    const solo = mk("A", [["a", 1, 90]]);
+    expect(splitLeastHappy([group("A", [solo])])).toBeNull();
+    expect(splitLeastHappy([group("Missing", [solo])])).toBeNull();
+    expect(splitLeastHappy([])).toBeNull();
   });
 });
 
