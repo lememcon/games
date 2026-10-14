@@ -4,8 +4,10 @@ import { Link } from "wouter";
 import { Collapse, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 
+import LeastHappy from "@/components/LeastHappy";
 import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
+import { leastHappyPlayer } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
 import type { GameSplit } from "@/types";
 import { normalized_score } from "@/util";
@@ -115,38 +117,55 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
               <Players players={group.players} />
             </div>
             <div className="tray-rows">
-              {group.games.map((game) => (
-                <div
-                  key={game.name}
-                  className={
-                    game.name === group.picked
-                      ? "tray-row splits__row--chosen"
-                      : "tray-row"
-                  }
-                  aria-current={game.name === group.picked ? "true" : undefined}
-                >
-                  <div className="tray-cover tray-cover--sm">
-                    {game.image ? (
-                      <img src={game.image} alt={game.name} />
-                    ) : (
-                      <div className="tray-cover__blank" aria-hidden />
-                    )}
+              {group.games.map((game) => {
+                const leastHappy = leastHappyPlayer(game);
+                return (
+                  <div
+                    key={game.name}
+                    className={
+                      game.name === group.picked
+                        ? "tray-row splits__row--chosen"
+                        : "tray-row"
+                    }
+                    aria-current={
+                      game.name === group.picked ? "true" : undefined
+                    }
+                  >
+                    <div className="tray-cover tray-cover--sm">
+                      {game.image ? (
+                        <img src={game.image} alt={game.name} />
+                      ) : (
+                        <div className="tray-cover__blank" aria-hidden />
+                      )}
+                    </div>
+                    <div className="tray-row__main">
+                      <Link
+                        href={gamePath(year, game.id)}
+                        className="tray-name"
+                      >
+                        {game.name}
+                      </Link>
+                      {leastHappy && (
+                        <div className="tray-row__meta">
+                          <LeastHappy
+                            game={game}
+                            name={leastHappy}
+                            individualMax={individualMax}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="tray-row__score">
+                      <ScorePopover
+                        score={game.score}
+                        players={game.players}
+                        selectedMax={individualMax * group.players.length}
+                        individualMax={individualMax}
+                      />
+                    </div>
                   </div>
-                  <div className="tray-row__main">
-                    <Link href={gamePath(year, game.id)} className="tray-name">
-                      {game.name}
-                    </Link>
-                  </div>
-                  <div className="tray-row__score">
-                    <ScorePopover
-                      score={game.score}
-                      players={game.players}
-                      selectedMax={individualMax * group.players.length}
-                      individualMax={individualMax}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
