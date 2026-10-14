@@ -40,7 +40,7 @@ const renderCard = (props: Partial<ComponentProps<typeof GameCard>> = {}) =>
 describe("GameCard", () => {
   it("shows who has played the game", () => {
     const { getByText } = renderCard({
-      game: { ...game, playedBy: ["alice", "bob"] },
+      game: { ...game, playedBy: [{ name: "alice" }, { name: "bob" }] },
     });
 
     expect(getByText("alice")).toBeInTheDocument();
