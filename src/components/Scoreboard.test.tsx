@@ -1,5 +1,6 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MantineProvider } from "@mantine/core";
@@ -578,6 +579,144 @@ describe("Scoreboard", () => {
       const { getByRole } = render();
 
       await user.click(getByRole("link", { name: "View 2026" }));
+
+      expect(stored("players")).toEqual(["bob"]);
+      expect(search()).toBe("?players=bob");
+    });
+  });
+
+  describe("back and forward", () => {
+    const search = () => window.location.search;
+    const stored = (key: string) => JSON.parse(localStorage.getItem(key)!);
+    const go = (target: string) =>
+      act(() => {
+        at(target);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+    // Navigation as the browser does it: the address changes, then popstate.
+    const nav = (target: string) =>
+      act(() => {
+        window.history.replaceState({}, "", target);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+
+    it("re-applies the query on back", () => {
+      at("/2026?players=alice");
+      render();
+      expect(stored("players")).toEqual(["alice"]);
+
+      nav("/2026?players=bob");
+
+      expect(stored("players")).toEqual(["bob"]);
+      expect(search()).toBe("?players=bob");
+    });
+
+    it("re-applies hide-played and sort on forward", () => {
+      at("/2026?players=alice");
+      render();
+
+      nav("/2026?players=bob&hidePlayed=1&sort=even");
+      expect(stored("players")).toEqual(["bob"]);
+      expect(stored("hide_played")).toBe(true);
+      expect(stored("sort_mode")).toBe("even");
+
+      nav("/2026?players=alice");
+      expect(stored("hide_played")).toBe(false);
+      expect(stored("sort_mode")).toBe("total");
+    });
+
+    it("does not overwrite the entry or add history", () => {
+      at("/2026?players=alice");
+      render();
+      const length = window.history.length;
+
+      nav("/2026?players=bob&hidePlayed=1");
+
+      expect(search()).toBe("?players=bob&hidePlayed=1");
+      expect(window.history.length).toBe(length);
+    });
+
+    it("handles encoded names", () => {
+      state.data = {
+        ...loadedData,
+        by_player: {
+          ...loadedData.by_player,
+          "Bob Smith": [],
+          "Doe, Jane": [],
+        },
+      };
+      at("/2026?players=alice");
+      render();
+
+      nav("/2026?players=Bob%20Smith");
+      expect(stored("players")).toEqual(["Bob Smith"]);
+      expect(search()).toBe("?players=Bob%20Smith");
+
+      nav("/2026?players=Doe%2C%20Jane");
+      expect(stored("players")).toEqual(["Doe, Jane"]);
+      expect(search()).toBe("?players=Doe%2C%20Jane");
+    });
+
+    it("applies the query when going back to another year", async () => {
+      at("/2026?players=alice");
+      render();
+
+      go("/2025");
+      go("/2026?players=bob");
+
+      await waitFor(() => expect(stored("players")).toEqual(["bob"]));
+      expect(path()).toBe("/2026");
+      expect(search()).toBe("?players=bob");
+    });
+
+    it("does not revert the query under StrictMode", () => {
+      at("/2026?players=alice");
+      renderWithMantine(
+        <StrictMode>
+          <Scoreboard user={member} />
+        </StrictMode>,
+      );
+
+      nav("/2026?players=bob");
+
+      expect(stored("players")).toEqual(["bob"]);
+      expect(search()).toBe("?players=bob");
+    });
+
+    it("ignores a popstate that leaves the query unchanged", () => {
+      at("/2026?players=alice");
+      render();
+
+      nav("/2026?players=alice");
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(search()).toBe("?players=alice");
+    });
+
+    it("ignores query changes off the year list", () => {
+      at("/2026/games/11");
+      render();
+
+      nav("/2026/games/11?players=alice");
+
+      expect(stored("players")).toBeNull();
+    });
+
+    it("keeps the filters and re-syncs when the query has no filters", () => {
+      at("/2026?players=alice");
+      render();
+
+      nav("/2026");
+
+      expect(stored("players")).toEqual(["alice"]);
+      expect(search()).toBe("?players=alice");
+    });
+
+    it("drops unknown names", () => {
+      at("/2026?players=alice");
+      render();
+
+      nav("/2026?players=bob,zed");
 
       expect(stored("players")).toEqual(["bob"]);
       expect(search()).toBe("?players=bob");
