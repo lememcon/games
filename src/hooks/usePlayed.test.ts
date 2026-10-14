@@ -1,9 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import usePlayedCounts from "@/hooks/usePlayedCounts";
+import usePlayed from "@/hooks/usePlayed";
 
-type Result = { current: ReturnType<typeof usePlayedCounts> };
+type Result = { current: ReturnType<typeof usePlayed> };
 
 interface Call {
   path: string;
@@ -45,7 +45,7 @@ const toggle = (result: Result, id: string) => act(() => result.current[1](id));
 // is visible even when there is nothing else to show.
 async function loaded(played: string[] = [], year = "2025") {
   const f = makeFetch();
-  const hook = renderHook(({ y }) => usePlayedCounts(y, f.fetchImpl), {
+  const hook = renderHook(({ y }) => usePlayed(y, f.fetchImpl), {
     initialProps: { y: year },
   });
   await answer(f.calls[0], 200, { played: ["7", ...played] });
@@ -53,12 +53,12 @@ async function loaded(played: string[] = [], year = "2025") {
   return { ...f, ...hook };
 }
 
-describe("usePlayedCounts", () => {
+describe("usePlayed", () => {
   beforeEach(() => localStorage.clear());
 
   it("loads the member's played games for the year", async () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
     expect(isPlayed(result, "100")).toBe(false);
     expect(f.calls[0]).toMatchObject({
@@ -73,7 +73,7 @@ describe("usePlayedCounts", () => {
 
   it("reads a missing played field as empty", async () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
     await answer(f.calls[0], 200, {});
 
@@ -82,7 +82,7 @@ describe("usePlayedCounts", () => {
 
   it("returns null until loaded, then {} once the last game is unmarked", async () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
     expect(result.current[2]).toBeNull();
 
     await answer(f.calls[0], 200, { played: ["100"] });
@@ -94,7 +94,7 @@ describe("usePlayedCounts", () => {
 
   it("does not fetch for an empty year", () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("", f.fetchImpl));
 
     toggle(result, "100");
 
@@ -104,7 +104,7 @@ describe("usePlayedCounts", () => {
 
   it("ignores edits before the played games have loaded", () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
     toggle(result, "100");
 
@@ -144,7 +144,7 @@ describe("usePlayedCounts", () => {
 
   it("ignores a confirmed game before the played games have loaded", () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
     act(() => result.current[3]("100"));
 
@@ -369,7 +369,7 @@ describe("usePlayedCounts", () => {
   it("drops a load that resolves after the year changed", async () => {
     const f = makeFetch();
     const { result, rerender } = renderHook(
-      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      ({ y }) => usePlayed(y, f.fetchImpl),
       { initialProps: { y: "2025" } },
     );
     rerender({ y: "2026" });
@@ -383,7 +383,7 @@ describe("usePlayedCounts", () => {
 
   it("shows nothing played and takes no edits when not signed in", async () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
     localStorage.setItem("played_counts_2025", JSON.stringify({ "100": 2 }));
 
     await answer(f.calls[0], 401, { error: "unauthorized" });
@@ -397,12 +397,9 @@ describe("usePlayedCounts", () => {
   it("asks again, without importing, when an unknown year comes back", async () => {
     localStorage.setItem("played_counts_1999", JSON.stringify({ "100": 2 }));
     const f = makeFetch();
-    const { rerender } = renderHook(
-      ({ y }) => usePlayedCounts(y, f.fetchImpl),
-      {
-        initialProps: { y: "1999" },
-      },
-    );
+    const { rerender } = renderHook(({ y }) => usePlayed(y, f.fetchImpl), {
+      initialProps: { y: "1999" },
+    });
     await answer(f.calls[0], 404, { error: "unknown_year" });
 
     rerender({ y: "2025" });
@@ -426,7 +423,7 @@ describe("usePlayedCounts", () => {
 
     it("imports valid data, shows the merged games and removes the key", async () => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: ["100"] });
 
       await waitFor(() => expect(f.calls).toHaveLength(2));
@@ -445,7 +442,7 @@ describe("usePlayedCounts", () => {
 
     it("ignores edits until the import has finished", async () => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
 
@@ -456,7 +453,7 @@ describe("usePlayedCounts", () => {
 
     it("keeps the imported games when toggled right after", async () => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 200, { played: ["100", "200"] });
@@ -471,7 +468,7 @@ describe("usePlayedCounts", () => {
 
     it("keeps the key and the server's games when the import fails", async () => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: ["100"] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 500, { error: "boom" });
@@ -484,7 +481,7 @@ describe("usePlayedCounts", () => {
 
     it("treats an unknown year on import as final and keeps the key", async () => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 404, { error: "unknown_year" });
@@ -498,14 +495,14 @@ describe("usePlayedCounts", () => {
 
     it("does not import again once the key is gone", async () => {
       const f = makeFetch();
-      const first = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const first = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: [] });
       await waitFor(() => expect(f.calls).toHaveLength(2));
       await answer(f.calls[1], 200, { played: ["100", "200"] });
       await waitFor(() => expect(isPlayed(first.result, "100")).toBe(true));
       first.unmount();
 
-      const second = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const second = renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[2], 200, { played: ["100", "200"] });
       await waitFor(() => expect(isPlayed(second.result, "100")).toBe(true));
 
@@ -515,7 +512,7 @@ describe("usePlayedCounts", () => {
     it("skips corrupt data and clears it", async () => {
       localStorage.setItem("played_counts_2025", "{not json");
       const f = makeFetch();
-      renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: ["100"] });
 
       await waitFor(() =>
@@ -529,7 +526,7 @@ describe("usePlayedCounts", () => {
       async (raw) => {
         localStorage.setItem("played_counts_2025", raw);
         const f = makeFetch();
-        renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+        renderHook(() => usePlayed("2025", f.fetchImpl));
         await answer(f.calls[0], 200, { played: [] });
 
         await waitFor(() =>
@@ -545,7 +542,7 @@ describe("usePlayedCounts", () => {
         JSON.stringify({ "100": 5000, "200": 2, abc: 1, "300": 0 }),
       );
       const f = makeFetch();
-      renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      renderHook(() => usePlayed("2025", f.fetchImpl));
       await answer(f.calls[0], 200, { played: [] });
 
       await waitFor(() => expect(f.calls).toHaveLength(2));

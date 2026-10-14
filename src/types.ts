@@ -70,7 +70,7 @@ export interface SelectedGame {
   players: Record<string, SelectedGamePlayer>;
   // Selected players (or all, when none are selected) who played this game
   // this year, by name.
-  playedBy: Record<string, number>;
+  playedBy: string[];
   image?: string;
 }
 
@@ -163,7 +163,7 @@ export interface Profile {
   // Null when no score-sheet player is linked to the member.
   stats: ProfileStats | null;
   // The profile owner's distinct games played across all years.
-  totalPlays: number;
+  gamesPlayed: number;
 }
 
 export interface ColorResult {
@@ -278,7 +278,7 @@ export interface ImportProblem {
 
 // Every member's played games for a year: discord id, then bgg ids. Body of
 // GET /api/played. A missing field reads as empty.
-export interface AllPlayedCountsResponse {
+export interface AllPlayedResponse {
   played?: Record<string, string[]>;
 }
 
@@ -291,7 +291,7 @@ export interface MarkPlayedResponse {
 // The signed-in member's played games for a year, as bgg ids. Body of
 // GET /api/me/played and of POST /api/me/played/:year/import. A missing field
 // reads as empty.
-export interface PlayedCountsResponse {
+export interface PlayedResponse {
   played?: string[];
 }
 

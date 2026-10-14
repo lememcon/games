@@ -80,7 +80,7 @@ const ready = (over: Partial<MemberPlayedState> = {}): MemberPlayedState =>
   ({
     status: "ready",
     byYear: { "2025": { "1": 2 }, "2024": { "2": 1 } },
-    allCounts: { me: { "1": 2 }, bo: { "1": 1, "2": 4 } },
+    allPlayed: { me: { "1": 2 }, bo: { "1": 1, "2": 4 } },
     ...over,
   }) as MemberPlayedState;
 
@@ -92,7 +92,7 @@ const profile = (stats: unknown = {}): ProfileState => ({
     image: null,
     linkedPlayers: ["Ana"],
     stats,
-    totalPlays: 3,
+    gamesPlayed: 3,
   } as never,
 });
 
@@ -263,7 +263,7 @@ describe("YearRecap", () => {
     h.data = dataFor([...scores, row(9, "Wingspan", "Bo", 10, 3)]);
     h.played = ready({
       byYear: { "2025": { "1": 2, "9": 1 }, "2024": { "1": 1 } },
-      allCounts: {
+      allPlayed: {
         me: { "1": 2, "9": 1 },
         bo: { "2": 5, "1": 1 },
         cy: { "1": 1 },
@@ -287,7 +287,7 @@ describe("YearRecap", () => {
     h.data = dataFor([row(1, "Azul", "Bo", 50, 2)]);
     h.played = ready({
       byYear: { "2025": {}, "2024": {} },
-      allCounts: { bo: { "1": 1 } },
+      allPlayed: { bo: { "1": 1 } },
     } as never);
     show();
     expect(screen.getByText("Fun facts")).toBeInTheDocument();
@@ -303,7 +303,7 @@ describe("YearRecap", () => {
     h.data = dataFor([row(1, "", "Bo", 50, 2)]);
     h.played = ready({
       byYear: { "2025": {}, "2024": {} },
-      allCounts: {},
+      allPlayed: {},
     } as never);
     show();
     expect(screen.queryByText("Fun facts")).toBeNull();
@@ -317,7 +317,7 @@ describe("YearRecap", () => {
     const mine = Object.fromEntries(many.map((m) => [`${m.bgg_id}`, 1]));
     h.played = ready({
       byYear: { "2025": mine, "2024": { ...mine, "99": 1, "98": 1 } },
-      allCounts: { me: mine },
+      allPlayed: { me: mine },
     } as never);
     const { unmount } = show();
     expect(screen.getByText("7 games, down 2")).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe("YearRecap", () => {
     unmount();
     h.played = ready({
       byYear: { "2025": mine, "2024": mine },
-      allCounts: { me: mine },
+      allPlayed: { me: mine },
     } as never);
     show();
     expect(screen.getByText("7 games, no change")).toBeInTheDocument();

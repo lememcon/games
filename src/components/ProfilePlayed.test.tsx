@@ -15,11 +15,11 @@ const state = vi.hoisted(() => ({
     error: false as boolean | undefined,
     scores: [] as PlayerGameScore[],
   },
-  counts: null as Record<string, 1> | null,
+  played: null as Record<string, 1> | null,
   error: null as string | null,
   toggle: vi.fn(),
   dataYear: vi.fn(),
-  countsYear: vi.fn(),
+  playedYear: vi.fn(),
 }));
 vi.mock("@/hooks/useYears", () => ({ default: () => state.years }));
 vi.mock("@/hooks/useData", () => ({
@@ -28,13 +28,13 @@ vi.mock("@/hooks/useData", () => ({
     return state.data;
   },
 }));
-vi.mock("@/hooks/usePlayedCounts", () => ({
+vi.mock("@/hooks/usePlayed", () => ({
   default: (year: string) => {
-    state.countsYear(year);
+    state.playedYear(year);
     return [
-      (id: string) => !!state.counts?.[id],
+      (id: string) => !!state.played?.[id],
       state.toggle,
-      state.counts,
+      state.played,
       () => {},
       state.error,
     ];
@@ -54,11 +54,11 @@ describe("ProfilePlayed", () => {
       error: false,
       scores: [row(1, "Root"), row(2, "Azul"), row(3, "Catan")],
     };
-    state.counts = { "2": 1 };
+    state.played = { "2": 1 };
     state.error = null;
     state.toggle.mockReset();
     state.dataYear.mockReset();
-    state.countsYear.mockReset();
+    state.playedYear.mockReset();
   });
 
   it("defaults to the current year and lists played games", () => {
@@ -66,7 +66,7 @@ describe("ProfilePlayed", () => {
     expect(screen.getByRole("combobox", { name: "Year" })).toHaveValue(
       thisYear,
     );
-    expect(state.countsYear).toHaveBeenLastCalledWith(thisYear);
+    expect(state.playedYear).toHaveBeenLastCalledWith(thisYear);
     expect(state.dataYear).toHaveBeenLastCalledWith(thisYear);
     expect(screen.getByText("Azul")).toBeInTheDocument();
   });
@@ -100,7 +100,7 @@ describe("ProfilePlayed", () => {
     await userEvent.click(
       screen.getByRole("option", { name: "2020", hidden: true }),
     );
-    expect(state.countsYear).toHaveBeenLastCalledWith("2020");
+    expect(state.playedYear).toHaveBeenLastCalledWith("2020");
     expect(state.dataYear).toHaveBeenLastCalledWith("2020");
     state.years = { ...state.years, years: ["2019", "2020", thisYear] };
     rerender(
@@ -109,7 +109,7 @@ describe("ProfilePlayed", () => {
       </MantineProvider>,
     );
     expect(screen.getByRole("combobox", { name: "Year" })).toHaveValue("2020");
-    expect(state.countsYear).toHaveBeenLastCalledWith("2020");
+    expect(state.playedYear).toHaveBeenLastCalledWith("2020");
   });
 
   it("clears the game to add when the year changes", async () => {
@@ -140,7 +140,7 @@ describe("ProfilePlayed", () => {
     state.years = { years: [], loading: false, error: false };
     renderWithMantine(<ProfilePlayed />);
     expect(screen.getByText("No years yet.")).toBeVisible();
-    expect(state.countsYear).toHaveBeenLastCalledWith("");
+    expect(state.playedYear).toHaveBeenLastCalledWith("");
     expect(state.dataYear).toHaveBeenLastCalledWith(null);
   });
 
@@ -152,7 +152,7 @@ describe("ProfilePlayed", () => {
   });
 
   it("shows an empty state", () => {
-    state.counts = {};
+    state.played = {};
     renderWithMantine(<ProfilePlayed />);
     expect(
       screen.getByText("You haven't marked any games this year."),
@@ -186,8 +186,8 @@ describe("ProfilePlayed", () => {
     );
   });
 
-  it("waits for played counts", () => {
-    state.counts = null;
+  it("waits for played games", () => {
+    state.played = null;
     renderWithMantine(<ProfilePlayed />);
     expect(screen.getByText("Loading played games...")).toBeVisible();
     expect(

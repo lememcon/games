@@ -4,19 +4,18 @@ import { PALETTE } from "@/lib/colors";
 import { PlayerColorContext } from "@/lib/playerColors";
 
 interface PlayedByListProps {
-  playedBy: Record<string, number>;
+  playedBy: string[];
 }
 
 // Chips for the players who played a game this year, each in the
 // player's identity color. Renders nothing when nobody has.
 const PlayedByList = ({ playedBy }: PlayedByListProps) => {
   const colors = useContext(PlayerColorContext);
-  const entries = Object.entries(playedBy);
-  if (entries.length === 0) return null;
+  if (playedBy.length === 0) return null;
 
   return (
     <ul className="tray-played-by" aria-label="Played by">
-      {entries.map(([name]) => (
+      {playedBy.map((name) => (
         <li
           key={name}
           className="tray-played-by__chip"

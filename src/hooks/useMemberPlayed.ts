@@ -2,18 +2,16 @@ import { useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { toPlayedMaps, type PlayedMap } from "@/lib/played";
-import type { AllPlayedCountsResponse } from "@/types";
-
-type Counts = PlayedMap;
+import type { AllPlayedResponse } from "@/types";
 
 export type MemberPlayedState =
   | { status: "loading" }
   | {
       status: "ready";
-      // The member's counts for the recap year and each earlier year.
-      byYear: Record<string, Counts>;
-      // Every member's counts for the recap year.
-      allCounts: Record<string, Counts>;
+      // The member's played games for the recap year and each earlier year.
+      byYear: Record<string, PlayedMap>;
+      // Every member's played games for the recap year.
+      allPlayed: Record<string, PlayedMap>;
     }
   | { status: "error" };
 
@@ -23,9 +21,9 @@ const LOADING: MemberPlayedState = { status: "loading" };
 const readYear = async (
   year: string,
   fetchImpl: typeof fetch,
-): Promise<Record<string, Counts>> => {
+): Promise<Record<string, PlayedMap>> => {
   try {
-    const body = await apiFetch<AllPlayedCountsResponse>(
+    const body = await apiFetch<AllPlayedResponse>(
       `/played?year=${year}`,
       {},
       fetchImpl,
@@ -64,13 +62,13 @@ const useMemberPlayed = (
     ];
     Promise.all([recapYear, ...earlier].map((y) => readYear(y, fetchImpl)))
       .then(([current, ...rest]): MemberPlayedState => {
-        const byYear: Record<string, Counts> = {
+        const byYear: Record<string, PlayedMap> = {
           [recapYear]: current[discordId] ?? {},
         };
         earlier.forEach((y, i) => {
           byYear[y] = rest[i][discordId] ?? {};
         });
-        return { status: "ready", byYear, allCounts: current };
+        return { status: "ready", byYear, allPlayed: current };
       })
       .catch((): MemberPlayedState => ({ status: "error" }))
       .then((state) => {

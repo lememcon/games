@@ -2,16 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { toPlayedMaps, type PlayedMap } from "@/lib/played";
-import type { AllPlayedCountsResponse, MarkPlayedResponse } from "@/types";
+import type { AllPlayedResponse, MarkPlayedResponse } from "@/types";
 
 type AllPlayed = Record<string, PlayedMap>;
 
 const EMPTY: AllPlayed = {};
 
 // Every member's played games for a year (discord id, then bgg id), fetched
-// once per year. Read-only: an empty year ("") skips the request, and a failure
+// once per year, plus `markPlayed(bggId, discordIds)` to set a game played for
+// several members at once. An empty year ("") skips the request, and a failure
 // leaves the map empty so nothing is hidden.
-const useAllPlayed = (
+export const useMarkPlayed = (
   year: string,
   fetchImpl: typeof fetch = fetch,
 ): [AllPlayed, (bggId: string, discordIds: string[]) => Promise<void>] => {
@@ -30,7 +31,7 @@ const useAllPlayed = (
     marked.current = false;
     if (year === "") return;
     let cancelled = false;
-    apiFetch<AllPlayedCountsResponse>(`/played?year=${year}`, {}, fetchImpl)
+    apiFetch<AllPlayedResponse>(`/played?year=${year}`, {}, fetchImpl)
       .then(({ played }) => {
         if (cancelled || marked.current) return;
         setLoaded({ year, played: toPlayedMaps(played) });
@@ -60,11 +61,8 @@ const useAllPlayed = (
   return [loaded.year === year ? loaded.played : EMPTY, markPlayed];
 };
 
-const useAllPlayedCounts = (year: string, fetchImpl?: typeof fetch) =>
-  useAllPlayed(year, fetchImpl)[0];
+// Read-only: just the played maps.
+const useAllPlayed = (year: string, fetchImpl?: typeof fetch) =>
+  useMarkPlayed(year, fetchImpl)[0];
 
-// Like useAllPlayedCounts, plus `markPlayed(bggId, discordIds)` to set a game
-// played for several members at once.
-export const useMarkPlayedCounts = useAllPlayed;
-
-export default useAllPlayedCounts;
+export default useAllPlayed;

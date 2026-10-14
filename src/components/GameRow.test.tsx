@@ -18,7 +18,7 @@ const game: SelectedGame = {
     alice: { name: "alice", rank: 1, score: 30 },
     bob: { name: "bob", rank: 2, score: 15 },
   },
-  playedBy: {},
+  playedBy: [],
 };
 
 const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
@@ -39,7 +39,7 @@ const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
 describe("GameRow", () => {
   it("shows who has played the game", () => {
     const { getByText } = renderRow({
-      game: { ...game, playedBy: { alice: 1 } },
+      game: { ...game, playedBy: ["alice"] },
     });
     expect(getByText("alice")).toBeInTheDocument();
   });

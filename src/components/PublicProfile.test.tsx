@@ -35,7 +35,7 @@ const base: Profile = {
       },
     ],
   },
-  totalPlays: 120,
+  gamesPlayed: 120,
 };
 
 describe("PublicProfile", () => {

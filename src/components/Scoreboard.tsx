@@ -13,11 +13,11 @@ import MarkPlayedDialog from "@/components/MarkPlayedDialog";
 import SplitSuggestions from "@/components/SplitSuggestions";
 import UnplayedShelf from "@/components/UnplayedShelf";
 import YearTrends from "@/components/YearTrends";
-import { useMarkPlayedCounts } from "@/hooks/useAllPlayedCounts";
+import { useMarkPlayed } from "@/hooks/useAllPlayed";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useLocalState from "@/hooks/useLocalState";
-import usePlayedCounts from "@/hooks/usePlayedCounts";
+import usePlayed from "@/hooks/usePlayed";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useVetoes from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
@@ -89,9 +89,9 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
   const sortMode = parseSortMode(storedSort);
-  const [isPlayed, togglePlayed, ownCounts, markConfirmed, playedError] =
-    usePlayedCounts(year ?? "");
-  const [allCounts, markPlayed] = useMarkPlayedCounts(year ?? "");
+  const [isPlayed, togglePlayed, ownPlayed, markConfirmed, playedError] =
+    usePlayed(year ?? "");
+  const [allPlayed, markPlayed] = useMarkPlayed(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
   // A dialog opened for one year must not confirm against another.
   const [markingYear, setMarkingYear] = useState(year);
@@ -104,15 +104,15 @@ function Scoreboard({ user }: ScoreboardProps) {
     [data.scores],
   );
   // The member's own edits show at once, so they replace their fetched entry
-  // (the fetched counts are only refreshed when the year changes).
-  const everyonesCounts = useMemo(
+  // (the fetched games are only refreshed when the year changes).
+  const everyonesPlayed = useMemo(
     () =>
-      ownCounts ? { ...allCounts, [user.discordId]: ownCounts } : allCounts,
-    [allCounts, ownCounts, user.discordId],
+      ownPlayed ? { ...allPlayed, [user.discordId]: ownPlayed } : allPlayed,
+    [allPlayed, ownPlayed, user.discordId],
   );
-  const playerCounts = useMemo(
-    () => playerCountsByName(data.by_player, everyonesCounts),
-    [data.by_player, everyonesCounts],
+  const playerPlayed = useMemo(
+    () => playerCountsByName(data.by_player, everyonesPlayed),
+    [data.by_player, everyonesPlayed],
   );
 
   const overrides = usePlayerOverrides();
@@ -188,7 +188,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     gameData: game_data,
     images,
     hidePlayed,
-    playerCounts,
+    playerPlayed,
     playerRanges,
     playerVetoes,
     sortMode,
@@ -201,7 +201,7 @@ function Scoreboard({ user }: ScoreboardProps) {
         gameData: game_data,
         images,
         hidePlayed,
-        playerCounts,
+        playerPlayed,
         playerRanges,
         playerVetoes,
         sortMode,
@@ -211,7 +211,7 @@ function Scoreboard({ user }: ScoreboardProps) {
       players,
       game_data,
       hidePlayed,
-      playerCounts,
+      playerPlayed,
       playerRanges,
       playerVetoes,
       sortMode,
@@ -248,7 +248,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   // is direct.
   const handleToggle = (id: string) => {
     if (isPlayed(id)) togglePlayed(id);
-    else if (ownCounts !== null) setMarkingId(id);
+    else if (ownPlayed !== null) setMarkingId(id);
   };
 
   const markingDialog =
@@ -259,7 +259,7 @@ function Scoreboard({ user }: ScoreboardProps) {
             bggId: markingId,
             selfId: user.discordId,
             selfName: user.displayName ?? user.name,
-            playedByDiscord: everyonesCounts,
+            playedByDiscord: everyonesPlayed,
           });
           return (
             <MarkPlayedDialog

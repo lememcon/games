@@ -15,7 +15,7 @@ const games: SelectedGame[] = [
     min: 0,
     max: 99,
     players: {},
-    playedBy: {},
+    playedBy: [],
   },
   {
     name: "Chess",
@@ -24,7 +24,7 @@ const games: SelectedGame[] = [
     min: 0,
     max: 99,
     players: {},
-    playedBy: {},
+    playedBy: [],
   },
   {
     name: "Go",
@@ -33,7 +33,7 @@ const games: SelectedGame[] = [
     min: 0,
     max: 99,
     players: {},
-    playedBy: {},
+    playedBy: [],
   },
   {
     name: "Nim",
@@ -42,7 +42,7 @@ const games: SelectedGame[] = [
     min: 0,
     max: 99,
     players: {},
-    playedBy: {},
+    playedBy: [],
   },
 ];
 
@@ -74,7 +74,7 @@ const scored = (name: string, ranks: [string, number][]): SelectedGame => ({
   players: Object.fromEntries(
     ranks.map(([p, rank]) => [p, { name: p, rank, score: 5 }]),
   ),
-  playedBy: {},
+  playedBy: [],
 });
 
 describe("GamesList", () => {

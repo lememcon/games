@@ -36,7 +36,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
     );
   }
 
-  const { name, image, stats, totalPlays } = state.profile;
+  const { name, image, stats, gamesPlayed } = state.profile;
 
   return (
     <Stack mt="md">
@@ -46,7 +46,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
       </Group>
       <SimpleGrid cols={2}>
         {stats && <StatTile label="years of data" value={`${stats.years}`} />}
-        <StatTile label="games played" value={`${totalPlays}`} />
+        <StatTile label="games played" value={`${gamesPlayed}`} />
       </SimpleGrid>
       {stats ? (
         <>

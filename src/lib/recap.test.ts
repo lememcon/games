@@ -10,7 +10,7 @@ const game = (id: number, name: string): SelectedGame => ({
   min: 1,
   max: 4,
   players: {},
-  playedBy: {},
+  playedBy: [],
 });
 
 const row = (
@@ -30,11 +30,11 @@ const row = (
 
 const base: BuildRecapArgs = {
   top: [game(1, "Azul"), game(2, "Heat"), game(3, "Root")],
-  counts: {},
-  earlierCounts: {},
+  played: {},
+  earlierPlayed: {},
   scores: [],
   discordId: "me",
-  allCounts: {},
+  allPlayed: {},
   games: {},
 };
 const recap = (over: Partial<BuildRecapArgs> = {}) =>
@@ -55,20 +55,14 @@ describe("buildRecap top list", () => {
 
   it("drops played games, keeping the original rank", () => {
     expect(
-      recap({ counts: { "1": 2, "3": 1 } }).unplayedTop.map((g) => g.rank),
+      recap({ played: { "1": 1, "3": 1 } }).unplayedTop.map((g) => g.rank),
     ).toEqual([2]);
   });
 
   it("is empty when every top game was played", () => {
-    const r = recap({ counts: { "1": 1, "2": 1, "3": 1 } });
+    const r = recap({ played: { "1": 1, "2": 1, "3": 1 } });
     expect(r.unplayedTop).toEqual([]);
     expect(r.playedGames).toBe(3);
-  });
-
-  it("treats a count of 0 like an absent entry", () => {
-    const r = recap({ counts: { "1": 0 } });
-    expect(r.unplayedTop).toHaveLength(3);
-    expect(r.playedGames).toBe(0);
   });
 
   it("handles an empty year", () => {
@@ -82,27 +76,27 @@ describe("buildRecap new picks", () => {
   const scores = [row(1, "Azul", 1, 90), row(2, "Heat", 2, 80)];
 
   it("is null with no earlier years or only empty ones", () => {
-    expect(recap({ counts: { "1": 1 }, scores }).newPicks).toBeNull();
+    expect(recap({ played: { "1": 1 }, scores }).newPicks).toBeNull();
     expect(
-      recap({ counts: { "1": 1 }, scores, earlierCounts: { "2023": {} } })
+      recap({ played: { "1": 1 }, scores, earlierPlayed: { "2023": {} } })
         .newPicks,
     ).toBeNull();
   });
 
   it("separates new picks from repeats", () => {
     const r = recap({
-      counts: { "1": 1, "2": 3 },
+      played: { "1": 1, "2": 1 },
       scores,
-      earlierCounts: { "2023": { "1": 2 }, "2022": { "5": 1 } },
+      earlierPlayed: { "2023": { "1": 1 }, "2022": { "5": 1 } },
     });
     expect(r.newPicks).toEqual([{ bggId: 2, game: "Heat" }]);
   });
 
-  it("counts a 0 in an earlier year as not played, and labels unnamed games", () => {
+  it("labels unnamed games", () => {
     const r = recap({
-      counts: { "1": 1, "9": 1 },
+      played: { "1": 1, "9": 1 },
       scores,
-      earlierCounts: { "2023": { "1": 0, "7": 1 } },
+      earlierPlayed: { "2023": { "7": 1 } },
     });
     expect(r.newPicks).toEqual([
       { bggId: 1, game: "Azul" },
@@ -112,10 +106,10 @@ describe("buildRecap new picks", () => {
 
   it("names a pick with no score row from the catalog, score names winning", () => {
     const r = recap({
-      counts: { "1": 1, "9": 1 },
+      played: { "1": 1, "9": 1 },
       scores,
       games: { "1": { name: "Other" }, "9": { name: "Wingspan" } },
-      earlierCounts: { "2023": { "5": 1 } },
+      earlierPlayed: { "2023": { "5": 1 } },
     });
     expect(r.newPicks).toEqual([
       { bggId: 1, game: "Azul" },
@@ -125,10 +119,10 @@ describe("buildRecap new picks", () => {
 
   it("sorts catalog-named picks among the rest by displayed name", () => {
     const r = recap({
-      counts: { "1": 1, "2": 1, "9": 1 },
+      played: { "1": 1, "2": 1, "9": 1 },
       scores,
       games: { "9": { name: "Betrayal" } },
-      earlierCounts: { "2023": { "5": 1 } },
+      earlierPlayed: { "2023": { "5": 1 } },
     });
     expect(r.newPicks?.map((g) => g.game)).toEqual([
       "Azul",
@@ -139,9 +133,9 @@ describe("buildRecap new picks", () => {
 
   it("sorts new picks by name", () => {
     const r = recap({
-      counts: { "1": 1, "2": 1 },
+      played: { "1": 1, "2": 1 },
       scores,
-      earlierCounts: { "2023": { "5": 1 } },
+      earlierPlayed: { "2023": { "5": 1 } },
     });
     expect(r.newPicks?.map((g) => g.game)).toEqual(["Azul", "Heat"]);
   });
@@ -160,10 +154,10 @@ describe("buildRecap facts", () => {
 
   it("averages games over members who played any", () => {
     const f = recap({
-      allCounts: {
+      allPlayed: {
         me: { "1": 1, "2": 1 },
         b: { "1": 1 },
-        c: { "1": 0 },
+        c: {},
       },
     }).facts;
     expect(f.groupAvgGames).toBe(1.5);
@@ -172,7 +166,7 @@ describe("buildRecap facts", () => {
   it("has no average when nobody played, and a lone member averages themself", () => {
     expect(recap().facts.groupAvgGames).toBeNull();
     expect(
-      recap({ counts: { "1": 1 }, allCounts: { me: { "1": 1 } } }).facts
+      recap({ played: { "1": 1 }, allPlayed: { me: { "1": 1 } } }).facts
         .groupAvgGames,
     ).toBe(1);
   });
@@ -210,8 +204,8 @@ describe("buildRecap facts", () => {
   it("finds the group favourite, the game most members played", () => {
     const f = recap({
       scores,
-      counts: { "1": 1 },
-      allCounts: {
+      played: { "1": 1 },
+      allPlayed: {
         me: { "1": 1 },
         b: { "2": 1, "1": 1 },
         c: { "2": 1 },
@@ -224,7 +218,7 @@ describe("buildRecap facts", () => {
   it("breaks group favourite ties by name and skips unnamed games", () => {
     const f = recap({
       scores,
-      allCounts: { b: { "2": 1, "1": 1, "99": 5 } },
+      allPlayed: { b: { "2": 1, "1": 1, "99": 1 } },
     }).facts;
     expect(f.groupFavourite?.game).toBe("Azul");
     expect(recap({ scores }).facts.groupFavourite).toBeNull();
@@ -234,13 +228,13 @@ describe("buildRecap facts", () => {
     const many = Array.from({ length: 7 }, (_, i) =>
       row(20 + i, `G${i}`, 2, 1),
     );
-    const counts = Object.fromEntries(
-      [1, 2, ...many.map((m) => m.bgg_id)].map((id) => [`${id}`, 1]),
+    const played = Object.fromEntries(
+      [1, 2, ...many.map((m) => m.bgg_id)].map((id) => [`${id}`, 1 as const]),
     );
     const f = recap({
       scores: [...scores, ...many],
-      counts,
-      allCounts: { me: counts, b: { "1": 1, "2": 0 } },
+      played,
+      allPlayed: { me: played, b: { "1": 1 } },
     }).facts;
     expect(f.onlyYou.total).toBe(8);
     expect(f.onlyYou.games.map((g) => g.game)).toEqual([
@@ -254,8 +248,8 @@ describe("buildRecap facts", () => {
   });
 
   it("compares with the nearest earlier year that has data", () => {
-    const f = (earlierCounts: BuildRecapArgs["earlierCounts"]) =>
-      recap({ counts: { "1": 1, "2": 1, "3": 1 }, earlierCounts }).facts
+    const f = (earlierPlayed: BuildRecapArgs["earlierPlayed"]) =>
+      recap({ played: { "1": 1, "2": 1, "3": 1 }, earlierPlayed }).facts
         .versusPrevious;
     expect(f({})).toBeNull();
     expect(f({ "2023": {} })).toBeNull();
@@ -269,8 +263,6 @@ describe("buildRecap facts", () => {
       gamesPlayed: 3,
       delta: 0,
     });
-    expect(
-      f({ "2023": { "1": 1, "2": 1, "3": 1, "4": 1, "5": 0 } })?.delta,
-    ).toBe(-1);
+    expect(f({ "2023": { "1": 1, "2": 1, "3": 1, "4": 1 } })?.delta).toBe(-1);
   });
 });
