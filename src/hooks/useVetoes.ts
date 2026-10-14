@@ -49,13 +49,19 @@ const useVetoes = (fetchImpl: typeof fetch = fetch) => {
     };
   }, [fetchImpl]);
 
-  const mutate = async (bggId: number, run: () => Promise<void>) => {
+  // Resolves true when the change itself saved, false when it threw.
+  const mutate = async (
+    bggId: number,
+    run: () => Promise<void>,
+  ): Promise<boolean> => {
     setSaving((prev) => new Set(prev).add(bggId));
     setErrors(({ [bggId]: _dropped, ...rest }) => rest);
     let message: string | null = null;
+    let ok = true;
     try {
       await run();
     } catch (e) {
+      ok = false;
       message = describe(e);
     }
     // Refetch either way so a stale view resyncs.
@@ -72,6 +78,7 @@ const useVetoes = (fetchImpl: typeof fetch = fetch) => {
       return next;
     });
     if (message) setErrors((prev) => ({ ...prev, [bggId]: message }));
+    return ok;
   };
 
   // Vetoes many games with one refetch. Failures are reported together in

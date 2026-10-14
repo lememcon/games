@@ -60,6 +60,7 @@ const state = vi.hoisted(() => ({
   veto: vi.fn(),
   unveto: vi.fn(),
   vetoErrors: {} as Record<number, string>,
+  vetoSaving: new Set<number>(),
   playedError: null as string | null,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
@@ -105,12 +106,12 @@ vi.mock("@/hooks/useVetoes", () => ({
     state.useVetoes(...args);
     return {
       all: state.vetoes,
-      saving: new Set<number>(),
+      saving: state.vetoSaving,
       bulkError: null,
       vetoMany: vi.fn(),
       clearBulkError: vi.fn(),
       error: state.vetoErrors,
-      isSaving: () => false,
+      isSaving: (id: number) => state.vetoSaving.has(id),
       errorFor: (id: number) => state.vetoErrors[id] ?? null,
       veto: state.veto,
       unveto: state.unveto,
@@ -152,9 +153,10 @@ describe("Scoreboard", () => {
     state.allPlayed = {};
     state.ranges = {};
     state.vetoes = {};
-    state.veto = vi.fn();
-    state.unveto = vi.fn();
+    state.veto = vi.fn(async () => true);
+    state.unveto = vi.fn(async () => true);
     state.vetoErrors = {};
+    state.vetoSaving = new Set();
     state.playedError = null;
     state.unplayed = [];
   });
@@ -1019,6 +1021,322 @@ describe("Scoreboard", () => {
       await user.click(button);
 
       expect(state.unveto).toHaveBeenCalledWith(11);
+    });
+
+    describe("undo bar", () => {
+      const ids = [11, 12, 13, 14];
+      const names = ["Belfort", "Chess", "Go", "Nim"];
+      const four: Data = {
+        ...loadedData,
+        by_player: {
+          alice: ids.map((bgg_id, i) => ({
+            game: names[i],
+            player: "alice",
+            rank: 1,
+            score: 50 - i,
+            bgg_id,
+          })),
+          bob: ids.map((bgg_id, i) => ({
+            game: names[i],
+            player: "bob",
+            rank: 2,
+            score: 30 - i,
+            bgg_id,
+          })),
+        },
+      };
+
+      afterEach(() => vi.useRealTimers());
+
+      const veto = async (name: string) => {
+        const user = userEvent.setup();
+        const view = render();
+        await user.click(view.getByRole("button", { name: `Veto: ${name}` }));
+        return { user, ...view };
+      };
+
+      it("shows the bar after a podium veto", async () => {
+        at("/2026");
+        const { getByRole } = await veto("Belfort");
+
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+        expect(state.veto).toHaveBeenCalledWith(11);
+      });
+
+      it("shows the bar after a veto from a row", async () => {
+        at("/2026");
+        state.data = four;
+        const { getByRole } = await veto("Nim");
+
+        expect(getByRole("status")).toHaveTextContent("Vetoed Nim.");
+        expect(state.veto).toHaveBeenCalledWith(14);
+      });
+
+      it("keeps the bar when the last visible game is vetoed", async () => {
+        at("/2026");
+        const user = userEvent.setup();
+        const { getByRole, rerender } = render();
+        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+        state.vetoes = { "1": new Set(["11"]) };
+        state.data = { ...emptyData };
+        localStorage.setItem("players", JSON.stringify(["alice"]));
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+      });
+
+      it("renders an empty live region with no veto", () => {
+        at("/2026");
+        state.data = { ...emptyData };
+        const { getByRole } = render();
+
+        expect(getByRole("status")).toBeEmptyDOMElement();
+        expect(getByRole("status")).toHaveAttribute("aria-live", "polite");
+      });
+
+      it("captures the name and id at click time", async () => {
+        at("/2026");
+        let finish!: (ok: boolean) => void;
+        state.veto = vi.fn(() => new Promise<boolean>((r) => (finish = r)));
+        const { getByRole, rerender } = await veto("Belfort");
+
+        state.data = { ...emptyData };
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        await act(async () => finish(true));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+
+        await userEvent.click(getByRole("button", { name: "Undo" }));
+        expect(state.unveto).toHaveBeenCalledWith(11);
+      });
+
+      it("focuses Undo when the bar appears", async () => {
+        at("/2026");
+        const { getByRole } = await veto("Belfort");
+
+        expect(getByRole("button", { name: "Undo" })).toHaveFocus();
+      });
+
+      it("undoes by numeric id and hides the bar", async () => {
+        at("/2026");
+        const { user, getByRole, queryByRole } = await veto("Belfort");
+
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.unveto).toHaveBeenCalledWith(11);
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
+      it("keeps the bar with the error when the undo fails", async () => {
+        at("/2026");
+        state.unveto = vi.fn(async () => {
+          state.vetoErrors = { 11: "Something went wrong" };
+          return false;
+        });
+        const { user, getByRole, rerender } = await veto("Belfort");
+        // The vetoed game is filtered out of the list, as in the real app.
+        state.vetoes = { "1": new Set(["11"]) };
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+
+        await user.click(getByRole("button", { name: "Undo" }));
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+
+        expect(getByRole("button", { name: "Undo" })).toBeInTheDocument();
+        expect(getByRole("status")).toHaveTextContent("Something went wrong");
+      });
+
+      it("ignores a veto that resolves after a newer one", async () => {
+        at("/2026");
+        state.data = four;
+        const finish: Array<(ok: boolean) => void> = [];
+        state.veto = vi.fn(
+          () => new Promise<boolean>((r) => void finish.push(r)),
+        );
+        const user = userEvent.setup();
+        const { getByRole } = render();
+        await user.click(getByRole("button", { name: "Veto: Nim" }));
+        await user.click(getByRole("button", { name: "Veto: Go" }));
+
+        await act(async () => finish[1](true));
+        await act(async () => finish[0](true));
+
+        expect(getByRole("status")).toHaveTextContent("Vetoed Go.");
+        expect(getByRole("status")).not.toHaveTextContent("Nim");
+      });
+
+      it("does not steal focus from an input the member moved to", async () => {
+        at("/2026");
+        let finish!: (ok: boolean) => void;
+        state.veto = vi.fn(() => new Promise<boolean>((r) => (finish = r)));
+        await veto("Belfort");
+        const input = document.createElement("input");
+        document.body.appendChild(input);
+        input.focus();
+
+        await act(async () => finish(true));
+
+        expect(input).toHaveFocus();
+        input.remove();
+      });
+
+      it("clears the bar when the route changes", async () => {
+        at("/2026");
+        const { getByRole, queryByRole, rerender } = await veto("Belfort");
+        expect(getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+        at("/2026/games/11");
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        at("/2026");
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
+      it("disables Undo while the game is saving", async () => {
+        at("/2026");
+        const { getByRole, rerender } = await veto("Belfort");
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+
+        state.vetoSaving = new Set([11]);
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Undo" })).toBeDisabled();
+
+        state.vetoSaving = new Set();
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+      });
+
+      it("dismisses the bar", async () => {
+        at("/2026");
+        const { user, getByRole, queryByRole } = await veto("Belfort");
+
+        await user.click(getByRole("button", { name: "Dismiss" }));
+
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(state.unveto).not.toHaveBeenCalled();
+      });
+
+      it("shows no bar when the veto fails", async () => {
+        at("/2026");
+        state.veto = vi.fn(async () => false);
+        const { getByRole, queryByRole } = await veto("Belfort");
+
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(getByRole("status")).toBeEmptyDOMElement();
+      });
+
+      it("replaces the bar on a second veto and restarts the timer", async () => {
+        at("/2026");
+        state.data = four;
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const { getByRole } = render();
+
+        await user.click(getByRole("button", { name: "Veto: Nim" }));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Nim.");
+        act(() => void vi.advanceTimersByTime(5000));
+        await user.click(getByRole("button", { name: "Veto: Go" }));
+        await act(async () => {});
+        expect(getByRole("status")).toHaveTextContent("Vetoed Go.");
+
+        act(() => void vi.advanceTimersByTime(6000));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Go.");
+        act(() => void vi.advanceTimersByTime(4100));
+        expect(getByRole("status")).toBeEmptyDOMElement();
+      });
+
+      it("disappears after 10 seconds", async () => {
+        at("/2026");
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const { getByRole } = render();
+        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+        act(() => void vi.advanceTimersByTime(5000));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+        act(() => void vi.advanceTimersByTime(5100));
+        expect(getByRole("status")).toBeEmptyDOMElement();
+      });
+
+      it("pauses the timer while hovered", async () => {
+        at("/2026");
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const { getByRole } = render();
+        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+        await user.hover(getByRole("button", { name: "Dismiss" }));
+        act(() => void vi.advanceTimersByTime(30000));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+
+        await user.unhover(getByRole("button", { name: "Dismiss" }));
+        act(() => void vi.advanceTimersByTime(10100));
+        expect(getByRole("status")).toBeEmptyDOMElement();
+      });
+
+      it("pauses the timer while focus is inside the bar", async () => {
+        at("/2026");
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const { getByRole } = render();
+        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        expect(getByRole("button", { name: "Undo" })).toHaveFocus();
+
+        await user.tab();
+        act(() => void vi.advanceTimersByTime(1000));
+        expect(getByRole("button", { name: "Dismiss" })).toHaveFocus();
+        act(() => void vi.advanceTimersByTime(30000));
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+
+        act(() => getByRole("button", { name: "Dismiss" }).blur());
+        act(() => void vi.advanceTimersByTime(10100));
+        expect(getByRole("status")).toBeEmptyDOMElement();
+      });
+
+      it("leaves no timers after unmount", async () => {
+        at("/2026");
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const { getByRole, unmount } = render();
+        const before = vi.getTimerCount();
+        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await act(async () => {});
+        expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
+
+        unmount();
+        expect(vi.getTimerCount()).toBeLessThanOrEqual(before);
+      });
     });
 
     it("shows a veto error", () => {

@@ -11,6 +11,11 @@ import { leastHappyPlayer, realBounds } from "@/lib/games";
 import { toggleSelected, vetoTargets } from "@/lib/selection";
 import type { GamesData, SelectedGame } from "@/types";
 
+// Like VetoesState, but veto also gets the game's name (for the undo bar).
+type ListVetoes = Omit<VetoesState, "veto"> & {
+  veto: (bggId: number, name: string) => void;
+};
+
 interface GamesListProps {
   games: SelectedGame[];
   year: string;
@@ -22,7 +27,7 @@ interface GamesListProps {
   // Rendered between the podium and the remaining rows.
   afterPodium?: ReactNode;
   // The members' vetoes and the signed-in member; omitted to hide the buttons.
-  vetoes?: VetoesState;
+  vetoes?: ListVetoes;
   discordId?: string;
 }
 
@@ -91,7 +96,10 @@ const GamesList = ({
       vetoed,
       vetoDisabled: vetoes.isSaving(bggId),
       vetoError: vetoes.errorFor(bggId),
-      onVeto: () => (vetoed ? vetoes.unveto(bggId) : vetoes.veto(bggId)),
+      onVeto: () => {
+        if (vetoed) void vetoes.unveto(bggId);
+        else vetoes.veto(bggId, game.name);
+      },
     };
   };
 

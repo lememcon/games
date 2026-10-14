@@ -604,3 +604,22 @@ body {
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+
+.undo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border: 1px solid #ece4d5;
+  border-radius: 12px;
+}
+
+.undo-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}

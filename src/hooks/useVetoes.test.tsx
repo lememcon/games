@@ -107,6 +107,49 @@ describe("useVetoes", () => {
     expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
   });
 
+  describe("result", () => {
+    it("resolves true when the change saved", async () => {
+      const { hook } = await setup(none(), res({ vetoes: mine }));
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await hook.result.current.veto(2);
+      });
+      expect(ok).toBe(true);
+    });
+
+    it("resolves true for unveto too", async () => {
+      const { hook } = await setup(none(), res({ vetoes: [] }));
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await hook.result.current.unveto(1);
+      });
+      expect(ok).toBe(true);
+    });
+
+    it("resolves false when the change throws, and still resyncs", async () => {
+      const { hook } = await setup(
+        res({}, 500),
+        res({ vetoes: [...mine, { discordId: "d1", bggId: 3 }] }),
+      );
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await hook.result.current.veto(2);
+      });
+      expect(ok).toBe(false);
+      expect(hook.result.current.all).toEqual({ d1: new Set(["1", "3"]) });
+    });
+
+    it("stays true when only the refetch fails", async () => {
+      const { hook } = await setup(none(), res({}, 500));
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await hook.result.current.veto(2);
+      });
+      expect(ok).toBe(true);
+      expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
+    });
+  });
+
   it("ignores a load that resolves after unmount", async () => {
     let finish!: (r: Response) => void;
     const fetchImpl = vi
@@ -249,7 +292,7 @@ describe("useVetoes", () => {
         "PUT /api/me/vetoes/2": [put.promise],
         [LIST]: [res(withGames(2))],
       });
-      let done!: Promise<void>;
+      let done!: Promise<boolean>;
       act(() => {
         done = hook.result.current.veto(2);
       });
@@ -280,8 +323,8 @@ describe("useVetoes", () => {
         "PUT /api/me/vetoes/3": [putB.promise],
         [LIST]: [res(withGames(2, 3)), res(withGames(2, 3))],
       });
-      let a!: Promise<void>;
-      let b!: Promise<void>;
+      let a!: Promise<boolean>;
+      let b!: Promise<boolean>;
       act(() => {
         a = hook.result.current.veto(2);
         b = hook.result.current.veto(3);
@@ -315,7 +358,7 @@ describe("useVetoes", () => {
       await act(() => hook.result.current.veto(3));
       expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
       expect(hook.result.current.errorFor(3)).toBe(GENERIC_ERROR);
-      let done!: Promise<void>;
+      let done!: Promise<boolean>;
       act(() => {
         done = hook.result.current.veto(2);
       });
@@ -336,8 +379,8 @@ describe("useVetoes", () => {
         "PUT /api/me/vetoes/3": [none()],
         [LIST]: [list1, list2],
       });
-      let a!: Promise<void>;
-      let b!: Promise<void>;
+      let a!: Promise<boolean>;
+      let b!: Promise<boolean>;
       act(() => {
         a = hook.result.current.veto(2);
       });
