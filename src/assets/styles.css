@@ -637,3 +637,53 @@ body {
   flex-wrap: wrap;
   gap: calc(var(--mantine-spacing-xs) / 2);
 }
+
+/* ---- Sign-in page: full-bleed backdrop with drifting game covers ---- */
+.signin-page {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: #f1ebdd;
+}
+
+.signin-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(251, 249, 244, 0.96);
+}
+
+.floaters {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floaters img {
+  position: absolute;
+  left: var(--left);
+  top: 0;
+  width: var(--size);
+  height: auto;
+  opacity: 0.3;
+  border-radius: 8px;
+  animation: floaters-drift var(--dur) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+@keyframes floaters-drift {
+  from {
+    transform: translateY(100vh) rotate(-6deg);
+  }
+  to {
+    transform: translateY(-40vh) rotate(6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floaters img {
+    animation: none;
+    top: var(--top);
+  }
+}
