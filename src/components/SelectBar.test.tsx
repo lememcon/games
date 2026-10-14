@@ -37,6 +37,13 @@ describe("SelectBar", () => {
     expect(getByRole("button", { name: "Not for me" })).toBeDisabled();
   });
 
+  it("disables Cancel while saving", () => {
+    const { getByRole } = renderWithMantine(
+      <SelectBar count={2} disabled onApply={vi.fn()} onCancel={vi.fn()} />,
+    );
+    expect(getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
+
   it("forwards clicks", async () => {
     const user = userEvent.setup();
     const onApply = vi.fn();

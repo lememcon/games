@@ -178,6 +178,14 @@ describe("GameCard", () => {
     expect(getByRole("link", { name: "Ark Nova" })).toBeInTheDocument();
   });
 
+  it("disables the checkbox when selectDisabled", () => {
+    const { getByRole } = renderCard({
+      selectable: true,
+      selectDisabled: true,
+    });
+    expect(getByRole("checkbox", { name: "Select Ark Nova" })).toBeDisabled();
+  });
+
   it("has no checkbox when not selectable", () => {
     expect(renderCard().queryByRole("checkbox")).toBeNull();
   });

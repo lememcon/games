@@ -30,6 +30,7 @@ interface GameCardProps {
   // Bulk-veto mode: show a checkbox and hide the per-game buttons.
   selectable?: boolean;
   checked?: boolean;
+  selectDisabled?: boolean;
   onSelect?: () => void;
   // Name of the least happy scorer, shown on the top result only.
   leastHappy?: string | null;
@@ -53,6 +54,7 @@ const GameCard = ({
   onVeto,
   selectable = false,
   checked = false,
+  selectDisabled = false,
   onSelect,
   leastHappy,
 }: GameCardProps) => {
@@ -67,6 +69,7 @@ const GameCard = ({
           className="tray-select"
           aria-label={`Select ${game.name}`}
           checked={checked}
+          disabled={selectDisabled}
           onChange={() => onSelect?.()}
         />
       )}

@@ -176,6 +176,7 @@ describe("GamesList", () => {
       saving: new Set<number>(),
       bulkError: null,
       vetoMany: vi.fn(async () => [] as number[]),
+      clearBulkError: vi.fn(),
       error: {},
       isSaving: () => false,
       errorFor: () => null,
@@ -369,6 +370,47 @@ describe("GamesList", () => {
         );
         expect(getByRole("button", { name: "Not for me" })).toBeDisabled();
         expect(getByRole("button", { name: "Select" })).toBeDisabled();
+      });
+
+      it("disables Cancel and the checkboxes while saving", async () => {
+        const { user, getByRole, getByLabelText, rerender } = await open({
+          vetoes: makeVetoes(),
+        });
+        await user.click(getByLabelText("Select Chess"));
+        expect(getByLabelText("Select Chess")).toBeEnabled();
+        rerender(
+          <MantineProvider>
+            <GamesList
+              games={games}
+              year="2024"
+              selectedMax={400}
+              individualMax={100}
+              gameData={gameData}
+              isPlayed={() => false}
+              onToggle={() => {}}
+              discordId="d1"
+              vetoes={makeVetoes({ saving: new Set([200]) })}
+            />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Cancel" })).toBeDisabled();
+        expect(getByLabelText("Select Chess")).toBeDisabled();
+        expect(getByLabelText("Select Root")).toBeDisabled();
+      });
+
+      it("clears the bulk error on Cancel, on entering, and after success", async () => {
+        const vetoes = makeVetoes({ bulkError: "1 of 2 didn't save" });
+        const { user, getByLabelText, getByRole } = await open({ vetoes });
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(1);
+        await user.click(getByRole("button", { name: "Cancel" }));
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(2);
+        await user.click(getByRole("button", { name: "Select" }));
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(3);
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByRole("button", { name: "Not for me" }));
+        await waitFor(() =>
+          expect(vetoes.clearBulkError).toHaveBeenCalledTimes(4),
+        );
       });
 
       it("drops selected ids when games shrink", async () => {

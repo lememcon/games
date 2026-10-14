@@ -190,6 +190,17 @@ describe("useVetoes", () => {
       expect(hook.result.current.bulkError).toBe(GENERIC_ERROR);
     });
 
+    it("clears the bulk error", async () => {
+      const { hook } = await start({
+        "PUT /api/me/vetoes/2": [none()],
+        [LIST]: [res({}, 500)],
+      });
+      await act(() => hook.result.current.vetoMany([2]));
+      expect(hook.result.current.bulkError).toBe(GENERIC_ERROR);
+      act(() => hook.result.current.clearBulkError());
+      expect(hook.result.current.bulkError).toBeNull();
+    });
+
     it("does nothing for an empty list", async () => {
       const { hook, fetchImpl } = await start({});
       let failed: number[] = [9];

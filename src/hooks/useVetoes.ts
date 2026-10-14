@@ -111,6 +111,7 @@ const useVetoes = (fetchImpl: typeof fetch = fetch) => {
     saving,
     bulkError,
     vetoMany,
+    clearBulkError: () => setBulkError(null),
     error: errors,
     isSaving: (bggId: number) => saving.has(bggId),
     errorFor: (bggId: number): string | null => errors[bggId] ?? null,

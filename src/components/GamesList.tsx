@@ -56,6 +56,7 @@ const GamesList = ({
   );
 
   const exit = () => {
+    vetoes?.clearBulkError();
     setSelecting(false);
     setPicked(new Set());
   };
@@ -73,6 +74,7 @@ const GamesList = ({
       ? {
           selectable: true,
           checked: selected.has(game.id),
+          selectDisabled: busy,
           onSelect: () => setPicked(toggleSelected(selected, game.id)),
         }
       : {};
@@ -101,7 +103,13 @@ const GamesList = ({
           variant="default"
           disabled={busy}
           aria-pressed={active}
-          onClick={() => (active ? exit() : setSelecting(true))}
+          onClick={() => {
+            if (active) exit();
+            else {
+              vetoes?.clearBulkError();
+              setSelecting(true);
+            }
+          }}
           style={{ alignSelf: "flex-start" }}
         >
           Select
@@ -147,7 +155,6 @@ const GamesList = ({
               played={isPlayed(game.id)}
               onToggle={() => onToggle(game.id)}
               {...vetoProps(game)}
-              {...selectProps(game)}
               {...selectProps(game)}
             />
           ))}

@@ -29,6 +29,7 @@ interface GameRowProps {
   // Bulk-veto mode: show a checkbox and hide the per-game buttons.
   selectable?: boolean;
   checked?: boolean;
+  selectDisabled?: boolean;
   onSelect?: () => void;
 }
 
@@ -52,6 +53,7 @@ const GameRow = ({
   onVeto,
   selectable = false,
   checked = false,
+  selectDisabled = false,
   onSelect,
 }: GameRowProps) => {
   const theme = useMantineTheme();
@@ -64,6 +66,7 @@ const GameRow = ({
           className="tray-select"
           aria-label={`Select ${game.name}`}
           checked={checked}
+          disabled={selectDisabled}
           onChange={() => onSelect?.()}
         />
       )}

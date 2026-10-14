@@ -2,7 +2,7 @@ import { Button } from "@mantine/core";
 
 interface SelectBarProps {
   count: number;
-  // True while saving; also disables Apply at zero selected.
+  // True while saving; also disables Apply at zero selected, and Cancel.
   disabled: boolean;
   onApply: () => void;
   onCancel: () => void;
@@ -19,7 +19,12 @@ const SelectBar = ({ count, disabled, onApply, onCancel }: SelectBarProps) => (
       <Button size="xs" disabled={disabled || count === 0} onClick={onApply}>
         Not for me
       </Button>
-      <Button size="xs" variant="default" onClick={onCancel}>
+      <Button
+        size="xs"
+        variant="default"
+        disabled={disabled}
+        onClick={onCancel}
+      >
         Cancel
       </Button>
     </div>

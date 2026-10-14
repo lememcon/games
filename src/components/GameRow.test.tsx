@@ -162,6 +162,14 @@ describe("GameRow", () => {
     expect(getByRole("link", { name: "Root" })).toBeInTheDocument();
   });
 
+  it("disables the checkbox when selectDisabled", () => {
+    const { getByRole } = renderRow({
+      selectable: true,
+      selectDisabled: true,
+    });
+    expect(getByRole("checkbox", { name: "Select Root" })).toBeDisabled();
+  });
+
   it("has no checkbox when not selectable", () => {
     expect(renderRow().queryByRole("checkbox")).toBeNull();
   });

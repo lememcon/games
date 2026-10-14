@@ -108,6 +108,7 @@ vi.mock("@/hooks/useVetoes", () => ({
       saving: new Set<number>(),
       bulkError: null,
       vetoMany: vi.fn(),
+      clearBulkError: vi.fn(),
       error: state.vetoErrors,
       isSaving: () => false,
       errorFor: (id: number) => state.vetoErrors[id] ?? null,
