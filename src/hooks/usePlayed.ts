@@ -18,6 +18,9 @@ interface Session {
   confirmed: PlayedMap;
   // At most one write per game is in flight.
   inFlight: Set<string>;
+  // A clear-all is waiting on the server: toggles and further clears are
+  // ignored until it settles.
+  clearing: boolean;
 }
 
 const withPlayed = (map: PlayedMap, id: string, played: boolean): PlayedMap => {
@@ -63,6 +66,8 @@ function flush(
 
 // The signed-in member's played games for a year, kept on the server. Edits show
 // at once and are written as absolute flags, one request per game at a time.
+// The fourth function clears every game at once with a single DELETE; when it
+// settles, each game is reconciled with any write that settled around it.
 const usePlayed = (
   year: string,
   fetchImpl: typeof fetch = fetch,
@@ -72,6 +77,7 @@ const usePlayed = (
   PlayedMap | null,
   (id: string) => void,
   string | null,
+  () => void,
 ] => {
   const [shown, setShown] = useState<{
     year: string;
@@ -101,6 +107,7 @@ const usePlayed = (
       desired: {},
       confirmed: {},
       inFlight: new Set(),
+      clearing: false,
     };
     session.current = s;
 
@@ -161,7 +168,7 @@ const usePlayed = (
   const toggle = useCallback(
     (id: string) => {
       const s = session.current;
-      if (!s?.ready) return;
+      if (!s?.ready || s.clearing) return;
       s.desired = withPlayed(s.desired, id, !(id in s.desired));
       setErrorState(null);
       setShown({ year: s.year, played: s.desired });
@@ -176,11 +183,51 @@ const usePlayed = (
   // Shows a game as played that the server already has, so nothing is sent.
   const markConfirmed = useCallback((id: string) => {
     const s = session.current;
-    if (!s?.ready) return;
+    if (!s?.ready || s.clearing) return;
     s.desired = withPlayed(s.desired, id, true);
     s.confirmed = withPlayed(s.confirmed, id, true);
     setShown({ year: s.year, played: s.desired });
   }, []);
+
+  // Empties the list at once and sends one DELETE. A failure restores what was
+  // shown before.
+  const clear = useCallback(() => {
+    const s = session.current;
+    if (!s?.ready || s.clearing) return;
+    const snapshot = s.desired;
+    s.clearing = true;
+    s.desired = {};
+    setErrorState(null);
+    setShown({ year: s.year, played: s.desired });
+    const onRollback = (played: PlayedMap) => {
+      setShown({ year: s.year, played });
+      setErrorState({ year: s.year, message: "Couldn't save. Try again." });
+    };
+    apiFetch(`/me/played/${s.year}`, { method: "DELETE" }, fetchImpl)
+      .then(
+        () => true,
+        () => false,
+      )
+      .then((ok) => {
+        s.clearing = false;
+        const ids = new Set([
+          ...Object.keys(s.desired),
+          ...Object.keys(s.confirmed),
+          ...Object.keys(snapshot),
+        ]);
+        if (ok) s.confirmed = {};
+        else s.desired = snapshot;
+        if (!s.cancelled) {
+          setShown({ year: s.year, played: s.desired });
+          if (!ok)
+            setErrorState({
+              year: s.year,
+              message: "Couldn't clear your games. Try again.",
+            });
+        }
+        for (const id of ids) flush(s, id, fetchImpl, onRollback);
+      });
+  }, [fetchImpl]);
 
   // Null until the played games for this year are in; {} once loaded and empty.
   const played = shown.year === year ? shown.played : null;
@@ -188,7 +235,7 @@ const usePlayed = (
 
   const error = errorState?.year === year ? errorState.message : null;
 
-  return [isPlayed, toggle, played, markConfirmed, error];
+  return [isPlayed, toggle, played, markConfirmed, error, clear];
 };
 
 export default usePlayed;

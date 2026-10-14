@@ -23,7 +23,11 @@ function makeFetch() {
           method: init?.method ?? "GET",
           body: init?.body ? JSON.parse(String(init.body)) : undefined,
           respond: (status, body = {}) =>
-            resolve(new Response(JSON.stringify(body), { status })),
+            resolve(
+              new Response(status === 204 ? null : JSON.stringify(body), {
+                status,
+              }),
+            ),
         });
       }),
   ) as unknown as typeof fetch & { mock: { calls: unknown[][] } };
@@ -413,6 +417,115 @@ describe("usePlayed", () => {
     await answer(f.calls[2], 404, { error: "unknown_year" });
     expect(f.calls.some((c) => c.path.endsWith("/import"))).toBe(false);
     expect(localStorage.getItem("played_counts_1999")).not.toBeNull();
+  });
+
+  describe("clear", () => {
+    const clearAll = (result: Result) => act(() => result.current[5]());
+    const deletes = (calls: Call[]) =>
+      calls.filter((c) => c.method === "DELETE");
+
+    it("empties the map at once, sends one DELETE and keeps it empty", async () => {
+      const { result, calls } = await loaded(["100"]);
+
+      clearAll(result);
+      expect(result.current[2]).toEqual({});
+      expect(deletes(calls)).toHaveLength(1);
+      expect(deletes(calls)[0].path).toBe("/me/played/2025");
+      await answer(deletes(calls)[0], 204);
+      expect(result.current[2]).toEqual({});
+      expect(calls.filter((c) => c.method === "PUT")).toHaveLength(0);
+    });
+
+    it("restores the previous map and shows an error when it fails", async () => {
+      const { result, calls } = await loaded(["100"]);
+
+      clearAll(result);
+      await answer(deletes(calls)[0], 500);
+
+      await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
+      expect(result.current[2]).toEqual({ "7": 1, "100": 1 });
+      expect(result.current[4]).toBe("Couldn't clear your games. Try again.");
+    });
+
+    it("does nothing before the games have loaded", () => {
+      const f = makeFetch();
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
+      act(() => result.current[5]());
+      expect(deletes(f.calls)).toHaveLength(0);
+    });
+
+    it("clears after a toggle", async () => {
+      const { result, calls, puts } = await loaded();
+      toggle(result, "100");
+      await answer(puts()[0], 200);
+      clearAll(result);
+      await answer(deletes(calls)[0], 204);
+      expect(result.current[2]).toEqual({});
+      expect(isPlayed(result, "100")).toBe(false);
+    });
+
+    it("ignores toggles, confirmations and a second clear while pending", async () => {
+      const { result, calls, puts } = await loaded(["100"]);
+      clearAll(result);
+      clearAll(result);
+      toggle(result, "100");
+      act(() => result.current[3]("300"));
+      expect(deletes(calls)).toHaveLength(1);
+      expect(puts()).toHaveLength(0);
+      expect(result.current[2]).toEqual({});
+      await answer(deletes(calls)[0], 204);
+      expect(result.current[2]).toEqual({});
+    });
+
+    it("undoes a game marked by a write that settles before the clear", async () => {
+      const { result, calls, puts } = await loaded();
+      toggle(result, "100");
+      clearAll(result);
+      await answer(puts()[0], 200);
+      await answer(deletes(calls)[0], 204);
+
+      await waitFor(() => expect(puts()).toHaveLength(2));
+      expect(puts()[1].body).toEqual({ played: false });
+      await answer(puts()[1], 200);
+      expect(result.current[2]).toEqual({});
+    });
+
+    it("undoes a game marked by a write that settles after the clear", async () => {
+      const { result, calls, puts } = await loaded();
+      toggle(result, "100");
+      clearAll(result);
+      await answer(deletes(calls)[0], 204);
+      expect(puts()).toHaveLength(1);
+      await answer(puts()[0], 200);
+
+      await waitFor(() => expect(puts()).toHaveLength(2));
+      expect(puts()[1].body).toEqual({ played: false });
+      expect(result.current[2]).toEqual({});
+    });
+
+    it("keeps the game when the clear fails and a write is in flight", async () => {
+      const { result, calls, puts } = await loaded();
+      toggle(result, "100");
+      clearAll(result);
+      await answer(deletes(calls)[0], 500);
+      await answer(puts()[0], 200);
+
+      await waitFor(() => expect(isPlayed(result, "100")).toBe(true));
+      expect(puts()).toHaveLength(1);
+    });
+
+    it("leaves the new year's session alone when the year changed mid-clear", async () => {
+      const { result, rerender, calls } = await loaded(["100"]);
+      clearAll(result);
+      rerender({ y: "2026" });
+      await answer(calls.at(-1)!, 200, { played: ["500"] });
+      await waitFor(() => expect(isPlayed(result, "500")).toBe(true));
+
+      await answer(deletes(calls)[0], 500);
+
+      expect(result.current[2]).toEqual({ "500": 1 });
+      expect(result.current[4]).toBeNull();
+    });
   });
 
   describe("migrating localStorage", () => {

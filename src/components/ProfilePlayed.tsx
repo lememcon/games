@@ -4,6 +4,7 @@ import {
   Button,
   Group,
   Loader,
+  Modal,
   Select,
   Stack,
   Text,
@@ -28,11 +29,19 @@ const ProfilePlayed = () => {
   const [picked, setPicked] = useState<string | null>(null);
   const year = chosen || defaultYear(years, new Date());
   const data = useData(year || null);
-  const [, toggle, played, , playedError] = usePlayed(year);
+  const [, toggle, played, , playedError, clear] = usePlayed(year);
+  const [confirming, setConfirming] = useState(false);
+  // Snapshot at open so the title stays put while the modal fades out.
+  const [confirmCount, setConfirmCount] = useState(0);
 
   const names = gameNamesById(data.scores);
   const loaded = played !== null;
   const canAdd = loaded && !data.loading && !data.error;
+
+  const confirmClear = () => {
+    clear();
+    setConfirming(false);
+  };
 
   const add = () => {
     if (!picked) return;
@@ -62,6 +71,7 @@ const ProfilePlayed = () => {
             onChange={(v) => {
               setChosen(v ?? "");
               setPicked(null);
+              setConfirming(false);
             }}
           />
           {!loaded ? (
@@ -83,6 +93,20 @@ const ProfilePlayed = () => {
                   </Button>
                 </Group>
               ))}
+              <Group justify="flex-end">
+                <Button
+                  size="xs"
+                  variant="default"
+                  color="red"
+                  disabled={data.loading}
+                  onClick={() => {
+                    setConfirmCount(Object.keys(played).length);
+                    setConfirming(true);
+                  }}
+                >
+                  Clear all
+                </Button>
+              </Group>
             </Stack>
           )}
           {playedError && (
@@ -106,6 +130,21 @@ const ProfilePlayed = () => {
               Add
             </Button>
           </Group>
+          <Modal
+            opened={confirming}
+            onClose={() => setConfirming(false)}
+            title={`Clear all ${confirmCount} ${confirmCount === 1 ? "game" : "games"} for ${year}?`}
+          >
+            <Text size="sm">This can&apos;t be undone.</Text>
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+              <Button color="red" onClick={confirmClear}>
+                Clear all
+              </Button>
+            </Group>
+          </Modal>
         </>
       )}
     </Stack>

@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +18,7 @@ const state = vi.hoisted(() => ({
   played: null as Record<string, 1> | null,
   error: null as string | null,
   toggle: vi.fn(),
+  clear: vi.fn(),
   dataYear: vi.fn(),
   playedYear: vi.fn(),
 }));
@@ -37,6 +38,7 @@ vi.mock("@/hooks/usePlayed", () => ({
       state.played,
       () => {},
       state.error,
+      state.clear,
     ];
   },
 }));
@@ -57,6 +59,7 @@ describe("ProfilePlayed", () => {
     state.played = { "2": 1 };
     state.error = null;
     state.toggle.mockReset();
+    state.clear.mockReset();
     state.dataYear.mockReset();
     state.playedYear.mockReset();
   });
@@ -194,5 +197,89 @@ describe("ProfilePlayed", () => {
       screen.getByRole("combobox", { name: "Game to add" }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  });
+
+  describe("Clear all", () => {
+    const open = () =>
+      userEvent.click(screen.getByRole("button", { name: "Clear all" }));
+
+    it("is hidden with no games or while played games load", () => {
+      state.played = {};
+      const { unmount } = renderWithMantine(<ProfilePlayed />);
+      expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
+      unmount();
+      state.played = null;
+      renderWithMantine(<ProfilePlayed />);
+      expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
+    });
+
+    it("is disabled while games load", () => {
+      state.data = { loading: true, error: false, scores: [] };
+      renderWithMantine(<ProfilePlayed />);
+      expect(screen.getByRole("button", { name: "Clear all" })).toBeDisabled();
+    });
+
+    it("does not clear when cancelled", async () => {
+      renderWithMantine(<ProfilePlayed />);
+      await open();
+      const dialog = await screen.findByRole("dialog");
+      expect(
+        within(dialog).getByText(`Clear all 1 game for ${thisYear}?`),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("This can't be undone."),
+      ).toBeInTheDocument();
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Cancel" }),
+      );
+      expect(state.clear).not.toHaveBeenCalled();
+    });
+
+    it("pluralizes the title and keeps it while closing", async () => {
+      state.played = { "1": 1, "2": 1 };
+      const { rerender } = renderWithMantine(<ProfilePlayed />);
+      await open();
+      const dialog = await screen.findByRole("dialog");
+      expect(
+        within(dialog).getByText(`Clear all 2 games for ${thisYear}?`),
+      ).toBeInTheDocument();
+      state.played = {};
+      rerender(
+        <MantineProvider>
+          <ProfilePlayed />
+        </MantineProvider>,
+      );
+      expect(
+        screen.getByText(`Clear all 2 games for ${thisYear}?`),
+      ).toBeInTheDocument();
+    });
+
+    it("clears once on confirm and closes", async () => {
+      renderWithMantine(<ProfilePlayed />);
+      await open();
+      const dialog = await screen.findByRole("dialog");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Clear all" }),
+      );
+      expect(state.clear).toHaveBeenCalledTimes(1);
+      await waitFor(() =>
+        expect(screen.queryByText("This can't be undone.")).toBeNull(),
+      );
+    });
+
+    it("closes when the year changes", async () => {
+      renderWithMantine(<ProfilePlayed />);
+      await open();
+      await screen.findByText("This can't be undone.");
+      await userEvent.click(
+        screen.getByRole("combobox", { name: "Year", hidden: true }),
+      );
+      await userEvent.click(
+        screen.getByRole("option", { name: "2020", hidden: true }),
+      );
+      await waitFor(() =>
+        expect(screen.queryByText("This can't be undone.")).toBeNull(),
+      );
+    });
   });
 });

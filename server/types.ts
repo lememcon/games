@@ -396,6 +396,11 @@ export interface PlayedStore {
     year: number,
     bggIds: Set<number>,
   ): Promise<MutationResult<PlayedGames>>;
+  /**
+   * Unmarks every game the member played in the year (a no-op when there are
+   * none). Refuses with 404 `unknown_year`.
+   */
+  clear(discordId: string, year: number): Promise<MutationResult<null>>;
 }
 
 /** Every member's own player count ranges: discord id, then bgg id. */
