@@ -241,7 +241,7 @@ describe("usePlayed", () => {
 
   it("sets a load error on a server failure", async () => {
     const f = makeFetch();
-    const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+    const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
     await answer(f.calls[0], 500);
 
@@ -255,7 +255,7 @@ describe("usePlayed", () => {
     "shows no error when the load gets a %i",
     async (status) => {
       const f = makeFetch();
-      const { result } = renderHook(() => usePlayedCounts("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
 
       await answer(f.calls[0], status);
 
@@ -267,7 +267,7 @@ describe("usePlayed", () => {
   it("scopes a load error to its year and clears it on return", async () => {
     const f = makeFetch();
     const { result, rerender } = renderHook(
-      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      ({ y }) => usePlayed(y, f.fetchImpl),
       { initialProps: { y: "2025" } },
     );
     await answer(f.calls[0], 500);
@@ -289,7 +289,7 @@ describe("usePlayed", () => {
   it("clears a load error once a retry succeeds", async () => {
     const f = makeFetch();
     const { result, rerender } = renderHook(
-      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      ({ y }) => usePlayed(y, f.fetchImpl),
       { initialProps: { y: "2025" } },
     );
     await answer(f.calls[0], 500);
@@ -306,7 +306,7 @@ describe("usePlayed", () => {
   it("sets no error when a cancelled load fails", async () => {
     const f = makeFetch();
     const { result, rerender } = renderHook(
-      ({ y }) => usePlayedCounts(y, f.fetchImpl),
+      ({ y }) => usePlayed(y, f.fetchImpl),
       { initialProps: { y: "2025" } },
     );
     rerender({ y: "2026" });
