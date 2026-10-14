@@ -224,7 +224,7 @@ describe("ProfilePlayed", () => {
       await open();
       const dialog = await screen.findByRole("dialog");
       expect(
-        within(dialog).getByText(`Clear all 1 games for ${thisYear}?`),
+        within(dialog).getByText(`Clear all 1 game for ${thisYear}?`),
       ).toBeInTheDocument();
       expect(
         within(dialog).getByText("This can't be undone."),
@@ -233,6 +233,25 @@ describe("ProfilePlayed", () => {
         within(dialog).getByRole("button", { name: "Cancel" }),
       );
       expect(state.clear).not.toHaveBeenCalled();
+    });
+
+    it("pluralizes the title and keeps it while closing", async () => {
+      state.played = { "1": 1, "2": 1 };
+      const { rerender } = renderWithMantine(<ProfilePlayed />);
+      await open();
+      const dialog = await screen.findByRole("dialog");
+      expect(
+        within(dialog).getByText(`Clear all 2 games for ${thisYear}?`),
+      ).toBeInTheDocument();
+      state.played = {};
+      rerender(
+        <MantineProvider>
+          <ProfilePlayed />
+        </MantineProvider>,
+      );
+      expect(
+        screen.getByText(`Clear all 2 games for ${thisYear}?`),
+      ).toBeInTheDocument();
     });
 
     it("clears once on confirm and closes", async () => {

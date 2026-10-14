@@ -31,6 +31,8 @@ const ProfilePlayed = () => {
   const data = useData(year || null);
   const [, toggle, played, , playedError, clear] = usePlayed(year);
   const [confirming, setConfirming] = useState(false);
+  // Snapshot at open so the title stays put while the modal fades out.
+  const [confirmCount, setConfirmCount] = useState(0);
 
   const names = gameNamesById(data.scores);
   const loaded = played !== null;
@@ -97,7 +99,10 @@ const ProfilePlayed = () => {
                   variant="default"
                   color="red"
                   disabled={data.loading}
-                  onClick={() => setConfirming(true)}
+                  onClick={() => {
+                    setConfirmCount(Object.keys(played).length);
+                    setConfirming(true);
+                  }}
                 >
                   Clear all
                 </Button>
@@ -128,7 +133,7 @@ const ProfilePlayed = () => {
           <Modal
             opened={confirming}
             onClose={() => setConfirming(false)}
-            title={`Clear all ${Object.keys(played ?? {}).length} games for ${year}?`}
+            title={`Clear all ${confirmCount} ${confirmCount === 1 ? "game" : "games"} for ${year}?`}
           >
             <Text size="sm">This can&apos;t be undone.</Text>
             <Group justify="flex-end" mt="md">
