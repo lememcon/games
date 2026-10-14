@@ -42,6 +42,7 @@ const Game = ({
   const { totals } = useYearTotals();
   const max = data.max;
   const players = data.by_id[id];
+  const bggId = Number(id);
 
   if (!players || players.length === 0) {
     return null;
@@ -61,7 +62,7 @@ const Game = ({
         image={image}
       />
       <PlayerScoresTable players={players} max={max} />
-      <YearSparkline series={seriesFor(totals, Number(id))} />
+      <YearSparkline series={seriesFor(totals, bggId)} />
       {overrides && discordId && bounds && (
         <MyPlayerRange
           // Remount after a save or reset so the inputs show server state.
@@ -70,18 +71,16 @@ const Game = ({
           stored={stored}
           saving={overrides.saving}
           error={overrides.error}
-          onSave={(range) => overrides.save(Number(id), range)}
-          onReset={() => overrides.reset(Number(id))}
+          onSave={(range) => overrides.save(bggId, range)}
+          onReset={() => overrides.reset(bggId)}
         />
       )}
       {vetoes && discordId && (
         <MyVeto
           vetoed={vetoes.all[discordId]?.has(id) ?? false}
-          saving={vetoes.saving}
-          error={vetoes.error}
-          onChange={(on) =>
-            on ? vetoes.veto(Number(id)) : vetoes.unveto(Number(id))
-          }
+          saving={vetoes.isSaving(bggId)}
+          error={vetoes.errorFor(bggId)}
+          onChange={(on) => (on ? vetoes.veto(bggId) : vetoes.unveto(bggId))}
         />
       )}
       <BackButton href={backHref} style={{ marginTop: "2em" }} />

@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import { Text } from "@mantine/core";
-
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
 import type { VetoesState } from "@/hooks/useVetoes";
@@ -52,18 +50,14 @@ const GamesList = ({
     const vetoed = vetoes.all[discordId]?.has(game.id) ?? false;
     return {
       vetoed,
-      vetoDisabled: vetoes.saving,
+      vetoDisabled: vetoes.isSaving(bggId),
+      vetoError: vetoes.errorFor(bggId),
       onVeto: () => (vetoed ? vetoes.unveto(bggId) : vetoes.veto(bggId)),
     };
   };
 
   return (
     <div className="tray-list">
-      {vetoes?.error && (
-        <Text role="alert" c="red" size="sm">
-          {vetoes.error}
-        </Text>
-      )}
       <div className="tray-podium">
         {podium.map((game, i) => (
           <GameCard

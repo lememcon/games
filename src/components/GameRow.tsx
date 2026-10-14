@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 
-import { useMantineTheme } from "@mantine/core";
+import { Text, useMantineTheme } from "@mantine/core";
 
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
@@ -22,6 +22,8 @@ interface GameRowProps {
   onToggle: () => void;
   vetoed?: boolean;
   vetoDisabled?: boolean;
+  // Shown beside the veto button when saving it failed.
+  vetoError?: string | null;
   // Omitted to hide the veto button.
   onVeto?: () => void;
 }
@@ -42,6 +44,7 @@ const GameRow = ({
   onToggle,
   vetoed = false,
   vetoDisabled,
+  vetoError,
   onVeto,
 }: GameRowProps) => {
   const theme = useMantineTheme();
@@ -90,6 +93,11 @@ const GameRow = ({
             disabled={vetoDisabled}
             onToggle={onVeto}
           />
+        )}
+        {vetoError && (
+          <Text role="alert" c="red" size="xs" w="100%">
+            {vetoError}
+          </Text>
         )}
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { Link } from "wouter";
 
+import { Text } from "@mantine/core";
+
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
 import PlayerName from "@/components/PlayerName";
@@ -21,6 +23,8 @@ interface GameCardProps {
   onToggle: () => void;
   vetoed?: boolean;
   vetoDisabled?: boolean;
+  // Shown beside the veto button when saving it failed.
+  vetoError?: string | null;
   // Omitted to hide the veto button.
   onVeto?: () => void;
   // Name of the least happy scorer, shown on the top result only.
@@ -41,6 +45,7 @@ const GameCard = ({
   onToggle,
   vetoed = false,
   vetoDisabled,
+  vetoError,
   onVeto,
   leastHappy,
 }: GameCardProps) => {
@@ -104,6 +109,11 @@ const GameCard = ({
                 disabled={vetoDisabled}
                 onToggle={onVeto}
               />
+            )}
+            {vetoError && (
+              <Text role="alert" c="red" size="xs" w="100%">
+                {vetoError}
+              </Text>
             )}
           </div>
         </div>

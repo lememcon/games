@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
@@ -19,49 +19,69 @@ const EMPTY: All = {};
 // Every member's vetoes (discord id, then bgg id as a string), which apply to
 // every year, plus veto and unveto for the signed-in member. A failed load
 // leaves the vetoes empty so nothing is hidden. Mutations are not optimistic:
-// the list is refetched after each one.
+// the list is refetched after each one. Saving and errors are tracked per
+// game, so one save locks only its own game and a failure shows on that game.
+// A new action on a game clears that game's error; errors persist until then.
+// Only the newest list response is applied, so a slow earlier fetch can never
+// overwrite a fresher one.
 const useVetoes = (fetchImpl: typeof fetch = fetch) => {
   const [all, setAll] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState<ReadonlySet<number>>(new Set());
+  const [errors, setErrors] = useState<Record<number, string>>({});
+  const latest = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    const mine = ++latest.current;
     vetoesApi(fetchImpl)
       .list()
-      .then((d) => !cancelled && setAll(vetoesByMember(d.vetoes)))
+      .then(
+        (d) =>
+          !cancelled &&
+          mine === latest.current &&
+          setAll(vetoesByMember(d.vetoes)),
+      )
       .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [fetchImpl]);
 
-  const mutate = useCallback(
-    async (run: () => Promise<void>) => {
-      setSaving(true);
-      setError(null);
-      try {
-        await run();
-      } catch (e) {
-        setError(describe(e));
-      }
-      // Refetch either way so a stale view resyncs.
-      try {
-        setAll(vetoesByMember((await vetoesApi(fetchImpl).list()).vetoes));
-      } catch {
-        setError((prev) => prev ?? GENERIC_ERROR);
-      }
-      setSaving(false);
-    },
-    [fetchImpl],
-  );
+  const mutate = async (bggId: number, run: () => Promise<void>) => {
+    setSaving((prev) => new Set(prev).add(bggId));
+    setErrors(({ [bggId]: _dropped, ...rest }) => rest);
+    let message: string | null = null;
+    try {
+      await run();
+    } catch (e) {
+      message = describe(e);
+    }
+    // Refetch either way so a stale view resyncs.
+    const mine = ++latest.current;
+    try {
+      const d = await vetoesApi(fetchImpl).list();
+      if (mine === latest.current) setAll(vetoesByMember(d.vetoes));
+    } catch {
+      if (mine === latest.current) message ??= GENERIC_ERROR;
+    }
+    setSaving((prev) => {
+      const next = new Set(prev);
+      next.delete(bggId);
+      return next;
+    });
+    if (message) setErrors((prev) => ({ ...prev, [bggId]: message }));
+  };
 
   return {
     all,
     saving,
-    error,
-    veto: (bggId: number) => mutate(() => vetoesApi(fetchImpl).set(bggId)),
-    unveto: (bggId: number) => mutate(() => vetoesApi(fetchImpl).clear(bggId)),
+    error: errors,
+    isSaving: (bggId: number) => saving.has(bggId),
+    errorFor: (bggId: number): string | null => errors[bggId] ?? null,
+    veto: (bggId: number) =>
+      mutate(bggId, () => vetoesApi(fetchImpl).set(bggId)),
+    unveto: (bggId: number) =>
+      mutate(bggId, () => vetoesApi(fetchImpl).clear(bggId)),
   };
 };
 
