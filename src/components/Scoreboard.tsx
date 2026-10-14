@@ -47,6 +47,8 @@ interface ScoreboardProps {
   user: ApprovedUser;
 }
 
+const UNDO_MS = 10_000;
+
 const Notice = ({
   title,
   children,
@@ -122,6 +124,42 @@ function Scoreboard({ user }: ScoreboardProps) {
   );
 
   const vetoes = useVetoes();
+  // The last game vetoed from the list, for the undo bar. A new object per
+  // veto, so the timer restarts. The game leaves the list, so the name is
+  // captured at click time.
+  const [lastVetoed, setLastVetoed] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [barHeld, setBarHeld] = useState(false);
+  const undoRef = useRef<HTMLButtonElement>(null);
+  const autoFocus = useRef(false);
+  useEffect(() => {
+    if (!lastVetoed) return;
+    // Focus moved here by us does not hold the timer; the member's does.
+    autoFocus.current = true;
+    undoRef.current?.focus();
+    autoFocus.current = false;
+  }, [lastVetoed]);
+  useEffect(() => {
+    if (!lastVetoed || barHeld) return;
+    const timer = setTimeout(() => setLastVetoed(null), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [lastVetoed, barHeld]);
+  const listVetoes = {
+    ...vetoes,
+    veto: (id: number, name: string) => {
+      setLastVetoed(null);
+      setBarHeld(false);
+      void vetoes.veto(id).then((ok) => {
+        if (ok) setLastVetoed({ id, name });
+      });
+    },
+  };
+  const undo = async (id: number) => {
+    setLastVetoed(null);
+    await vetoes.unveto(id);
+  };
   const playerVetoes = useMemo(
     () => playerCountsByName(data.by_player, vetoes.all),
     [data.by_player, vetoes.all],
@@ -404,6 +442,41 @@ function Scoreboard({ user }: ScoreboardProps) {
                   {playedError}
                 </Text>
               )}
+              <div
+                role="status"
+                aria-live="polite"
+                onMouseEnter={() => setBarHeld(true)}
+                onMouseLeave={() => setBarHeld(false)}
+                onFocus={() => !autoFocus.current && setBarHeld(true)}
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setBarHeld(false);
+                  }
+                }}
+              >
+                {lastVetoed && (
+                  <div className="undo-bar">
+                    <span>Vetoed {lastVetoed.name}.</span>
+                    <div className="undo-bar__actions">
+                      <Button
+                        ref={undoRef}
+                        size="xs"
+                        disabled={vetoes.isSaving(lastVetoed.id)}
+                        onClick={() => void undo(lastVetoed.id)}
+                      >
+                        Undo
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="default"
+                        onClick={() => setLastVetoed(null)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
               {games.length === 0 ? (
                 <>
                   <Notice title="No games to rank">
@@ -438,7 +511,7 @@ function Scoreboard({ user }: ScoreboardProps) {
                     gameData={game_data}
                     isPlayed={isPlayed}
                     onToggle={handleToggle}
-                    vetoes={vetoes}
+                    vetoes={listVetoes}
                     discordId={user.discordId}
                   />
                   {markingDialog}

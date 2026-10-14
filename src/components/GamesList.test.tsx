@@ -180,8 +180,8 @@ describe("GamesList", () => {
       error: {},
       isSaving: () => false,
       errorFor: () => null,
-      veto: vi.fn(),
-      unveto: vi.fn(),
+      veto: vi.fn(async () => true),
+      unveto: vi.fn(async () => true),
       ...over,
     });
 
@@ -206,7 +206,7 @@ describe("GamesList", () => {
       const { getByRole } = renderList({ vetoes, discordId: "d1" });
 
       await user.click(getByRole("button", { name: "Veto: Chess" }));
-      expect(vetoes.veto).toHaveBeenCalledWith(200);
+      expect(vetoes.veto).toHaveBeenCalledWith(200, "Chess");
       await user.click(getByRole("button", { name: "Veto: Root" }));
       expect(vetoes.unveto).toHaveBeenCalledWith(100);
       await user.click(getByRole("button", { name: "Veto: Nim" }));
