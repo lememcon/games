@@ -133,5 +133,15 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
           .onConflictDoNothing();
       return { ok: true, value: await read(discordId, year) };
     },
+
+    async clear(discordId, year) {
+      if (!(await yearExists(year))) return UNKNOWN_YEAR;
+      await db
+        .delete(playedCount)
+        .where(
+          and(eq(playedCount.discordId, discordId), eq(playedCount.year, year)),
+        );
+      return { ok: true, value: null };
+    },
   };
 }

@@ -71,6 +71,10 @@ const send =
   });
 const put = send("PUT");
 const post = send("POST");
+const del = (headers: Record<string, string> = {}) => ({
+  method: "DELETE",
+  headers: { "sec-fetch-site": "same-origin", ...headers },
+});
 
 describe("GET /api/played", () => {
   it("401s anonymous and 403s pending users, so it is not public", async () => {
@@ -449,5 +453,60 @@ describe("POST /api/played/:year/:bggId", () => {
     expect(res.status).toBe(422);
     expect(await res.json()).toEqual({ error: "unknown_member" });
     expect(rows.has(`${KEL}:2025`)).toBe(false);
+  });
+});
+
+describe("DELETE /api/me/played/:year", () => {
+  it("401s anonymous and 403s pending users", async () => {
+    const { app, calls } = makeApp();
+    expect((await app.request("/api/me/played/2025", del())).status).toBe(401);
+    expect(
+      (await app.request("/api/me/played/2025", del(as("pending")))).status,
+    ).toBe(403);
+    expect(calls).toEqual([]);
+  });
+
+  it("403s a cross-site request", async () => {
+    const { app, calls } = makeApp();
+    const res = await app.request(
+      "/api/me/played/2025",
+      del({ ...as("member"), "sec-fetch-site": "cross-site" }),
+    );
+    expect(res.status).toBe(403);
+    expect(calls).toEqual([]);
+  });
+
+  it("clears only the session member's year, with 204 and no body", async () => {
+    const { app, rows } = makeApp();
+    rows.set(`${KEL}:2025`, new Set([11, 12]));
+    rows.set(`${KEL}:2026`, new Set([11]));
+    const res = await app.request("/api/me/played/2025", del(as("member")));
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
+    expect(rows.get(`${KEL}:2025`)).toEqual(new Set());
+    expect(rows.get(`${KEL}:2026`)).toEqual(new Set([11]));
+    expect(rows.get(`${PAT}:2025`)).toEqual(new Set([11]));
+  });
+
+  it("204s again when already empty", async () => {
+    const { app } = makeApp();
+    const url = "/api/me/played/2025";
+    expect((await app.request(url, del(as("member")))).status).toBe(204);
+    expect((await app.request(url, del(as("member")))).status).toBe(204);
+  });
+
+  it("400s a bad year", async () => {
+    const { app, calls } = makeApp();
+    const res = await app.request("/api/me/played/20x5", del(as("member")));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_year" });
+    expect(calls).toEqual([]);
+  });
+
+  it("404s an unknown year", async () => {
+    const { app } = makeApp();
+    const res = await app.request("/api/me/played/2000", del(as("member")));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_year" });
   });
 });

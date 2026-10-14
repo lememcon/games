@@ -183,6 +183,35 @@ describe("importPlayed", () => {
   });
 });
 
+describe("clear", () => {
+  it("deletes only that member's rows for that year", async () => {
+    for (const [id, y, g] of [
+      [ALEX, 2025, 11],
+      [ALEX, 2025, 12],
+      [ALEX, 2026, 11],
+      [JO, 2025, 11],
+    ] as const)
+      await insert(id, y, g);
+    expect(await store.clear(ALEX, 2025)).toEqual({ ok: true, value: null });
+    expect(await store.get(ALEX, 2025)).toEqual([]);
+    expect(await store.get(ALEX, 2026)).toEqual(["11"]);
+    expect(await store.get(JO, 2025)).toEqual(["11"]);
+  });
+
+  it("is a no-op when nothing is played", async () => {
+    expect(await store.clear(ALEX, 2025)).toEqual({ ok: true, value: null });
+    expect(await rowCount()).toBe(0);
+  });
+
+  it("refuses an unknown year", async () => {
+    expect(await store.clear(ALEX, 1999)).toEqual({
+      ok: false,
+      status: 404,
+      error: "unknown_year",
+    });
+  });
+});
+
 describe("cascades", () => {
   it("removes a member's played games when the member is deleted", async () => {
     await store.set(ALEX, 2025, 11, true);

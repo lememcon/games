@@ -13,7 +13,7 @@ import { readJson } from "../validate";
 
 /**
  * Played games: everyone's (`/played`) and the signed-in member's own
- * (`/me/played`); all need an approved user (checked in app.ts). Responses
+ * (`/me/played`, including clearing a year); all need an approved user (checked in app.ts). Responses
  * carry `played` (bgg id arrays, or a boolean for a single set).
  */
 export function playedRoutes(played: PlayedStore) {
@@ -82,6 +82,14 @@ export function playedRoutes(played: PlayedStore) {
     );
     if (!result.ok) return refusalResponse(c, result);
     return c.json({ played: result.value });
+  });
+
+  routes.delete("/me/played/:year", async (c) => {
+    const year = parseYear(c.req.param("year"));
+    if (year === null) return c.json({ error: "invalid_year" }, 400);
+    const result = await played.clear(c.get("user")!.discordId, year);
+    if (!result.ok) return refusalResponse(c, result);
+    return c.body(null, 204);
   });
 
   return routes;

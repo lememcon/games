@@ -369,6 +369,12 @@ export function fakePlayed(
       for (const id of incoming) if (inYear(year, id)) ids.add(id);
       return { ok: true, value: list(ids) };
     },
+    clear: async (discordId, year) => {
+      calls.push({ discordId, year });
+      if (!years.has(year)) return refuse(404, "unknown_year");
+      bucket(discordId, year).clear();
+      return { ok: true, value: null };
+    },
   };
   return { played, rows, calls };
 }
