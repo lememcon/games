@@ -357,8 +357,7 @@ export type AllPlayedGames = Record<string, PlayedGames>;
 
 /**
  * All SQL for played games lives behind this interface
- * (server/db/playedStore.ts). A played_count row means played; its count is
- * ignored.
+ * (server/db/playedStore.ts). A played_count row means played.
  */
 export interface PlayedStore {
   /** Members with at least one played game; null when the year is unknown. */

@@ -35,15 +35,10 @@ beforeEach(async () => {
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
 });
 
-const insert = (
-  discordId: string,
-  year: number,
-  bggId: number,
-  count: number,
-) =>
+const insert = (discordId: string, year: number, bggId: number) =>
   client.query(
-    "INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES ($1, $2, $3, $4)",
-    [discordId, year, bggId, count],
+    "INSERT INTO played_count (discord_id, year, bgg_id) VALUES ($1, $2, $3)",
+    [discordId, year, bggId],
   );
 
 describe("get", () => {
@@ -57,12 +52,6 @@ describe("get", () => {
     await store.set(ALEX, 2025, 11, true);
     await store.set(ALEX, 2025, 30, true);
     expect(await store.get(ALEX, 2025)).toEqual(["11", "30", "200"]);
-  });
-
-  it("reads a row with a legacy count above 1 as played", async () => {
-    await insert(ALEX, 2025, 11, 5);
-    expect(await store.get(ALEX, 2025)).toEqual(["11"]);
-    expect(await store.getAll(2025)).toEqual({ [ALEX]: ["11"] });
   });
 });
 
@@ -88,7 +77,7 @@ describe("getAll", () => {
 });
 
 describe("set", () => {
-  it("marks played with count 1, idempotently", async () => {
+  it("marks played, idempotently", async () => {
     expect(await store.set(ALEX, 2025, 11, true)).toEqual({
       ok: true,
       value: null,
@@ -98,16 +87,8 @@ describe("set", () => {
       value: null,
     });
     expect(
-      (await client.query("SELECT bgg_id, count FROM played_count")).rows,
-    ).toEqual([{ bgg_id: 11, count: 1 }]);
-  });
-
-  it("leaves an existing legacy count alone when marking played", async () => {
-    await insert(ALEX, 2025, 11, 5);
-    await store.set(ALEX, 2025, 11, true);
-    expect((await client.query("SELECT count FROM played_count")).rows).toEqual(
-      [{ count: 5 }],
-    );
+      (await client.query("SELECT bgg_id FROM played_count")).rows,
+    ).toEqual([{ bgg_id: 11 }]);
   });
 
   it("deletes the row when unplayed, idempotently", async () => {
@@ -125,7 +106,7 @@ describe("set", () => {
       error: "unknown_game",
     });
     expect(await rowCount()).toBe(0);
-    await insert(ALEX, 2025, 4040, 1);
+    await insert(ALEX, 2025, 4040);
     expect((await store.set(ALEX, 2025, 4040, false)).ok).toBe(true);
     expect(await rowCount()).toBe(0);
   });
@@ -150,20 +131,11 @@ describe("set", () => {
 });
 
 describe("importPlayed", () => {
-  it("adds missing games with count 1, keeping stored rows", async () => {
-    await insert(ALEX, 2025, 11, 2);
+  it("adds missing games, keeping stored rows", async () => {
+    await insert(ALEX, 2025, 11);
     const result = await store.importPlayed(ALEX, 2025, new Set([11, 12]));
     expect(result).toEqual({ ok: true, value: ["11", "12"] });
-    expect(
-      (
-        await client.query(
-          "SELECT bgg_id, count FROM played_count ORDER BY bgg_id",
-        )
-      ).rows,
-    ).toEqual([
-      { bgg_id: 11, count: 2 },
-      { bgg_id: 12, count: 1 },
-    ]);
+    expect(await rowCount()).toBe(2);
   });
 
   it("returns the existing played games for an empty import", async () => {
@@ -219,7 +191,7 @@ describe("collapsing counts to played (migration 0016)", () => {
          ('${ALEX}', 2025, 1, 1), ('${ALEX}', 2025, 2, 3),
          ('${ALEX}', 2026, 1, 999), ('${JO}', 2025, 1, 3);`,
     );
-    await applyMigrations(pre, 16);
+    await applyMigrations(pre, 16, 17);
     const { rows: collapsed } = await pre.query(
       "SELECT discord_id, year, bgg_id, count FROM played_count ORDER BY discord_id, year, bgg_id",
     );
@@ -243,6 +215,42 @@ describe("collapsing counts to played (migration 0016)", () => {
   });
 });
 
+describe("dropping the count column (migration 0017)", () => {
+  it("drops count and its CHECK, keeping every row", async () => {
+    const pre = new PGlite();
+    await applyMigrations(pre, 0, 17);
+    await pre.exec(
+      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}'), ('${JO}');
+       INSERT INTO year (year) VALUES (2025);
+       INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');
+       INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES
+         ('${ALEX}', 2025, 1, 1), ('${ALEX}', 2025, 2, 3), ('${JO}', 2025, 1, 1);`,
+    );
+    await applyMigrations(pre, 17);
+    const { rows: columns } = await pre.query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'played_count' ORDER BY column_name",
+    );
+    expect(columns).toEqual([
+      { column_name: "bgg_id" },
+      { column_name: "discord_id" },
+      { column_name: "year" },
+    ]);
+    const { rows: checks } = await pre.query(
+      "SELECT conname FROM pg_constraint WHERE conname = 'played_count_count_check'",
+    );
+    expect(checks).toEqual([]);
+    const { rows } = await pre.query(
+      "SELECT discord_id, year, bgg_id FROM played_count ORDER BY discord_id, year, bgg_id",
+    );
+    expect(rows).toEqual([
+      { discord_id: JO, year: 2025, bgg_id: 1 },
+      { discord_id: ALEX, year: 2025, bgg_id: 1 },
+      { discord_id: ALEX, year: 2025, bgg_id: 2 },
+    ]);
+    await pre.close();
+  });
+});
+
 describe("markPlayed", () => {
   const approve = (...ids: string[]) =>
     client.query(
@@ -252,19 +260,14 @@ describe("markPlayed", () => {
 
   it("marks every member, keeps existing rows and other games and years", async () => {
     await approve(ALEX, JO);
-    await insert(ALEX, 2025, 11, 3);
-    await insert(JO, 2026, 12, 1);
+    await insert(ALEX, 2025, 11);
+    await insert(JO, 2026, 12);
     const result = await store.markPlayed(new Set([ALEX, JO]), 2025, 11);
     expect(result).toEqual({
       ok: true,
       value: { [ALEX]: ["11"], [JO]: ["11"] },
     });
     expect(await rowCount()).toBe(3);
-    const { rows } = await client.query<{ count: number }>(
-      "SELECT count FROM played_count WHERE discord_id = $1 AND year = 2025",
-      [ALEX],
-    );
-    expect(rows).toEqual([{ count: 3 }]);
     expect(await store.get(JO, 2026)).toEqual(["12"]);
   });
 
