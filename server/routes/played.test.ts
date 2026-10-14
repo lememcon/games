@@ -31,7 +31,7 @@ const users: Record<string, AppUser> = {
   pending: { ...approved, status: "pending" },
 };
 
-function makeApp(members?: string[], games?: number[]) {
+function makeApp(members?: string[], games?: Record<number, number[]>) {
   const fake = fakePlayed({
     years: [2025, 2026],
     played: { [`${PAT}:2025`]: [11] },
@@ -262,8 +262,19 @@ describe("PUT /api/me/played/:year/:bggId", () => {
     expect(await res.json()).toEqual({ error: "unknown_year" });
   });
 
+  it("404s a game not scored in that year", async () => {
+    const { app, rows } = makeApp(undefined, { 2025: [11], 2026: [12] });
+    const res = await app.request(
+      "/api/me/played/2026/11",
+      put({ played: true }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_game" });
+    expect(rows.has(`${KEL}:2026`)).toBe(false);
+  });
+
   it("404s an unknown game when marking played, not when unmarking", async () => {
-    const { app, rows } = makeApp(undefined, [11]);
+    const { app, rows } = makeApp(undefined, { 2025: [11] });
     const res = await app.request(
       "/api/me/played/2025/999",
       put({ played: true }, as("member")),
@@ -300,6 +311,16 @@ describe("POST /api/me/played/:year/import", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ played: ["11", "12"] });
     expect(rows.get(`${PAT}:2025`)).toEqual(new Set([11]));
+  });
+
+  it("skips games not scored in the year", async () => {
+    const { app } = makeApp(undefined, { 2025: [11] });
+    const res = await app.request(
+      "/api/me/played/2025/import",
+      post({ games: ["11", "12"] }, as("member")),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ played: ["11"] });
   });
 
   it("400s bad year and body", async () => {
@@ -397,8 +418,19 @@ describe("POST /api/played/:year/:bggId", () => {
     expect(await res.json()).toEqual({ error: "unknown_year" });
   });
 
+  it("404s a game not scored in that year", async () => {
+    const { app, rows } = makeApp(undefined, { 2025: [11], 2026: [12] });
+    const res = await app.request(
+      "/api/played/2026/11",
+      post({ discordIds: [KEL] }, as("member")),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_game" });
+    expect(rows.has(`${KEL}:2026`)).toBe(false);
+  });
+
   it("404s an unknown game and writes nothing", async () => {
-    const { app, rows } = makeApp(undefined, [11]);
+    const { app, rows } = makeApp(undefined, { 2025: [11] });
     const res = await app.request(
       "/api/played/2025/999",
       post({ discordIds: [KEL] }, as("member")),

@@ -2,7 +2,7 @@ import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { AllPlayedGames, PlayedStore } from "../types";
-import { appUser, game, playedCount, year as yearTable } from "./schema";
+import { appUser, playedCount, score, year as yearTable } from "./schema";
 import type { StoreDb } from "./userStore";
 
 const UNKNOWN_YEAR = refuse(404, "unknown_year");
@@ -21,13 +21,25 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
         .where(eq(yearTable.year, year))
     ).length > 0;
 
-  const gameExists = async (bggId: number, q: StoreDb | Tx = db) =>
-    (
-      await q
-        .select({ bggId: game.bggId })
-        .from(game)
-        .where(eq(game.bggId, bggId))
-    ).length > 0;
+  /** The subset of `bggIds` with a score row in the year. */
+  const gamesInYear = async (
+    year: number,
+    bggIds: number[],
+    q: StoreDb | Tx = db,
+  ) =>
+    bggIds.length === 0
+      ? new Set<number>()
+      : new Set(
+          (
+            await q
+              .selectDistinct({ bggId: score.bggId })
+              .from(score)
+              .where(and(eq(score.year, year), inArray(score.bggId, bggIds)))
+          ).map(({ bggId }) => bggId),
+        );
+
+  const gameInYear = async (year: number, bggId: number, q = db) =>
+    (await gamesInYear(year, [bggId], q)).has(bggId);
 
   const read = async (discordId: string, year: number) =>
     (
@@ -64,7 +76,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
     async set(discordId, year, bggId, played) {
       if (!(await yearExists(year))) return UNKNOWN_YEAR;
       if (played) {
-        if (!(await gameExists(bggId))) return UNKNOWN_GAME;
+        if (!(await gameInYear(year, bggId))) return UNKNOWN_GAME;
         await db
           .insert(playedCount)
           .values({ discordId, year, bggId })
@@ -86,7 +98,7 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
     async markPlayed(discordIds, year, bggId) {
       return db.transaction(async (tx) => {
         if (!(await yearExists(year, tx))) return UNKNOWN_YEAR;
-        if (!(await gameExists(bggId, tx))) return UNKNOWN_GAME;
+        if (!(await gameInYear(year, bggId, tx))) return UNKNOWN_GAME;
         const [{ members }] = await tx
           .select({ members: count() })
           .from(appUser)
@@ -113,10 +125,11 @@ export function createPlayedStore(db: StoreDb): PlayedStore {
 
     async importPlayed(discordId, year, bggIds) {
       if (!(await yearExists(year))) return UNKNOWN_YEAR;
-      if (bggIds.size > 0)
+      const known = await gamesInYear(year, [...bggIds]);
+      if (known.size > 0)
         await db
           .insert(playedCount)
-          .values([...bggIds].map((bggId) => ({ discordId, year, bggId })))
+          .values([...known].map((bggId) => ({ discordId, year, bggId })))
           .onConflictDoNothing();
       return { ok: true, value: await read(discordId, year) };
     },

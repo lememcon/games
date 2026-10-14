@@ -366,8 +366,8 @@ export interface PlayedStore {
   get(discordId: string, year: number): Promise<PlayedGames | null>;
   /**
    * Marks a game played or unplayed. Refuses with 404 `unknown_year`, and
-   * 404 `unknown_game` when marking played a game that is not in the game
-   * table (unmarking skips that check so stale marks can be cleared).
+   * 404 `unknown_game` when marking played a game with no score row in the
+   * year (unmarking skips that check so stray marks can be cleared).
    */
   set(
     discordId: string,
@@ -388,7 +388,8 @@ export interface PlayedStore {
   ): Promise<MutationResult<AllPlayedGames>>;
   /**
    * Marks the games played and returns all the member's played games for the
-   * year. Refuses with 404 `unknown_year`.
+   * year. Refuses with 404 `unknown_year`; ids with no score row in the year
+   * are skipped silently.
    */
   importPlayed(
     discordId: string,
