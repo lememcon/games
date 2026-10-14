@@ -8,7 +8,7 @@ import GroupRank from "@/components/GroupRank";
 import LeastHappy from "@/components/LeastHappy";
 import PlayerName from "@/components/PlayerName";
 import ScorePopover from "@/components/ScorePopover";
-import { leastHappyPlayer } from "@/lib/games";
+import { leastHappyPlayer, splitLeastHappy } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
 import type { GameSplit } from "@/types";
 import { normalized_score } from "@/util";
@@ -39,12 +39,13 @@ const Players = ({ players }: { players: string[] }) => (
   </>
 );
 
-// One suggested split. Collapsed it shows the headline, the per-player score and,
-// for each group, its players and picked game; expanding the header reveals every
+// One suggested split. Collapsed it shows the headline, the per-player score, the
+// player least happy across the whole split and, for each group, its players and picked game; expanding the header reveals every
 // group's full list of top games.
 const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
   const [opened, { toggle }] = useDisclosure(false);
   const listId = useId();
+  const splitHappy = splitLeastHappy(split.groups);
 
   return (
     <div className="splits__card">
@@ -76,6 +77,15 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
             )}
           </span>
         </UnstyledButton>
+        {splitHappy && (
+          <div className="splits__least-happy" data-testid="split-least-happy">
+            <LeastHappy
+              game={splitHappy.game}
+              name={splitHappy.name}
+              individualMax={individualMax}
+            />
+          </div>
+        )}
       </div>
       {!opened && (
         <div className="splits__summary" data-testid="split-summary">

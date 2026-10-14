@@ -194,7 +194,10 @@ describe("SplitSuggestions", () => {
     ]);
     const utils = renderSplits([s]);
     await expand(utils);
-    const lines = utils.getAllByText(/least happy:/);
+    const rows = utils.container.querySelectorAll(".tray-row");
+    const lines = Array.from(rows).filter((r) =>
+      /least happy:/.test(r.textContent ?? ""),
+    );
     expect(lines).toHaveLength(1);
     expect(lines[0]).toHaveTextContent("least happy: Waymost (60.0)");
   });
@@ -209,9 +212,8 @@ describe("SplitSuggestions", () => {
     ]);
     const utils = renderSplits([s]);
     await expand(utils);
-    expect(utils.getAllByText(/least happy:/)[0]).toHaveTextContent(
-      "least happy: Waymost (40.0)",
-    );
+    const row = utils.container.querySelector(".splits__row--chosen");
+    expect(row).toHaveTextContent("least happy: Waymost (40.0)");
   });
 
   it("omits the line with fewer than two scorers", async () => {
@@ -220,6 +222,7 @@ describe("SplitSuggestions", () => {
     const utils = renderSplits([s]);
     await expand(utils);
     expect(utils.queryByText(/least happy:/)).toBeNull();
+    expect(utils.queryByTestId("split-least-happy")).toBeNull();
   });
 
   it("shows the least happy line on the collapsed summary", () => {
@@ -289,6 +292,27 @@ describe("SplitSuggestions", () => {
     await expand(utils);
     expect(utils.getAllByText(/group rank:/)[0]).toHaveTextContent(
       "group rank: #1 Kelsin (global 4) · #2 Waymost (global 2)",
+    );
+  });
+
+  it("shows the split-wide least happy line once, collapsed and expanded", async () => {
+    const s = split(null);
+    s.groups[0].games[0] = scored(s.groups[0].games[0], [
+      ["Kelsin", 1, 90],
+      ["Waymost", 2, 60],
+    ]);
+    s.groups[1].games[0] = scored(s.groups[1].games[0], [
+      ["Lemem", 3, 70],
+      ["TJ", 1, 85],
+    ]);
+    const utils = renderSplits([s]);
+    const line = utils.getByTestId("split-least-happy");
+    expect(line).toHaveTextContent("least happy: Lemem (70.0)");
+    expect(utils.getByTestId("split-summary")).not.toContainElement(line);
+    await expand(utils);
+    expect(utils.getAllByTestId("split-least-happy")).toHaveLength(1);
+    expect(utils.getByTestId("split-least-happy")).toHaveTextContent(
+      "least happy: Lemem (70.0)",
     );
   });
 });

@@ -248,6 +248,24 @@ export const leastHappyPlayer = (game: SelectedGame): string | null => {
     .name;
 };
 
+// The player least happy across a whole split, with the picked game where they
+// ranked worst: each group's picked game contributes its least happy player; the
+// worst rank wins (first name alphabetically on a tie). Null when no picked game
+// has one.
+export const splitLeastHappy = (
+  groups: SplitGroup[],
+): { name: string; game: SelectedGame } | null => {
+  const candidates = groups.flatMap((group) => {
+    const game = group.games.find((g) => g.name === group.picked);
+    const name = game ? leastHappyPlayer(game) : null;
+    return game && name ? [{ name, game, rank: game.players[name].rank }] : [];
+  });
+  candidates.sort((a, b) => b.rank - a.rank || byText(a.name, b.name));
+  return candidates.length > 0
+    ? { name: candidates[0].name, game: candidates[0].game }
+    : null;
+};
+
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
 // (images/gameData/playerPlayed injected) so it can be tested without Vite or
 // a rendered tree.
