@@ -73,11 +73,16 @@ const usePlayedCounts = (
   (id: string) => void,
   Counts | null,
   (id: string) => void,
+  string | null,
 ] => {
   const [shown, setShown] = useState<{ year: string; counts: Counts | null }>({
     year,
     counts: null,
   });
+  const [errorState, setErrorState] = useState<{
+    year: string;
+    message: string;
+  } | null>(null);
   const session = useRef<Session | null>(null);
 
   useEffect(() => {
@@ -85,6 +90,9 @@ const usePlayedCounts = (
       session.current = null;
       return;
     }
+    // A new load starts without the last one's error.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setErrorState(null);
     const s: Session = {
       year,
       cancelled: false,
@@ -104,8 +112,15 @@ const usePlayedCounts = (
           fetchImpl,
         );
         counts = toPlayedMap(body.played);
-      } catch {
-        // Not signed in, unknown year or a failure: nothing played, no edits.
+      } catch (e) {
+        // Not signed in, not approved or an unknown year is expected: nothing
+        // played, no edits, no message. Anything else is a failure worth showing.
+        const expected =
+          e instanceof ApiError &&
+          (e.status === 401 || e.status === 403 || e.status === 404);
+        if (!expected && !s.cancelled) {
+          setErrorState({ year, message: "Couldn't load your played games." });
+        }
         return;
       }
       if (s.cancelled) return;
@@ -132,6 +147,7 @@ const usePlayedCounts = (
       s.confirmed = counts;
       s.desired = counts;
       s.ready = true;
+      setErrorState(null);
       setShown({ year, counts });
     };
     void load();
@@ -146,8 +162,12 @@ const usePlayedCounts = (
       const s = session.current;
       if (!s?.ready) return;
       s.desired = withPlayed(s.desired, id, !(id in s.desired));
+      setErrorState(null);
       setShown({ year: s.year, counts: s.desired });
-      flush(s, id, fetchImpl, (counts) => setShown({ year: s.year, counts }));
+      flush(s, id, fetchImpl, (counts) => {
+        setShown({ year: s.year, counts });
+        setErrorState({ year: s.year, message: "Couldn't save. Try again." });
+      });
     },
     [fetchImpl],
   );
@@ -165,7 +185,9 @@ const usePlayedCounts = (
   const counts = shown.year === year ? shown.counts : null;
   const isPlayed = useCallback((id: string) => !!counts?.[id], [counts]);
 
-  return [isPlayed, toggle, counts, markConfirmed];
+  const error = errorState?.year === year ? errorState.message : null;
+
+  return [isPlayed, toggle, counts, markConfirmed, error];
 };
 
 export default usePlayedCounts;

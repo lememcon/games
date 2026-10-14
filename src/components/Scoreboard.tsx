@@ -89,9 +89,8 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [hidePlayed, setHidePlayed] = useLocalState("hide_played", false);
   const [storedSort, setSortMode] = useLocalState("sort_mode", "total");
   const sortMode = parseSortMode(storedSort);
-  const [isPlayed, togglePlayed, ownCounts, markConfirmed] = usePlayedCounts(
-    year ?? "",
-  );
+  const [isPlayed, togglePlayed, ownCounts, markConfirmed, playedError] =
+    usePlayedCounts(year ?? "");
   const [allCounts, markPlayed] = useMarkPlayedCounts(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
   // A dialog opened for one year must not confirm against another.
@@ -371,6 +370,11 @@ function Scoreboard({ user }: ScoreboardProps) {
                   sharePath(year, { players, hidePlayed, sort: sortMode })
                 }
               />
+              {playedError && (
+                <Text c="red" size="sm" role="alert">
+                  {playedError}
+                </Text>
+              )}
               {games.length === 0 ? (
                 <>
                   <Notice title="No games to rank">
