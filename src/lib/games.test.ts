@@ -473,8 +473,61 @@ describe("buildSelectedGames", () => {
 
     it("lists who played each game, in selected-player order", () => {
       const games = run([], { alice: { "100": 1 }, bob: { "100": 1 } }, false);
-      expect(games[0].playedBy).toEqual(["alice", "bob"]);
+      expect(games[0].playedBy).toEqual([{ name: "alice" }, { name: "bob" }]);
       expect(games[1].playedBy).toEqual([]);
+    });
+
+    describe("identity", () => {
+      const linked: Record<string, PlayerGameScore[]> = {
+        alice: [
+          {
+            player: "alice",
+            game: "Root",
+            rank: 1,
+            score: 50,
+            bgg_id: 100,
+            discord_id: "d1",
+            discord_image: "https://cdn.example/a.png",
+          },
+        ],
+        bob: [
+          {
+            player: "bob",
+            game: "Chess",
+            rank: 1,
+            score: 20,
+            bgg_id: 200,
+            discord_id: "d2",
+            discord_image: "http://cdn.example/b.png",
+          },
+        ],
+      };
+      const runLinked = (playerPlayed: PlayerPlayed) =>
+        buildSelectedGames({
+          byPlayer: linked,
+          players: [],
+          gameData,
+          images: {},
+          hidePlayed: false,
+          playerPlayed,
+        });
+
+      it("carries the Discord id and https avatar", () => {
+        const games = runLinked({ alice: { "100": 1 } });
+        expect(games[0].playedBy).toEqual([
+          {
+            name: "alice",
+            discordId: "d1",
+            discordImage: "https://cdn.example/a.png",
+          },
+        ]);
+      });
+
+      it("gives a player who played without scoring their identity", () => {
+        const games = runLinked({ bob: { "100": 1 } });
+        const root = games.find((g) => g.name === "Root")!;
+        expect(root.playedBy).toEqual([{ name: "bob", discordId: "d2" }]);
+      });
     });
   });
 

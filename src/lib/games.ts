@@ -7,6 +7,7 @@ import type {
   GameMeta,
   GameSplit,
   GamesData,
+  PlayedByPlayer,
   PlayerGameScore,
   PlayerOverride,
   SelectedGame,
@@ -282,13 +283,32 @@ export const buildSelectedGames = ({
   const selectedPlayers = players.length > 0 ? players : keys(byPlayer);
 
   // Who among the selected players has played a game this year.
-  const playedByFor = (id: string): string[] =>
-    selectedPlayers.filter((player) => id in (playerPlayed[player] ?? {}));
+  // A player may have played without scoring, so identity comes from their
+  // first score row that carries a Discord id, resolved once per player.
+  const identities = new Map<string, PlayedByPlayer>();
+  const identityOf = (name: string): PlayedByPlayer => {
+    let identity = identities.get(name);
+    if (!identity) {
+      const row = (byPlayer[name] ?? []).find((item) => item.discord_id);
+      const image = avatarUrl(row?.discord_image);
+      identity = {
+        name,
+        ...(row?.discord_id ? { discordId: row.discord_id } : {}),
+        ...(image ? { discordImage: image } : {}),
+      };
+      identities.set(name, identity);
+    }
+    return identity;
+  };
+  const playedByFor = (id: string): PlayedByPlayer[] =>
+    selectedPlayers
+      .filter((player) => id in (playerPlayed[player] ?? {}))
+      .map(identityOf);
 
   // Whether a not-yet-seen game should be left out of the list entirely.
   const isExcluded = (
     id: string,
-    playedBy: string[],
+    playedBy: PlayedByPlayer[],
     min: number,
     max: number,
   ): boolean => {

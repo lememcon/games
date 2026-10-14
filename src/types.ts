@@ -60,6 +60,13 @@ export interface SelectedGamePlayer {
   discordImage?: string;
 }
 
+// A player who has played a game, with the identity PlayerName needs.
+export interface PlayedByPlayer {
+  name: string;
+  discordId?: string;
+  discordImage?: string;
+}
+
 // An aggregated game row produced by buildSelectedGames.
 export interface SelectedGame {
   name: string;
@@ -69,8 +76,8 @@ export interface SelectedGame {
   max: number;
   players: Record<string, SelectedGamePlayer>;
   // Selected players (or all, when none are selected) who played this game
-  // this year, by name.
-  playedBy: string[];
+  // this year.
+  playedBy: PlayedByPlayer[];
   image?: string;
 }
 

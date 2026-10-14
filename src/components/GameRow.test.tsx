@@ -39,7 +39,7 @@ const renderRow = (props: Partial<ComponentProps<typeof GameRow>> = {}) =>
 describe("GameRow", () => {
   it("shows who has played the game", () => {
     const { getByText } = renderRow({
-      game: { ...game, playedBy: ["alice"] },
+      game: { ...game, playedBy: [{ name: "alice" }] },
     });
     expect(getByText("alice")).toBeInTheDocument();
   });

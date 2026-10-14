@@ -155,19 +155,24 @@ body {
 .tray-played-by {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.tray-played-by__label {
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+}
+
+.tray-played-by__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.tray-played-by__chip {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0 0.4rem;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  white-space: nowrap;
 }
 
 .tray-pips {
