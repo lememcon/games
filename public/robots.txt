@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /profile
+Disallow: /admin
+Sitemap: https://games.lememcon.com/sitemap.xml
