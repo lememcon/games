@@ -136,7 +136,7 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
               value={min}
               onChange={setMin}
             />
-            <Text span pt={6}>
+            <Text span pt="calc(var(--mantine-spacing-xs) / 2)">
               -
             </Text>
             <NumberInput
