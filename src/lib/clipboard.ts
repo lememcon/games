@@ -1,5 +1,6 @@
 // Copy text to the clipboard. The async Clipboard API only exists in secure
-// contexts (HTTPS/localhost), so fall back to a hidden textarea and execCommand.
+// contexts (HTTPS/localhost), so check window.isSecureContext up front and fall
+// back to a hidden textarea and execCommand when it is missing or insecure.
 // Never throws; resolves to whether the copy succeeded.
 const legacyCopy = (text: string): boolean => {
   const previous = document.activeElement;
@@ -26,11 +27,15 @@ const legacyCopy = (text: string): boolean => {
   }
 };
 
+// jsdom leaves isSecureContext undefined, so only an explicit false is insecure.
+export const canUseAsyncClipboard = (): boolean =>
+  window.isSecureContext !== false &&
+  (navigator.clipboard as Clipboard | undefined) !== undefined;
+
 export const copyText = async (text: string): Promise<boolean> => {
-  const clipboard = navigator.clipboard as Clipboard | undefined;
-  if (clipboard) {
+  if (canUseAsyncClipboard()) {
     try {
-      await clipboard.writeText(text);
+      await navigator.clipboard.writeText(text);
       return true;
     } catch {
       // Sync throw or rejection: fall through to the legacy path.

@@ -30,6 +30,10 @@ const originalClipboard = Object.getOwnPropertyDescriptor(
   navigator,
   "clipboard",
 );
+const originalSecure = Object.getOwnPropertyDescriptor(
+  window,
+  "isSecureContext",
+);
 const originalExec = (document as { execCommand?: unknown }).execCommand;
 
 const stubExec = (value: () => boolean) =>
@@ -57,6 +61,9 @@ describe("Filters", () => {
       configurable: true,
       writable: true,
     });
+    if (originalSecure)
+      Object.defineProperty(window, "isSecureContext", originalSecure);
+    else delete (window as { isSecureContext?: unknown }).isSecureContext;
   });
 
   it("toggles hide-played through onHidePlayedChange", async () => {
@@ -141,6 +148,26 @@ describe("Filters", () => {
 
     expect(writeText).toHaveBeenCalledWith(defaults.shareUrl);
     expect(getByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+
+  it("skips the async clipboard in an insecure context", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(window, "isSecureContext", {
+      value: false,
+      configurable: true,
+    });
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    stubExec(() => false);
+    const { getByRole, getByText } = renderWithMantine(
+      <Filters {...defaults} />,
+    );
+
+    await user.click(getByRole("button", { name: "Copy link" }));
+
+    expect(getByText("Copy failed")).toBeInTheDocument();
+    expect(getByRole("textbox", { name: "Share link" })).toBeInTheDocument();
+    expect(writeText).not.toHaveBeenCalled();
   });
 
   it("shows the link for manual copying when copying fails", async () => {
