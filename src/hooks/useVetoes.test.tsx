@@ -120,6 +120,116 @@ describe("useVetoes", () => {
     expect(hook.result.current.all).toEqual({});
   });
 
+  describe("vetoMany", () => {
+    const start = async (routes: Record<string, Pending[]>) => {
+      const fetchImpl = routed({
+        ...routes,
+        [LIST]: [res({ vetoes: mine }), ...(routes[LIST] ?? [])],
+      });
+      const hook = renderHook(() =>
+        useVetoes(fetchImpl as unknown as typeof fetch),
+      );
+      await waitFor(() => expect(hook.result.current.all).not.toEqual({}));
+      return { hook, fetchImpl };
+    };
+
+    it("puts each id and refetches once", async () => {
+      const { hook, fetchImpl } = await start({
+        "PUT /api/me/vetoes/2": [none()],
+        "PUT /api/me/vetoes/3": [none()],
+        [LIST]: [res(withGames(2, 3))],
+      });
+      let failed: number[] = [9];
+      await act(async () => {
+        failed = await hook.result.current.vetoMany([2, 3]);
+      });
+      expect(failed).toEqual([]);
+      expect(fetchImpl).toHaveBeenCalledTimes(4);
+      expect(hook.result.current.all).toEqual({
+        d1: new Set(["1", "2", "3"]),
+      });
+      expect(hook.result.current.bulkError).toBeNull();
+      expect(hook.result.current.saving.size).toBe(0);
+    });
+
+    it("reports a mixed result when the first one rejects", async () => {
+      const { hook, fetchImpl } = await start({
+        "PUT /api/me/vetoes/2": [res({}, 500)],
+        "PUT /api/me/vetoes/3": [none()],
+        [LIST]: [res(withGames(3))],
+      });
+      let failed: number[] = [];
+      await act(async () => {
+        failed = await hook.result.current.vetoMany([2, 3]);
+      });
+      expect(failed).toEqual([2]);
+      expect(hook.result.current.bulkError).toBe("1 of 2 didn't save");
+      expect(fetchImpl).toHaveBeenCalledTimes(4);
+    });
+
+    it("uses the first rejection when all fail", async () => {
+      const { hook } = await start({
+        "PUT /api/me/vetoes/2": [res({ error: "unknown_game" }, 404)],
+        "PUT /api/me/vetoes/3": [res({}, 500)],
+        [LIST]: [res({ vetoes: mine })],
+      });
+      let failed: number[] = [];
+      await act(async () => {
+        failed = await hook.result.current.vetoMany([2, 3]);
+      });
+      expect(failed).toEqual([2, 3]);
+      expect(hook.result.current.bulkError).toMatch(/game no longer exists/);
+    });
+
+    it("reports a failed refetch after good saves", async () => {
+      const { hook } = await start({
+        "PUT /api/me/vetoes/2": [none()],
+        [LIST]: [res({}, 500)],
+      });
+      await act(() => hook.result.current.vetoMany([2]));
+      expect(hook.result.current.bulkError).toBe(GENERIC_ERROR);
+    });
+
+    it("clears the bulk error", async () => {
+      const { hook } = await start({
+        "PUT /api/me/vetoes/2": [none()],
+        [LIST]: [res({}, 500)],
+      });
+      await act(() => hook.result.current.vetoMany([2]));
+      expect(hook.result.current.bulkError).toBe(GENERIC_ERROR);
+      act(() => hook.result.current.clearBulkError());
+      expect(hook.result.current.bulkError).toBeNull();
+    });
+
+    it("does nothing for an empty list", async () => {
+      const { hook, fetchImpl } = await start({});
+      let failed: number[] = [9];
+      await act(async () => {
+        failed = await hook.result.current.vetoMany([]);
+      });
+      expect(failed).toEqual([]);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("toggles saving while in flight", async () => {
+      const put = deferred();
+      const { hook } = await start({
+        "PUT /api/me/vetoes/2": [put.promise],
+        [LIST]: [res(withGames(2))],
+      });
+      let done!: Promise<number[]>;
+      act(() => {
+        done = hook.result.current.vetoMany([2]);
+      });
+      expect(hook.result.current.isSaving(2)).toBe(true);
+      await act(async () => {
+        put.resolve(none());
+        await done;
+      });
+      expect(hook.result.current.isSaving(2)).toBe(false);
+    });
+  });
+
   describe("per game state", () => {
     const start = async (routes: Record<string, Pending[]>) => {
       const fetchImpl = routed({

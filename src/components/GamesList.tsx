@@ -1,9 +1,14 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
+
+import { Button, Text } from "@mantine/core";
 
 import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
+import SelectBar from "@/components/SelectBar";
 import type { VetoesState } from "@/hooks/useVetoes";
 import { leastHappyPlayer, realBounds } from "@/lib/games";
+import { toggleSelected, vetoTargets } from "@/lib/selection";
 import type { GamesData, SelectedGame } from "@/types";
 
 interface GamesListProps {
@@ -40,6 +45,40 @@ const GamesList = ({
   vetoes,
   discordId,
 }: GamesListProps) => {
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const canSelect = !!vetoes && !!discordId && games.length > 0;
+  const busy = !!vetoes && vetoes.saving.size > 0;
+  const active = selecting && canSelect;
+  // Ids no longer in the list (a filter changed) are dropped.
+  const selected = new Set(
+    games.map((g) => g.id).filter((id) => picked.has(id)),
+  );
+
+  const exit = () => {
+    vetoes?.clearBulkError();
+    setSelecting(false);
+    setPicked(new Set());
+  };
+
+  const apply = async () => {
+    if (!vetoes || !discordId) return;
+    const targets = vetoTargets(selected, vetoes.all[discordId]);
+    const failed = new Set((await vetoes.vetoMany(targets)).map(String));
+    if (failed.size === 0) exit();
+    else setPicked(new Set([...selected].filter((id) => failed.has(id))));
+  };
+
+  const selectProps = (game: SelectedGame) =>
+    active
+      ? {
+          selectable: true,
+          checked: selected.has(game.id),
+          selectDisabled: busy,
+          onSelect: () => setPicked(toggleSelected(selected, game.id)),
+        }
+      : {};
+
   const podium = games.slice(0, 3);
   const rest = games.slice(3);
   const leastHappy = games.length > 0 ? leastHappyPlayer(games[0]) : null;
@@ -57,7 +96,30 @@ const GamesList = ({
   };
 
   return (
-    <div className="tray-list">
+    <div className={`tray-list${active ? " tray-list--selecting" : ""}`}>
+      {canSelect && (
+        <Button
+          size="xs"
+          variant="default"
+          disabled={busy}
+          aria-pressed={active}
+          onClick={() => {
+            if (active) exit();
+            else {
+              vetoes?.clearBulkError();
+              setSelecting(true);
+            }
+          }}
+          style={{ alignSelf: "flex-start" }}
+        >
+          Select
+        </Button>
+      )}
+      {vetoes?.bulkError && (
+        <Text role="alert" c="red" size="sm">
+          {vetoes.bulkError}
+        </Text>
+      )}
       <div className="tray-podium">
         {podium.map((game, i) => (
           <GameCard
@@ -72,6 +134,7 @@ const GamesList = ({
             onToggle={() => onToggle(game.id)}
             leastHappy={i === 0 ? leastHappy : null}
             {...vetoProps(game)}
+            {...selectProps(game)}
           />
         ))}
       </div>
@@ -92,9 +155,19 @@ const GamesList = ({
               played={isPlayed(game.id)}
               onToggle={() => onToggle(game.id)}
               {...vetoProps(game)}
+              {...selectProps(game)}
             />
           ))}
         </div>
+      )}
+
+      {active && (
+        <SelectBar
+          count={selected.size}
+          disabled={busy}
+          onApply={apply}
+          onCancel={exit}
+        />
       )}
     </div>
   );

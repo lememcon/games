@@ -270,6 +270,9 @@ describe("Game", () => {
     const vetoes = (all = {}, extra = {}) => ({
       all,
       saving: new Set<number>(),
+      bulkError: null,
+      vetoMany: vi.fn(async () => [] as number[]),
+      clearBulkError: vi.fn(),
       error: {},
       isSaving: vi.fn(() => false),
       errorFor: vi.fn((): string | null => null),

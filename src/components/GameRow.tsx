@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 
-import { Text, useMantineTheme } from "@mantine/core";
+import { Checkbox, Text, useMantineTheme } from "@mantine/core";
 
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
@@ -26,6 +26,11 @@ interface GameRowProps {
   vetoError?: string | null;
   // Omitted to hide the veto button.
   onVeto?: () => void;
+  // Bulk-veto mode: show a checkbox and hide the per-game buttons.
+  selectable?: boolean;
+  checked?: boolean;
+  selectDisabled?: boolean;
+  onSelect?: () => void;
 }
 
 // The compact chase unit: a mini horizontal card keeping the tray language
@@ -46,12 +51,25 @@ const GameRow = ({
   vetoDisabled,
   vetoError,
   onVeto,
+  selectable = false,
+  checked = false,
+  selectDisabled = false,
+  onSelect,
 }: GameRowProps) => {
   const theme = useMantineTheme();
   const chip = score_color(theme, normalized_score(game.score, selectedMax));
 
   return (
-    <div className="tray-row">
+    <div className={`tray-row${selectable && checked ? " tray-selected" : ""}`}>
+      {selectable && (
+        <Checkbox
+          className="tray-select"
+          aria-label={`Select ${game.name}`}
+          checked={checked}
+          disabled={selectDisabled}
+          onChange={() => onSelect?.()}
+        />
+      )}
       <div className="tray-cover tray-cover--sm">
         {game.image ? (
           <img src={game.image} alt={game.name} />
@@ -84,22 +102,24 @@ const GameRow = ({
         />
       </div>
 
-      <div className="tray-row__actions">
-        <PlayedToggle game={game.name} played={played} onToggle={onToggle} />
-        {onVeto && (
-          <VetoToggle
-            game={game.name}
-            vetoed={vetoed}
-            disabled={vetoDisabled}
-            onToggle={onVeto}
-          />
-        )}
-        {vetoError && (
-          <Text role="alert" c="red" size="xs" w="100%">
-            {vetoError}
-          </Text>
-        )}
-      </div>
+      {!selectable && (
+        <div className="tray-row__actions">
+          <PlayedToggle game={game.name} played={played} onToggle={onToggle} />
+          {onVeto && (
+            <VetoToggle
+              game={game.name}
+              vetoed={vetoed}
+              disabled={vetoDisabled}
+              onToggle={onVeto}
+            />
+          )}
+          {vetoError && (
+            <Text role="alert" c="red" size="xs" w="100%">
+              {vetoError}
+            </Text>
+          )}
+        </div>
+      )}
     </div>
   );
 };

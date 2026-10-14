@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 
-import { Text } from "@mantine/core";
+import { Checkbox, Text } from "@mantine/core";
 
 import PlayedByList from "@/components/PlayedByList";
 import PlayedToggle from "@/components/PlayedToggle";
@@ -27,6 +27,11 @@ interface GameCardProps {
   vetoError?: string | null;
   // Omitted to hide the veto button.
   onVeto?: () => void;
+  // Bulk-veto mode: show a checkbox and hide the per-game buttons.
+  selectable?: boolean;
+  checked?: boolean;
+  selectDisabled?: boolean;
+  onSelect?: () => void;
   // Name of the least happy scorer, shown on the top result only.
   leastHappy?: string | null;
 }
@@ -47,12 +52,27 @@ const GameCard = ({
   vetoDisabled,
   vetoError,
   onVeto,
+  selectable = false,
+  checked = false,
+  selectDisabled = false,
+  onSelect,
   leastHappy,
 }: GameCardProps) => {
   const chip = medalColor(rank) ?? PALETTE[(rank - 1) % PALETTE.length];
 
   return (
-    <div className="tray-card">
+    <div
+      className={`tray-card${selectable && checked ? " tray-selected" : ""}`}
+    >
+      {selectable && (
+        <Checkbox
+          className="tray-select"
+          aria-label={`Select ${game.name}`}
+          checked={checked}
+          disabled={selectDisabled}
+          onChange={() => onSelect?.()}
+        />
+      )}
       <div className="tray-card__spine" style={{ background: chip }} />
       <div className="tray-card__body">
         <div className="tray-card__head">
@@ -96,26 +116,28 @@ const GameCard = ({
 
         <div className="tray-card__foot">
           {bounds && <span className="tray-meta">{formatBounds(bounds)}</span>}
-          <div className="tray-card__played">
-            <PlayedToggle
-              game={game.name}
-              played={played}
-              onToggle={onToggle}
-            />
-            {onVeto && (
-              <VetoToggle
+          {!selectable && (
+            <div className="tray-card__played">
+              <PlayedToggle
                 game={game.name}
-                vetoed={vetoed}
-                disabled={vetoDisabled}
-                onToggle={onVeto}
+                played={played}
+                onToggle={onToggle}
               />
-            )}
-            {vetoError && (
-              <Text role="alert" c="red" size="xs" w="100%">
-                {vetoError}
-              </Text>
-            )}
-          </div>
+              {onVeto && (
+                <VetoToggle
+                  game={game.name}
+                  vetoed={vetoed}
+                  disabled={vetoDisabled}
+                  onToggle={onVeto}
+                />
+              )}
+              {vetoError && (
+                <Text role="alert" c="red" size="xs" w="100%">
+                  {vetoError}
+                </Text>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

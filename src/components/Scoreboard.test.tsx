@@ -106,6 +106,9 @@ vi.mock("@/hooks/useVetoes", () => ({
     return {
       all: state.vetoes,
       saving: new Set<number>(),
+      bulkError: null,
+      vetoMany: vi.fn(),
+      clearBulkError: vi.fn(),
       error: state.vetoErrors,
       isSaving: () => false,
       errorFor: (id: number) => state.vetoErrors[id] ?? null,
@@ -962,6 +965,37 @@ describe("Scoreboard", () => {
       at("/2026");
       render();
       expect(state.useVetoes).toHaveBeenCalledWith();
+    });
+
+    it("clears the selection when the year changes", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      const { getByRole, getByLabelText, getByText, queryByText } = render();
+
+      await user.click(getByRole("button", { name: "Select" }));
+      await user.click(getByLabelText("Select Belfort"));
+      expect(getByText("1 selected")).toBeInTheDocument();
+
+      act(() => {
+        at("/2025");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      await waitFor(() => expect(path()).toBe("/2025"));
+      expect(queryByText(/selected$/)).toBeNull();
+    });
+
+    it("clears the selection when the filter changes", async () => {
+      at("/2026");
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      const user = userEvent.setup();
+      const { getByRole, getByLabelText, getByText, queryByText } = render();
+
+      await user.click(getByRole("button", { name: "Select" }));
+      await user.click(getByLabelText("Select Belfort"));
+      expect(getByText("1 selected")).toBeInTheDocument();
+
+      await user.click(getByLabelText(/Hide games played/));
+      expect(queryByText(/selected$/)).toBeNull();
     });
 
     it("vetoes a game from its card", async () => {

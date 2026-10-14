@@ -159,4 +159,34 @@ describe("GameCard", () => {
     const { queryByRole } = renderCard({ onVeto: () => {} });
     expect(queryByRole("alert")).toBeNull();
   });
+
+  it("shows a select checkbox and hides the buttons when selectable", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const { getByRole, queryByRole } = renderCard({
+      selectable: true,
+      checked: true,
+      onSelect,
+      onVeto: () => {},
+    });
+    const box = getByRole("checkbox", { name: "Select Ark Nova" });
+    expect(box).toBeChecked();
+    await user.click(box);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(queryByRole("button", { name: /^Veto:/ })).toBeNull();
+    expect(queryByRole("button", { name: /^Played:|played/i })).toBeNull();
+    expect(getByRole("link", { name: "Ark Nova" })).toBeInTheDocument();
+  });
+
+  it("disables the checkbox when selectDisabled", () => {
+    const { getByRole } = renderCard({
+      selectable: true,
+      selectDisabled: true,
+    });
+    expect(getByRole("checkbox", { name: "Select Ark Nova" })).toBeDisabled();
+  });
+
+  it("has no checkbox when not selectable", () => {
+    expect(renderCard().queryByRole("checkbox")).toBeNull();
+  });
 });

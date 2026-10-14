@@ -1,6 +1,9 @@
+import { cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+import { MantineProvider } from "@mantine/core";
 
 import GamesList from "@/components/GamesList";
 import type { VetoesState } from "@/hooks/useVetoes";
@@ -171,6 +174,9 @@ describe("GamesList", () => {
     const makeVetoes = (over: Partial<VetoesState> = {}): VetoesState => ({
       all: { d1: new Set(["100", "400"]) },
       saving: new Set<number>(),
+      bulkError: null,
+      vetoMany: vi.fn(async () => [] as number[]),
+      clearBulkError: vi.fn(),
       error: {},
       isSaving: () => false,
       errorFor: () => null,
@@ -249,6 +255,188 @@ describe("GamesList", () => {
         ".tray-card",
       );
       expect(card).toContainElement(alerts[0]);
+    });
+
+    describe("bulk select", () => {
+      const open = async (props: Partial<ComponentProps<typeof GamesList>>) => {
+        const user = userEvent.setup();
+        const view = renderList({ discordId: "d1", ...props });
+        await user.click(view.getByRole("button", { name: "Select" }));
+        return { user, ...view };
+      };
+
+      it("hides Select without vetoes, a member, or games", () => {
+        expect(
+          renderList({ discordId: "d1" }).queryByRole("button", {
+            name: "Select",
+          }),
+        ).toBeNull();
+        cleanup();
+        expect(
+          renderList({ vetoes: makeVetoes() }).queryByRole("button", {
+            name: "Select",
+          }),
+        ).toBeNull();
+        cleanup();
+        expect(
+          renderList({
+            vetoes: makeVetoes(),
+            discordId: "d1",
+            games: [],
+          }).queryByRole("button", { name: "Select" }),
+        ).toBeNull();
+      });
+
+      it("shows checkboxes and hides per-game buttons", async () => {
+        const { getByLabelText, queryByRole, getByText } = await open({
+          vetoes: makeVetoes(),
+        });
+        expect(getByLabelText("Select Root")).toBeInTheDocument();
+        expect(getByLabelText("Select Nim")).toBeInTheDocument();
+        expect(queryByRole("button", { name: /^Veto:/ })).toBeNull();
+        expect(getByText("0 selected")).toBeInTheDocument();
+      });
+
+      it("counts selections and Cancel clears them", async () => {
+        const { user, getByLabelText, getByText, getByRole, queryByText } =
+          await open({ vetoes: makeVetoes() });
+        await user.click(getByLabelText("Select Root"));
+        await user.click(getByLabelText("Select Nim"));
+        expect(getByText("2 selected")).toBeInTheDocument();
+        await user.click(getByLabelText("Select Nim"));
+        expect(getByText("1 selected")).toBeInTheDocument();
+        await user.click(getByRole("button", { name: "Cancel" }));
+        expect(queryByText(/selected$/)).toBeNull();
+        await user.click(getByRole("button", { name: "Select" }));
+        expect(getByText("0 selected")).toBeInTheDocument();
+      });
+
+      it("applies by numeric id, skipping vetoed, and exits", async () => {
+        const vetoes = makeVetoes();
+        const { user, getByLabelText, getByRole, queryByText } = await open({
+          vetoes,
+        });
+        await user.click(getByLabelText("Select Root"));
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByLabelText("Select Go"));
+        await user.click(getByRole("button", { name: "Not for me" }));
+        expect(vetoes.vetoMany).toHaveBeenCalledWith([200, 300]);
+        await waitFor(() => expect(queryByText(/selected$/)).toBeNull());
+      });
+
+      it("keeps only failed ids after a partial failure", async () => {
+        const vetoes = makeVetoes({ vetoMany: vi.fn(async () => [300]) });
+        const { user, getByLabelText, getByRole, getByText } = await open({
+          vetoes,
+        });
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByLabelText("Select Go"));
+        await user.click(getByRole("button", { name: "Not for me" }));
+        await waitFor(() =>
+          expect(getByText("1 selected")).toBeInTheDocument(),
+        );
+        expect(getByLabelText("Select Go")).toBeChecked();
+        expect(getByLabelText("Select Chess")).not.toBeChecked();
+      });
+
+      it("shows the bulk error", () => {
+        const { getByRole } = renderList({
+          vetoes: makeVetoes({ bulkError: "1 of 2 didn't save" }),
+          discordId: "d1",
+        });
+        expect(getByRole("alert")).toHaveTextContent("1 of 2 didn't save");
+      });
+
+      it("disables Select and apply while saving", async () => {
+        const { user, getByRole, getByLabelText, rerender } = await open({
+          vetoes: makeVetoes(),
+        });
+        await user.click(getByLabelText("Select Chess"));
+        expect(getByRole("button", { name: "Not for me" })).toBeEnabled();
+        rerender(
+          <MantineProvider>
+            <GamesList
+              games={games}
+              year="2024"
+              selectedMax={400}
+              individualMax={100}
+              gameData={gameData}
+              isPlayed={() => false}
+              onToggle={() => {}}
+              discordId="d1"
+              vetoes={makeVetoes({ saving: new Set([200]) })}
+            />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Not for me" })).toBeDisabled();
+        expect(getByRole("button", { name: "Select" })).toBeDisabled();
+      });
+
+      it("disables Cancel and the checkboxes while saving", async () => {
+        const { user, getByRole, getByLabelText, rerender } = await open({
+          vetoes: makeVetoes(),
+        });
+        await user.click(getByLabelText("Select Chess"));
+        expect(getByLabelText("Select Chess")).toBeEnabled();
+        rerender(
+          <MantineProvider>
+            <GamesList
+              games={games}
+              year="2024"
+              selectedMax={400}
+              individualMax={100}
+              gameData={gameData}
+              isPlayed={() => false}
+              onToggle={() => {}}
+              discordId="d1"
+              vetoes={makeVetoes({ saving: new Set([200]) })}
+            />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Cancel" })).toBeDisabled();
+        expect(getByLabelText("Select Chess")).toBeDisabled();
+        expect(getByLabelText("Select Root")).toBeDisabled();
+      });
+
+      it("clears the bulk error on Cancel, on entering, and after success", async () => {
+        const vetoes = makeVetoes({ bulkError: "1 of 2 didn't save" });
+        const { user, getByLabelText, getByRole } = await open({ vetoes });
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(1);
+        await user.click(getByRole("button", { name: "Cancel" }));
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(2);
+        await user.click(getByRole("button", { name: "Select" }));
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(3);
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByRole("button", { name: "Not for me" }));
+        await waitFor(() =>
+          expect(vetoes.clearBulkError).toHaveBeenCalledTimes(4),
+        );
+      });
+
+      it("drops selected ids when games shrink", async () => {
+        const vetoes = makeVetoes();
+        const { user, getByLabelText, getByText, rerender } = await open({
+          vetoes,
+        });
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByLabelText("Select Go"));
+        rerender(
+          <MantineProvider>
+            <GamesList
+              games={[games[0], games[2]]}
+              year="2024"
+              selectedMax={400}
+              individualMax={100}
+              gameData={gameData}
+              isPlayed={() => false}
+              onToggle={() => {}}
+              discordId="d1"
+              vetoes={vetoes}
+            />
+          </MantineProvider>,
+        );
+        expect(getByText("1 selected")).toBeInTheDocument();
+      });
     });
   });
 });
