@@ -441,6 +441,16 @@ body {
   outline-offset: 2px;
 }
 
+.tray-header {
+  background: #fff;
+  border-bottom: 1px solid #ece4d5;
+}
+
+.tray-title {
+  margin: 0;
+  color: #2b2723;
+}
+
 /* ---- Logo ---- */
 .tray-logo {
   border: 1px solid rgba(70, 55, 20, 0.22);

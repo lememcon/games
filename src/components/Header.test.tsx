@@ -38,6 +38,18 @@ describe("Header", () => {
     expect(container.querySelector('img[alt=""]')).toHaveClass("tray-logo");
   });
 
+  it("styles the header bar", () => {
+    const { container } = renderHeader();
+    expect(container.querySelector("header")).toHaveClass("tray-header");
+  });
+
+  it("styles the title", () => {
+    const { getByRole } = renderHeader();
+    expect(getByRole("heading", { name: "LememCon" })).toHaveClass(
+      "tray-title",
+    );
+  });
+
   it("omits the year picker when no years are given", () => {
     const { queryByRole } = renderHeader({ years: undefined });
     expect(queryByRole("combobox")).toBeNull();
