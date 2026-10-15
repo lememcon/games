@@ -14,10 +14,9 @@ import {
 } from "@mantine/core";
 
 import usePlayerLinks from "@/hooks/usePlayerLinks";
+import { TABLE_MIN_WIDTH } from "@/lib/layout";
 import type { MemberGroup } from "@/lib/playerLinks";
 import type { LinkableUser, PlayerLink } from "@/types";
-
-const TABLE_MIN_WIDTH = 560;
 
 const memberLabel = (u: LinkableUser) =>
   u.status === "pending" ? `${u.name} (pending)` : u.name;
