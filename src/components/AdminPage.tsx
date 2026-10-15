@@ -25,6 +25,8 @@ import { splitUsers, timeAgo } from "@/lib/users";
 import type { AdminUser, Role } from "@/types";
 
 const BUILT_IN = "Built-in admin, can't be changed";
+const TABLE_MIN_WIDTH = 560;
+const ROLE_SELECT_WIDTH = 110;
 
 type Confirm =
   { kind: "remove"; user: AdminUser } | { kind: "demote"; user: AdminUser };
@@ -116,7 +118,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
       )}
 
       <Title order={4}>Pending approval ({pending.length})</Title>
-      <Table.ScrollContainer minWidth={560}>
+      <Table.ScrollContainer minWidth={TABLE_MIN_WIDTH}>
         <Table>
           <Table.Thead>
             <Table.Tr>
@@ -157,7 +159,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
       </Table.ScrollContainer>
 
       <Title order={4}>Members ({members.length})</Title>
-      <Table.ScrollContainer minWidth={560}>
+      <Table.ScrollContainer minWidth={TABLE_MIN_WIDTH}>
         <Table>
           <Table.Thead>
             <Table.Tr>
@@ -182,7 +184,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
                       <Select
                         aria-label={`Role for ${u.displayName ?? u.name}`}
                         size="xs"
-                        w={110}
+                        w={ROLE_SELECT_WIDTH}
                         allowDeselect={false}
                         data={[
                           { value: "member", label: "Member" },
