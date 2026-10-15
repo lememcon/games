@@ -82,7 +82,7 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
             const name = gameLabel(games.games, id);
             const bounds = realBounds(games.games[id]);
             return (
-              <Group key={id} justify="space-between" wrap="nowrap">
+              <Group key={id} justify="space-between">
                 <Text>{name}</Text>
                 {bounds ? (
                   <MyPlayerRange
@@ -116,6 +116,8 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
           })}
           <Group gap="xs" align="flex-start" wrap="nowrap">
             <Select
+              flex={1}
+              miw={0}
               aria-label="Game to override"
               placeholder="Search games..."
               searchable

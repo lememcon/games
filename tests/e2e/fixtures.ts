@@ -5,6 +5,8 @@ import type {
   GamesData,
   Me,
   PlayerGameScore,
+  PlayerOverride,
+  Profile,
 } from "../../src/types";
 
 export const aliceId = "100000000000000001";
@@ -76,6 +78,12 @@ interface MockOptions {
   me?: Me;
   games?: GamesData;
   played?: string[];
+  profile?: Profile;
+  overrides?: PlayerOverride[];
+  vetoes?: { bggId: number; name: string }[];
+  // Everyone's played games per year, for the recap.
+  playedByYear?: Record<string, Record<string, string[]>>;
+  scores?: PlayerGameScore[];
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -86,7 +94,16 @@ const pathOf = (url: URL | string) => new URL(url).pathname;
 // Mocks the whole API. Playwright tries the most recently registered route
 // first, so the catch-all goes in first and the specific routes override it.
 export async function mockApi(page: Page, opts: MockOptions = {}) {
-  const { me = approvedMe, played = [], games: gamesData = games } = opts;
+  const {
+    me = approvedMe,
+    played = [],
+    games: gamesData = games,
+    profile,
+    overrides = [],
+    vetoes = [],
+    playedByYear,
+    scores: scoreRows = scores,
+  } = opts;
 
   await page.route(
     (url) => pathOf(url).startsWith("/api/"),
@@ -114,11 +131,11 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => /^\/api\/years\/\d+\/scores$/.test(pathOf(url)),
-    (route) => json(route, { player_game_scores: scores }),
+    (route) => json(route, { player_game_scores: scoreRows }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/player-overrides",
-    (route) => json(route, { overrides: [] }),
+    (route) => json(route, { overrides }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/vetoes",
@@ -126,7 +143,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => pathOf(url) === "/api/me/vetoes",
-    (route) => json(route, { vetoes: [] }),
+    (route) => json(route, { vetoes }),
   );
   await page.route(
     (url) => /^\/api\/me\/vetoes\/\d+$/.test(pathOf(url)),
@@ -134,8 +151,20 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => pathOf(url) === "/api/played",
-    (route) => json(route, { played: {} }),
+    (route) =>
+      json(route, {
+        played:
+          playedByYear?.[
+            new URL(route.request().url()).searchParams.get("year") ?? ""
+          ] ?? {},
+      }),
   );
+  if (profile) {
+    await page.route(
+      (url) => /^\/api\/profiles\/\d+$/.test(pathOf(url)),
+      (route) => json(route, profile),
+    );
+  }
   await page.route(
     (url) => /^\/api\/played\/\d+\/\d+$/.test(pathOf(url)),
     (route) =>

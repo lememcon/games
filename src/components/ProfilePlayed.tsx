@@ -118,6 +118,8 @@ const ProfilePlayed = () => {
           {data.error && <Text size="sm">Couldn&apos;t load games.</Text>}
           <Group gap="xs" wrap="nowrap">
             <Select
+              flex={1}
+              miw={0}
               aria-label="Game to add"
               placeholder="Search games..."
               searchable

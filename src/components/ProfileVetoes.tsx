@@ -69,6 +69,8 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
       )}
       <Group gap="xs" wrap="nowrap">
         <Select
+          flex={1}
+          miw={0}
           aria-label="Game to veto"
           placeholder="Search games..."
           searchable

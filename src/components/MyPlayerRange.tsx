@@ -60,7 +60,7 @@ const MyPlayerRange = ({
           </Text>
         </>
       )}
-      <Group gap="xs" mt="xs" wrap="nowrap">
+      <Group gap="xs" mt="xs">
         <NumberInput
           aria-label={`Minimum players${suffix}`}
           size="xs"
