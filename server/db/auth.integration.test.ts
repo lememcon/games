@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { createAuth, createSessionResolver } from "../auth";
+import { GUILD_ID, createAuth, createSessionResolver } from "../auth";
 import type { Env } from "../env";
 import { PROTECTED_ADMIN_IDS } from "../roles";
 import { addLogin, createTestDb } from "./testDb";
@@ -19,6 +19,7 @@ const env: Env = {
 };
 const [KELSIN] = PROTECTED_ADMIN_IDS;
 const ALEX = "998877665544332211";
+const JO = "777666555444333222";
 
 /** The cookie Better Auth would issue for a session token. */
 const cookieFor = (token: string) => {
@@ -46,7 +47,7 @@ describe("session resolver against Better Auth and Postgres", () => {
   });
   afterAll(() => client.close());
 
-  it("resolves a real session to a pending member and picks up approval", async () => {
+  it("resolves a real session to an approved member", async () => {
     const userId = await addLogin(client, ALEX, "Alex");
     const headers = new Headers({ cookie: cookieFor(`t${userId}`) });
 
@@ -55,15 +56,12 @@ describe("session resolver against Better Auth and Postgres", () => {
       discordId: ALEX,
       name: "Alex",
       role: "member",
-      status: "pending",
+      status: "approved",
     });
     // No signed session_data cookie: nothing is cached client-side.
     expect(first.headers?.getSetCookie().join(";") ?? "").not.toContain(
       "session_data",
     );
-
-    await store.update(KELSIN, ALEX, { status: "approved" });
-    expect((await resolve(headers)).user).toMatchObject({ status: "approved" });
   });
 
   it("stops resolving as soon as the user is removed", async () => {
@@ -102,7 +100,10 @@ describe("Discord sign-in against Better Auth and Postgres", () => {
   afterAll(() => client.close());
 
   /** Runs the real OAuth callback with Discord's HTTP endpoints stubbed. */
-  async function signIn(profile: { id: string; username: string }) {
+  async function signIn(
+    profile: { id: string; username: string },
+    guilds: { id: string }[] = [{ id: GUILD_ID }],
+  ) {
     const start = await auth.handler(
       new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/social`, {
         method: "POST",
@@ -132,6 +133,7 @@ describe("Discord sign-in against Better Auth and Postgres", () => {
             expires_in: 3600,
             scope: "identify",
           });
+        if (href.endsWith("/users/@me/guilds")) return Response.json(guilds);
         if (href.includes("discord.com/api/users/"))
           return Response.json({
             ...profile,
@@ -168,5 +170,18 @@ describe("Discord sign-in against Better Auth and Postgres", () => {
 
     await signIn({ id: ALEX, username: "alex_new" });
     expect(await usernameOf(ALEX)).toBe("alex_new");
+  });
+
+  it("refuses a sign-in from outside the LememCon server and creates nothing", async () => {
+    const res = await signIn({ id: JO, username: "jo" }, [{ id: "1" }]);
+    expect(res.headers.get("location")).toContain(
+      "error=unable_to_get_user_info",
+    );
+    expect(await usernameOf(JO)).toBeUndefined();
+  });
+
+  it("lets a built-in admin in without checking the server", async () => {
+    await signIn({ id: KELSIN, username: "kelsin" }, []);
+    expect(await usernameOf(KELSIN)).toBe("kelsin");
   });
 });

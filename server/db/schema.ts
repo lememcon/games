@@ -102,7 +102,7 @@ export const appUser = pgTable(
   {
     discordId: text("discord_id").primaryKey(),
     role: text("role").notNull().default("member"),
-    status: text("status").notNull().default("pending"),
+    status: text("status").notNull().default("approved"),
     /** Name the member chose; replaces their Discord name in the app. */
     displayName: text("display_name"),
     /** Name color the member picked from the palette; null means automatic. */

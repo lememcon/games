@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { discord } from "better-auth/social-providers";
 
 import type { Db } from "./db";
 import * as schema from "./db/schema";
 import type { Env } from "./env";
-import { effectiveUser } from "./roles";
+import { effectiveUser, isProtected } from "./roles";
 import type { ResolvedSession, UserStore } from "./types";
 
 /**
@@ -24,7 +25,49 @@ export function resolveErrorUrl(
   return env.WEB_ORIGIN || new URL(env.BETTER_AUTH_URL).origin;
 }
 
+/** The LememCon Discord server; only its members may sign in. */
+export const GUILD_ID = "190322800400138240";
+
+/**
+ * Whether the access token's owner is in the LememCon server, from their
+ * guild list (the `guilds` scope). Discord caps that list at 200 guilds, so
+ * one page is complete. Any failure counts as not a member.
+ */
+export async function isGuildMember(
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    const res = await fetchImpl("https://discord.com/api/users/@me/guilds", {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return false;
+    const guilds: unknown = await res.json();
+    return (
+      Array.isArray(guilds) &&
+      guilds.some((g: { id?: unknown }) => g?.id === GUILD_ID)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function createAuth(env: Env, db: Db) {
+  const discordOptions = {
+    clientId: env.DISCORD_CLIENT_ID,
+    clientSecret: env.DISCORD_CLIENT_SECRET,
+    // `identify` returns no email, and `guilds` lets us check server membership.
+    // Better Auth requires an email, so synthesize a unique placeholder.
+    disableDefaultScope: true,
+    scope: ["identify", "guilds"],
+    // Refresh name, avatar and username on every sign-in.
+    overrideUserInfoOnSignIn: true,
+    mapProfileToUser: (profile: { id: string; username: string }) => ({
+      email: `${profile.id}@discord.invalid`,
+      emailVerified: false,
+      username: profile.username,
+    }),
+  };
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
@@ -52,19 +95,14 @@ export function createAuth(env: Env, db: Db) {
     },
     socialProviders: {
       discord: {
-        clientId: env.DISCORD_CLIENT_ID,
-        clientSecret: env.DISCORD_CLIENT_SECRET,
-        // Only the `identify` scope is requested, so Discord returns no email.
-        // Better Auth requires one, so synthesize a unique placeholder.
-        disableDefaultScope: true,
-        scope: ["identify"],
-        // Refresh name, avatar and username on every sign-in.
-        overrideUserInfoOnSignIn: true,
-        mapProfileToUser: (profile) => ({
-          email: `${profile.id}@discord.invalid`,
-          emailVerified: false,
-          username: profile.username,
-        }),
+        ...discordOptions,
+        // Returning null aborts the sign-in before any user or session exists.
+        // The built-in protected admins skip the check so they cannot be locked out.
+        getUserInfo: async (token) => {
+          const info = await discord(discordOptions).getUserInfo(token);
+          if (!info || isProtected(info.data.id)) return info;
+          return (await isGuildMember(token.accessToken!)) ? info : null;
+        },
       },
     },
     advanced: {

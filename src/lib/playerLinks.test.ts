@@ -13,7 +13,7 @@ const player = (id: number, over: Partial<PlayerLink> = {}): PlayerLink => ({
 });
 const users: LinkableUser[] = [
   { discordId: "10", name: "Kelsin", status: "approved" },
-  { discordId: "20", name: "dana", status: "pending" },
+  { discordId: "20", name: "dana", status: "approved" },
 ];
 
 describe("groupByMember", () => {

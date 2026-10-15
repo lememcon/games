@@ -72,8 +72,8 @@ beforeEach(async () => {
   await addLogin(client, ALEX, "Alex");
   await addLogin(client, JO, "jo");
   await client.query(
-    `UPDATE app_user SET status = 'approved' WHERE discord_id IN ($1, $2)`,
-    [ALEX, JO],
+    `UPDATE app_user SET status = 'pending' WHERE discord_id = $1`,
+    [SAM],
   );
 });
 

@@ -92,23 +92,10 @@ export function createApp(deps: AppDeps) {
       role,
       status,
     } = user;
-    return status === "approved"
-      ? c.json({
-          status,
-          user: {
-            discordId,
-            name,
-            displayName,
-            color,
-            discordName,
-            image,
-            role,
-          },
-        })
-      : c.json({
-          status,
-          user: { discordId, name: discordName, image },
-        });
+    return c.json({
+      status,
+      user: { discordId, name, displayName, color, discordName, image, role },
+    });
   });
   api.use("/admin/*", requireAdmin);
   api.route("/admin", adminRoutes(deps.store));

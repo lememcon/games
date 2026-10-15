@@ -25,7 +25,11 @@ const ADMIN: AppUser = {
 const users: Record<string, AppUser> = {
   admin: ADMIN,
   member: { ...ADMIN, discordId: "222222222222222222", role: "member" },
-  pending: { ...ADMIN, discordId: "333333333333333333", status: "pending" },
+  pending: {
+    ...ADMIN,
+    discordId: "333333333333333333",
+    status: "pending",
+  } as unknown as AppUser,
 };
 
 function makeApp() {

@@ -43,7 +43,7 @@ const useAdminUsers = (fetchImpl: typeof fetch = fetch, meId?: string) => {
   );
 
   const mutate = useCallback(
-    async (discordId: string, body: { status?: "approved"; role?: Role }) => {
+    async (discordId: string, body: { role: Role }) => {
       setActionError(null);
       try {
         const updated = await apiFetch<AdminUser>(
@@ -54,7 +54,7 @@ const useAdminUsers = (fetchImpl: typeof fetch = fetch, meId?: string) => {
         setUsers((list) =>
           list.map((u) => (u.discordId === discordId ? updated : u)),
         );
-        if (body.role) reloadIfSelf(discordId);
+        reloadIfSelf(discordId);
       } catch (e) {
         setActionError(describe(e));
       }
@@ -62,8 +62,6 @@ const useAdminUsers = (fetchImpl: typeof fetch = fetch, meId?: string) => {
     [fetchImpl, reloadIfSelf],
   );
 
-  const approve = (discordId: string) =>
-    mutate(discordId, { status: "approved" });
   const setRole = (discordId: string, role: Role) =>
     mutate(discordId, { role });
 
@@ -82,7 +80,7 @@ const useAdminUsers = (fetchImpl: typeof fetch = fetch, meId?: string) => {
     }
   };
 
-  return { users, loading, error, actionError, approve, setRole, remove };
+  return { users, loading, error, actionError, setRole, remove };
 };
 
 export default useAdminUsers;

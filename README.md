@@ -140,8 +140,9 @@ requests. Commit the regenerated `games.json` and new images.
 
 The SPA is static and stays on Netlify at `games.lememcon.com`. The backend is a
 separate Hono server in `server/`, built from the `Dockerfile` and meant to run as
-an API-only service at `api.lememcon.com`. Login is Discord OAuth via Better Auth;
-sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `admin`
+an API-only service at `api.lememcon.com`. Login is Discord OAuth via Better Auth, limited to members of the
+LememCon Discord server (checked at sign-in through the `guilds` scope; the built-in
+admins skip the check) with no approval step; sessions live in PostgreSQL (Drizzle ORM). Roles are `anonymous`, `user` and `admin`
 (a user whose Discord id is in `ADMIN_DISCORD_IDS`). Routes so far: `GET /healthz`,
 `GET /api/me`, `GET /api/admin/ping`, and Better Auth under `/api/auth/*`. Game data:
 public `GET /api/years`, `GET /api/years/:year/scores` and `GET /api/games`, and the
@@ -262,8 +263,7 @@ metadata from the database.
 
 Admins link each score-sheet player to an app member in the "Player links" section of
 the admin page (`GET /api/admin/player-links`, `PATCH /api/admin/players/:id` with
-`{ "discordId": "<id>" }` to link or `{ "discordId": null }` to unlink). Pending members
-can be linked too. Several players may point at one member. A link is stored on the
+`{ "discordId": "<id>" }` to link or `{ "discordId": null }` to unlink). Several players may point at one member. A link is stored on the
 player row and persists across score uploads: an upload never changes it, a name that
 differs only by case is the same player, and new names arrive unlinked. Removing a
 member clears their links but keeps the player and its scores.

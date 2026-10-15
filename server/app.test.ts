@@ -37,15 +37,14 @@ const users: Record<string, AppUser> = {
     role: "member",
     status: "approved",
   },
-  pending: { ...person(SAM, "Sam"), role: "member", status: "pending" },
 };
 
-// Cookie header stands in for a real session: "as=admin" / "as=member" / "as=pending".
+// Cookie header stands in for a real session: "as=admin" / "as=member".
 function makeApp(webOrigin: string | undefined = WEB) {
   const authHandler = vi.fn(async () => new Response("auth"));
   const fake = fakeStore({
     [ALEX]: { role: "admin", status: "approved" },
-    [SAM]: { role: "member", status: "pending" },
+    [SAM]: { role: "member", status: "approved" },
   });
   const app = createApp({
     baseUrl: BASE,
@@ -247,14 +246,6 @@ describe("GET /api/me", () => {
     expect(await res.json()).toEqual({ status: "anonymous" });
   });
 
-  it("reports a pending user without a role", async () => {
-    const res = await makeApp().app.request("/api/me", as("pending"));
-    expect(await res.json()).toEqual({
-      status: "pending",
-      user: { discordId: SAM, name: "Sam", image: null },
-    });
-  });
-
   it("reports an approved user with their role", async () => {
     const res = await makeApp().app.request("/api/me", as("admin"));
     expect(await res.json()).toEqual({
@@ -298,15 +289,6 @@ describe("GET /api/me color", () => {
       user: { color: "#2F6BB8" },
     });
   });
-
-  it("does not report it to a pending user", async () => {
-    const res = await appAs({
-      ...picked,
-      role: "member",
-      status: "pending",
-    }).request("/api/me");
-    expect(JSON.stringify(await res.json())).not.toContain("2F6BB8");
-  });
 });
 
 describe("GET /api/me display names", () => {
@@ -347,36 +329,12 @@ describe("GET /api/me display names", () => {
       },
     });
   });
-
-  it("gives a pending user only the Discord name", async () => {
-    const res = await appAs({
-      ...named,
-      role: "member",
-      status: "pending",
-    }).request("/api/me");
-    expect(await res.json()).toEqual({
-      status: "pending",
-      user: { discordId: ALEX, name: "Alex", image: null },
-    });
-  });
 });
 
 describe("approval gate", () => {
-  it("rejects anonymous and pending users on any other /api route", async () => {
+  it("rejects anonymous users on any other /api route", async () => {
     const { app } = makeApp();
     expect((await app.request("/api/anything")).status).toBe(401);
-    expect((await app.request("/api/anything", as("pending"))).status).toBe(
-      403,
-    );
-    expect((await app.request("/api/admin/users", as("pending"))).status).toBe(
-      403,
-    );
-  });
-
-  it("covers routes added later: a new unlisted route rejects pending users", async () => {
-    const { app } = makeApp();
-    const res = await app.request("/api/brand-new", as("pending"));
-    expect(res.status).toBe(403);
   });
 
   it("lets approved users reach unknown routes (JSON 404)", async () => {
@@ -400,23 +358,25 @@ describe("admin routes", () => {
     const res = await makeApp().app.request("/api/admin/users", as("admin"));
     expect(res.status).toBe(200);
     expect(((await res.json()) as AdminUser[]).map((u) => u.discordId)).toEqual(
-      [SAM, ALEX],
+      [ALEX, SAM],
     );
   });
 
-  it("approves a pending user", async () => {
+  it("changes a role, and no longer accepts approval", async () => {
     const { app, users } = makeApp();
-    const res = await app.request(`/api/admin/users/${SAM}`, {
-      method: "PATCH",
-      headers: {
-        cookie: "as=admin",
-        "sec-fetch-site": "same-origin",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ status: "approved" }),
-    });
-    expect(res.status).toBe(200);
-    expect(users.get(SAM)?.status).toBe("approved");
+    const patch = (body: object) =>
+      app.request(`/api/admin/users/${SAM}`, {
+        method: "PATCH",
+        headers: {
+          cookie: "as=admin",
+          "sec-fetch-site": "same-origin",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    expect((await patch({ status: "approved" })).status).toBe(400);
+    expect((await patch({ role: "admin" })).status).toBe(200);
+    expect(users.get(SAM)?.role).toBe("admin");
   });
 
   it("answers 409 locked for a built-in admin before looking for the row", async () => {

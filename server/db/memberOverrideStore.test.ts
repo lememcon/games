@@ -125,7 +125,7 @@ describe("dropping admin overrides (migration 0012)", () => {
     const pre = new PGlite();
     await applyMigrations(pre, 0, 12);
     await pre.exec(
-      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}');
+      `INSERT INTO app_user (discord_id, status) VALUES ('${ALEX}', 'approved');
        INSERT INTO game (bgg_id, name) VALUES (1, 'Root');
        INSERT INTO game_player_override (bgg_id, min_players, max_players) VALUES (1, 3, 5);
        INSERT INTO member_player_override (discord_id, bgg_id, min_players, max_players) VALUES ('${ALEX}', 1, 3, 4);`,

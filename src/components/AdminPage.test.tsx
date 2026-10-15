@@ -22,7 +22,6 @@ const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
 
 const hook = vi.hoisted(() => ({
   value: {} as Record<string, unknown>,
-  approve: vi.fn(),
   setRole: vi.fn(),
   remove: vi.fn(),
 }));
@@ -37,7 +36,6 @@ vi.mock("@/hooks/useAdminUsers", () => ({ default: () => hook.value }));
 const setHook = (over: Record<string, unknown> = {}) => {
   hook.value = {
     users: [
-      user("10", { status: "pending" }),
       user("1", { name: "Kelsin", locked: true, role: "admin" }),
       user("2"),
       user("3", { role: "admin" }),
@@ -45,7 +43,6 @@ const setHook = (over: Record<string, unknown> = {}) => {
     loading: false,
     error: false,
     actionError: null,
-    approve: hook.approve,
     setRole: hook.setRole,
     remove: hook.remove,
     ...over,
@@ -82,13 +79,12 @@ describe("AdminPage", () => {
     );
   });
 
-  it("splits pending and members, showing username and Discord ID", () => {
+  it("lists members, showing username and Discord ID", () => {
     renderWithMantine(<AdminPage meId="3" />);
 
-    expect(screen.getByText("Pending approval (1)")).toBeInTheDocument();
     expect(screen.getByText("Members (3)")).toBeInTheDocument();
-    expect(screen.getByText("Discord username: user10")).toBeInTheDocument();
-    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("Discord username: user2")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
     expect(
       screen.getByText("(built-in)", { exact: false }),
     ).toBeInTheDocument();
@@ -114,25 +110,6 @@ describe("AdminPage", () => {
     setHook({ actionError: "Built-in admins can't be changed." });
     renderWithMantine(<AdminPage meId="3" />);
     expect(screen.getByRole("alert")).toHaveTextContent(/Built-in admins/);
-  });
-
-  it("approves a pending user", async () => {
-    renderWithMantine(<AdminPage meId="3" />);
-    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
-    expect(hook.approve).toHaveBeenCalledWith("10");
-  });
-
-  it("rejects a pending user after confirming", async () => {
-    renderWithMantine(<AdminPage meId="3" />);
-    await userEvent.click(screen.getByRole("button", { name: "Reject" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(
-      within(dialog).getByText("Reject this account?"),
-    ).toBeInTheDocument();
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Confirm" }),
-    );
-    expect(hook.remove).toHaveBeenCalledWith("10");
   });
 
   it("removes nothing when the modal is cancelled", async () => {
@@ -195,13 +172,8 @@ describe("AdminPage", () => {
     expect(hook.setRole).not.toHaveBeenCalled();
   });
 
-  it("links approved members to their profile, but not pending accounts", () => {
-    setHook({
-      users: [
-        user("10", { status: "pending", name: "Newbie" }),
-        user("2", { name: "Amy", displayName: "Ames" }),
-      ],
-    });
+  it("links members to their profile", () => {
+    setHook({ users: [user("2", { name: "Amy", displayName: "Ames" })] });
     renderWithMantine(<AdminPage meId="3" />);
 
     expect(screen.getByRole("link", { name: "Ames" })).toHaveAttribute(
@@ -209,8 +181,6 @@ describe("AdminPage", () => {
       "/players/2",
     );
     expect(screen.getByText("Discord name: Amy")).toBeInTheDocument();
-    expect(screen.getByText("Newbie")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Newbie" })).toBeNull();
   });
 
   it("names a member by display name in labels and the remove confirmation", async () => {

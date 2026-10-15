@@ -88,7 +88,12 @@ describe("App gate", () => {
 
   it("silently cleans the URL for signed-in users", () => {
     window.history.pushState({}, "", "/?error=access_denied");
-    setGate({ me: { status: "pending", user } });
+    setGate({
+      me: {
+        status: "approved",
+        user: { ...user, ...approvedExtras, role: "member" },
+      },
+    });
     render(<App />);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(window.location.search).toBe("");
@@ -108,25 +113,11 @@ describe("App gate", () => {
     expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
   });
 
-  it("shows the pending screen and Check again refetches", async () => {
-    setGate({ me: { status: "pending", user } });
-    render(<App />);
-    expect(screen.getByText(/waiting for approval/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
-    expect(gate.retry).toHaveBeenCalled();
-    expect(gate.useData).not.toHaveBeenCalled();
-  });
-
-  it("lets the gate win over /admin for anonymous and pending users", () => {
+  it("lets the gate win over /admin for anonymous users", () => {
     window.history.pushState({}, "", "/admin");
     setGate({ me: { status: "anonymous" } });
-    const { unmount } = render(<App />);
-    expect(screen.getByText("Sign in to LememCon")).toBeInTheDocument();
-    unmount();
-
-    setGate({ me: { status: "pending", user } });
     render(<App />);
-    expect(screen.getByText(/waiting for approval/)).toBeInTheDocument();
+    expect(screen.getByText("Sign in to LememCon")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/admin");
   });
 

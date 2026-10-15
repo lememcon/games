@@ -9,7 +9,6 @@ import {
 } from "@mantine/core";
 
 import AuthedApp from "@/components/AuthedApp";
-import PendingApproval from "@/components/PendingApproval";
 import SignIn from "@/components/SignIn";
 import useAuthError from "@/hooks/useAuthError";
 import useMe from "@/hooks/useMe";
@@ -78,15 +77,6 @@ function Gate() {
     return (
       <SignIn errorCode={authError.code} onDismissError={authError.dismiss} />
     );
-  if (me.status === "pending") {
-    return (
-      <PendingApproval
-        name={me.user.name}
-        onCheckAgain={retry}
-        checking={loading}
-      />
-    );
-  }
   return <AuthedApp user={me.user} onUserChanged={retry} />;
 }
 

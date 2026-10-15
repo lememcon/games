@@ -8,7 +8,7 @@ const isMe = (body: unknown): body is Me => {
   const { status, user } = body as { status?: unknown; user?: unknown };
   if (status === "anonymous") return true;
   return (
-    (status === "pending" || status === "approved") &&
+    status === "approved" &&
     typeof user === "object" &&
     user !== null &&
     typeof (user as { discordId?: unknown }).discordId === "string"

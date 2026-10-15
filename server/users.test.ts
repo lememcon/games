@@ -31,20 +31,20 @@ function setup() {
     },
     [SAM]: {
       role: "member",
-      status: "pending",
+      status: "approved",
       name: "Sam",
       username: "sam_k",
       createdAt: new Date("2026-01-04"),
     },
     [JO]: {
       role: "member",
-      status: "pending",
+      status: "approved",
       createdAt: new Date("2026-01-03"),
     },
     // Tampered row: still reported as a locked approved admin.
     [KELSIN]: {
       role: "member",
-      status: "pending",
+      status: "approved",
       createdAt: new Date("2026-01-01"),
     },
   });
@@ -64,22 +64,22 @@ const json = (method: string, body: unknown) => ({
 });
 
 describe("GET /users", () => {
-  it("lists pending users first, oldest first, with effective roles", async () => {
+  it("lists the oldest users first, with effective roles", async () => {
     const res = await setup().app.request("/users");
     const users = (await res.json()) as AdminUser[];
-    expect(users.map((u) => u.discordId)).toEqual([JO, SAM, KELSIN, ALEX]);
-    expect(users[1]).toEqual({
+    expect(users.map((u) => u.discordId)).toEqual([KELSIN, ALEX, JO, SAM]);
+    expect(users[3]).toEqual({
       discordId: SAM,
       name: "Sam",
       displayName: null,
       image: null,
       username: "sam_k",
       role: "member",
-      status: "pending",
+      status: "approved",
       locked: false,
       createdAt: "2026-01-04T00:00:00.000Z",
     });
-    expect(users[0].name).toBe("Unknown");
+    expect(users[2].name).toBe("Unknown");
   });
 
   it("lists the display name next to the Discord name", async () => {
@@ -107,24 +107,24 @@ describe("GET /users", () => {
 });
 
 describe("PATCH /users/:discordId", () => {
-  it("approves a pending user and returns it", async () => {
+  it("changes a role and returns the user", async () => {
     const { app, users } = setup();
     const res = await app.request(
       `/users/${SAM}`,
-      json("PATCH", { status: "approved" }),
+      json("PATCH", { role: "admin" }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       discordId: SAM,
-      status: "approved",
+      role: "admin",
     });
-    expect(users.get(SAM)?.status).toBe("approved");
+    expect(users.get(SAM)?.role).toBe("admin");
   });
 
   it.each([
     [KELSIN, { role: "member" }, 409, "locked"],
     ["999999999999999999", { role: "member" }, 404, "not_found"],
-    [SAM, { role: "admin" }, 400, "approve_first"],
+    [SAM, { status: "approved" }, 400, "invalid_body"],
     [SAM, { admin: true }, 400, "invalid_body"],
     ["abc", { role: "member" }, 400, "invalid_id"],
   ])("maps %s %j to %i %s", async (id, body, status, error) => {

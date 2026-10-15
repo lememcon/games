@@ -119,7 +119,7 @@ describe("dropping the veto year (migration 0014)", () => {
     const pre = new PGlite();
     await applyMigrations(pre, 0, 14);
     await pre.exec(
-      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}'), ('${JO}');
+      `INSERT INTO app_user (discord_id, status) VALUES ('${ALEX}', 'approved'), ('${JO}', 'approved');
        INSERT INTO year (year) VALUES (2025), (2026), (2027);
        INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');
        INSERT INTO member_veto (discord_id, year, bgg_id) VALUES
