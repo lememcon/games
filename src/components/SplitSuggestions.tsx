@@ -91,7 +91,6 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
         <div className="splits__summary" data-testid="split-summary">
           {split.groups.map((group) => {
             const picked = group.games.find((g) => g.name === group.picked);
-            const leastHappy = picked ? leastHappyPlayer(picked) : null;
             return (
               <div
                 key={group.players.join(",")}
@@ -115,13 +114,6 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
                     >
                       {picked.name}
                     </Link>
-                    {leastHappy && (
-                      <LeastHappy
-                        game={picked}
-                        name={leastHappy}
-                        individualMax={individualMax}
-                      />
-                    )}
                   </>
                 )}
               </div>
