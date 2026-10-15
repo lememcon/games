@@ -216,6 +216,7 @@ describe("AdminImport", () => {
       "player_game_scores[0].score: must be a number",
     );
     expect(alert).toHaveTextContent("and 3 more");
+    expect(alert).toHaveStyle({ overflowWrap: "anywhere" });
     expect(screen.queryByText("no path")).toBeNull();
   });
 
