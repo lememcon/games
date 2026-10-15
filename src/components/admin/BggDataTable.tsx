@@ -10,6 +10,7 @@ const COLORS: Record<BggGameState, string> = {
   partial: "yellow",
   missing: "red",
 };
+const TABLE_MIN_WIDTH = 560;
 
 interface Props {
   games: BggGameRow[];
@@ -38,7 +39,7 @@ const BggDataTable = ({
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
-      <Table.ScrollContainer minWidth={560}>
+      <Table.ScrollContainer minWidth={TABLE_MIN_WIDTH}>
         <Table>
           <Table.Thead>
             <Table.Tr>
