@@ -20,12 +20,12 @@ import BggDataPanel from "@/components/admin/BggDataPanel";
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
 import usePageMeta from "@/hooks/usePageMeta";
+import { TABLE_MIN_WIDTH } from "@/lib/layout";
 import { pageMeta } from "@/lib/pageMeta";
 import { splitUsers, timeAgo } from "@/lib/users";
 import type { AdminUser, Role } from "@/types";
 
 const BUILT_IN = "Built-in admin, can't be changed";
-const TABLE_MIN_WIDTH = 560;
 const ROLE_SELECT_WIDTH = 110;
 
 type Confirm =

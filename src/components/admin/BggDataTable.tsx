@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge, Checkbox, Table, Text, TextInput } from "@mantine/core";
 
 import { filterGames, toggleAll, toggleId } from "@/lib/bgg";
+import { TABLE_MIN_WIDTH } from "@/lib/layout";
 import type { BggGameRow, BggGameState } from "@/types";
 
 const COLORS: Record<BggGameState, string> = {
@@ -10,7 +11,6 @@ const COLORS: Record<BggGameState, string> = {
   partial: "yellow",
   missing: "red",
 };
-const TABLE_MIN_WIDTH = 560;
 
 interface Props {
   games: BggGameRow[];
