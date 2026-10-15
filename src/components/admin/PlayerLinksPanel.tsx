@@ -17,6 +17,8 @@ import usePlayerLinks from "@/hooks/usePlayerLinks";
 import type { MemberGroup } from "@/lib/playerLinks";
 import type { LinkableUser, PlayerLink } from "@/types";
 
+const TABLE_MIN_WIDTH = 560;
+
 const memberLabel = (u: LinkableUser) =>
   u.status === "pending" ? `${u.name} (pending)` : u.name;
 
@@ -168,7 +170,7 @@ const PlayerLinksPanel = () => {
           {unlinked.length > 0 && (
             <Stack>
               <Title order={3}>Unlinked players ({unlinked.length})</Title>
-              <Table.ScrollContainer minWidth={560}>
+              <Table.ScrollContainer minWidth={TABLE_MIN_WIDTH}>
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
