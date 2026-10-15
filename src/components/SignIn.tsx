@@ -60,11 +60,11 @@ const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
   };
 
   return (
-    <div className="signin-page">
+    <div className="cover-page">
       <FloatingCovers />
       <Center mih="100vh" px="md">
         <Paper
-          className="signin-card"
+          className="cover-card"
           withBorder
           shadow="md"
           radius="lg"
