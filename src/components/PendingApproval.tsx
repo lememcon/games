@@ -1,7 +1,17 @@
 import { useState } from "react";
 
-import { Badge, Button, Group, Stack, Text, Title } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Center,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 
+import FloatingCovers from "@/components/FloatingCovers";
 import usePageMeta from "@/hooks/usePageMeta";
 import { signOut } from "@/lib/auth";
 import { pageMeta } from "@/lib/pageMeta";
@@ -33,27 +43,48 @@ const PendingApproval = ({
   };
 
   return (
-    <Stack align="center" gap="xs" mt="xl" px="md">
-      <Title order={2}>You&apos;re signed in, waiting for approval</Title>
-      <Text c="dimmed" ta="center">
-        Hi {name}. An admin needs to approve your account before you can see the
-        scores. Ask Kelsin or Waymost on Discord.
-      </Text>
-      <Badge>Pending approval</Badge>
-      <Group>
-        <Button variant="light" onClick={onCheckAgain} disabled={checking}>
-          Check again
-        </Button>
-        <Button variant="subtle" onClick={handleSignOut}>
-          Sign out
-        </Button>
-      </Group>
-      {failed && (
-        <Text c="red" role="alert">
-          Couldn&apos;t sign out. Try again.
-        </Text>
-      )}
-    </Stack>
+    <div className="cover-page">
+      <FloatingCovers />
+      <Center mih="100vh" px="md">
+        <Paper
+          className="cover-card"
+          withBorder
+          shadow="md"
+          radius="lg"
+          p="xl"
+          w="100%"
+          maw={480}
+        >
+          <Stack align="center" gap="md">
+            <Title order={2} ta="center">
+              You&apos;re signed in, waiting for approval
+            </Title>
+            <Text c="dimmed" ta="center">
+              Hi {name}. An admin needs to approve your account before you can
+              see the scores. Ask Kelsin or Waymost on Discord.
+            </Text>
+            <Badge>Pending approval</Badge>
+            <Group>
+              <Button
+                variant="light"
+                onClick={onCheckAgain}
+                disabled={checking}
+              >
+                Check again
+              </Button>
+              <Button variant="subtle" onClick={handleSignOut}>
+                Sign out
+              </Button>
+            </Group>
+            {failed && (
+              <Text c="red" role="alert">
+                Couldn&apos;t sign out. Try again.
+              </Text>
+            )}
+          </Stack>
+        </Paper>
+      </Center>
+    </div>
   );
 };
 

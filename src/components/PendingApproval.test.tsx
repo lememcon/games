@@ -23,6 +23,21 @@ describe("PendingApproval", () => {
     expect(onCheckAgain).toHaveBeenCalled();
   });
 
+  it("renders on the floating-covers backdrop", async () => {
+    const { container } = renderWithMantine(
+      <PendingApproval name="Sam" onCheckAgain={() => {}} />,
+    );
+    expect(container.querySelector(".cover-page")).not.toBeNull();
+    await waitFor(() =>
+      expect(container.querySelector(".floaters")).not.toBeNull(),
+    );
+    const card = container.querySelector(".cover-card") as HTMLElement;
+    expect(card).toContainElement(screen.getByRole("heading", { level: 2 }));
+    expect(card).toContainElement(
+      screen.getByRole("button", { name: "Check again" }),
+    );
+  });
+
   it("disables Check again while checking", () => {
     renderWithMantine(
       <PendingApproval name="Sam" onCheckAgain={() => {}} checking />,

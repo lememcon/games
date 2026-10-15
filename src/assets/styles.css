@@ -638,15 +638,15 @@ body {
   gap: calc(var(--mantine-spacing-xs) / 2);
 }
 
-/* ---- Sign-in page: full-bleed backdrop with drifting game covers ---- */
-.signin-page {
+/* ---- Cover pages (sign-in, pending approval): full-bleed backdrop with drifting game covers ---- */
+.cover-page {
   position: fixed;
   inset: 0;
   overflow-y: auto;
   background: #f1ebdd;
 }
 
-.signin-card {
+.cover-card {
   position: relative;
   z-index: 1;
   background: rgba(251, 249, 244, 0.96);
