@@ -218,6 +218,10 @@ body {
   font-size: 1.2rem;
 }
 
+.tray-card__played-by {
+  min-height: 20px;
+}
+
 .tray-card__foot {
   display: flex;
   align-items: center;

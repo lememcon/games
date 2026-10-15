@@ -52,6 +52,21 @@ describe("GameCard", () => {
     expect(queryByLabelText("Played by")).toBeNull();
   });
 
+  it("reserves an empty played-by slot when nobody has played", () => {
+    const { container } = renderCard();
+    const slot = container.querySelector(".tray-card__played-by");
+    expect(slot).not.toBeNull();
+    expect(slot).toBeEmptyDOMElement();
+  });
+
+  it("puts the played-by list inside the reserved slot", () => {
+    const { container, getByText } = renderCard({
+      game: { ...game, playedBy: [{ name: "alice" }] },
+    });
+    const slot = container.querySelector(".tray-card__played-by");
+    expect(slot).toContainElement(getByText("alice"));
+  });
+
   it("links the cover and name to the detail route", () => {
     const { getByRole } = renderCard();
 
