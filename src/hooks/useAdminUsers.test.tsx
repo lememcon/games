@@ -11,7 +11,7 @@ const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
   image: null,
   username: discordId,
   role: "member",
-  status: "pending",
+  status: "approved",
   locked: false,
   createdAt: "2026-01-01T00:00:00Z",
   ...over,
@@ -23,9 +23,7 @@ const setup = async (...next: Response[]) => setupAs(undefined, ...next);
 
 const setupAs = async (meId: string | undefined, ...next: Response[]) => {
   const fetchImpl = vi.fn();
-  fetchImpl.mockResolvedValueOnce(
-    res([user("a"), user("b", { status: "approved" })]),
-  );
+  fetchImpl.mockResolvedValueOnce(res([user("a"), user("b")]));
   next.forEach((r) => fetchImpl.mockResolvedValueOnce(r));
   const hook = renderHook(() => useAdminUsers(fetchImpl, meId));
   await waitFor(() => expect(hook.result.current.loading).toBe(false));
@@ -48,26 +46,8 @@ describe("useAdminUsers", () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it("approves and replaces the user with the server response", async () => {
-    const { hook, fetchImpl } = await setup(
-      res(user("a", { status: "approved" })),
-    );
-    await act(() => hook.result.current.approve("a"));
-
-    expect(fetchImpl).toHaveBeenLastCalledWith(
-      "/api/admin/users/a",
-      expect.objectContaining({
-        method: "PATCH",
-        body: '{"status":"approved"}',
-      }),
-    );
-    expect(hook.result.current.users[0].status).toBe("approved");
-  });
-
   it("changes a role", async () => {
-    const { hook, fetchImpl } = await setup(
-      res(user("b", { status: "approved", role: "admin" })),
-    );
+    const { hook, fetchImpl } = await setup(res(user("b", { role: "admin" })));
     await act(() => hook.result.current.setRole("b", "admin"));
 
     expect(fetchImpl).toHaveBeenLastCalledWith(
@@ -100,10 +80,10 @@ describe("useAdminUsers", () => {
     "surfaces a %i failure and leaves the list unchanged",
     async (status, error, message) => {
       const { hook } = await setup(res({ error }, status));
-      await act(() => hook.result.current.approve("a"));
+      await act(() => hook.result.current.setRole("a", "admin"));
 
       expect(hook.result.current.actionError).toMatch(message);
-      expect(hook.result.current.users[0].status).toBe("pending");
+      expect(hook.result.current.users[0].role).toBe("member");
     },
   );
 
@@ -129,10 +109,7 @@ describe("useAdminUsers", () => {
     afterEach(() => vi.unstubAllGlobals());
 
     it("reloads after you demote yourself", async () => {
-      const { hook } = await setupAs(
-        "b",
-        res(user("b", { status: "approved", role: "member" })),
-      );
+      const { hook } = await setupAs("b", res(user("b", { role: "member" })));
       await act(() => hook.result.current.setRole("b", "member"));
       expect(assign).toHaveBeenCalledWith("/");
     });

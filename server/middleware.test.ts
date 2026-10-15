@@ -13,8 +13,9 @@ const base = {
 };
 const member: AppUser = { ...base, role: "member", status: "approved" };
 const admin: AppUser = { ...member, role: "admin" };
-const pending: AppUser = { ...member, status: "pending" };
-const pendingAdmin: AppUser = { ...admin, status: "pending" };
+// The schema still allows a "pending" row, which must stay locked out.
+const pending = { ...member, status: "pending" } as unknown as AppUser;
+const pendingAdmin = { ...admin, status: "pending" } as unknown as AppUser;
 
 function appWith(user: AppUser | null) {
   const app = new Hono<AppEnv>();

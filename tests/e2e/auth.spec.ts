@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { anonymousMe, mockApi, pendingMe } from "./fixtures";
+import { anonymousMe, mockApi } from "./fixtures";
 
 test("anonymous visitor can start Discord sign-in", async ({ page }) => {
   await mockApi(page, { me: anonymousMe });
@@ -25,22 +25,4 @@ test("anonymous visitor can start Discord sign-in", async ({ page }) => {
   expect((await request).postDataJSON()).toMatchObject({
     provider: "discord",
   });
-});
-
-test("pending member sees the approval notice and can check again", async ({
-  page,
-}) => {
-  await mockApi(page, { me: pendingMe });
-  await page.goto("/");
-
-  await expect(
-    page.getByRole("heading", { name: /waiting for approval/ }),
-  ).toBeVisible();
-  await expect(page.getByText("Hi Newcomer.")).toBeVisible();
-
-  const meRequest = page.waitForRequest(
-    (req) => new URL(req.url()).pathname === "/api/me",
-  );
-  await page.getByRole("button", { name: "Check again" }).click();
-  await meRequest;
 });

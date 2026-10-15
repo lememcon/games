@@ -36,7 +36,7 @@ const setHook = (over: Record<string, unknown> = {}) => {
     ],
     users: [
       { discordId: "10", name: "Amy", status: "approved" },
-      { discordId: "20", name: "Bo", status: "pending" },
+      { discordId: "20", name: "Bo", status: "approved" },
     ],
     ...over,
   };
@@ -108,7 +108,7 @@ describe("PlayerLinksPanel", () => {
     const input = screen.getByRole("combobox", { name: "Member for player1" });
     await userEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
-    expect(within(list).getByText("Bo (pending)")).toBeInTheDocument();
+    expect(within(list).getByText("Bo")).toBeInTheDocument();
     await userEvent.click(within(list).getByText("Amy"));
 
     expect(button).toBeEnabled();
@@ -149,7 +149,7 @@ describe("PlayerLinksPanel", () => {
     const input = screen.getByRole("combobox", { name: "Member for player1" });
     await userEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
-    await userEvent.click(within(list).getByText("Bo (pending)"));
+    await userEvent.click(within(list).getByText("Bo"));
     expect(screen.getByRole("button", { name: "Link player1" })).toBeEnabled();
 
     setHook({
@@ -169,7 +169,7 @@ describe("PlayerLinksPanel", () => {
     await userEvent.type(input, "Bo");
     const list = document.getElementById(input.getAttribute("aria-controls")!)!;
     expect(within(list).queryByText("Amy")).toBeNull();
-    expect(within(list).getByText("Bo (pending)")).toBeInTheDocument();
+    expect(within(list).getByText("Bo")).toBeInTheDocument();
   });
 
   it("unlinks one name from a member", async () => {

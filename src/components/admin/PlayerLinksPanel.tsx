@@ -18,9 +18,6 @@ import { TABLE_MIN_WIDTH } from "@/lib/layout";
 import type { MemberGroup } from "@/lib/playerLinks";
 import type { LinkableUser, PlayerLink } from "@/types";
 
-const memberLabel = (u: LinkableUser) =>
-  u.status === "pending" ? `${u.name} (pending)` : u.name;
-
 interface MemberProps {
   member: MemberGroup;
   unlinked: PlayerLink[];
@@ -75,7 +72,7 @@ const UnlinkedRow = ({ player, users, onLink }: RowProps) => {
   const [chosen, setChosen] = useState<string | null>(null);
   const data = users.map((u) => ({
     value: u.discordId,
-    label: memberLabel(u),
+    label: u.name,
   }));
 
   return (

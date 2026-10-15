@@ -10,12 +10,11 @@ import type { UserRow } from "./types";
 
 const admin: UserRow = { role: "admin", status: "approved" };
 const member: UserRow = { role: "member", status: "approved" };
-const pending: UserRow = { role: "member", status: "pending" };
 const OTHER = "998877665544332211";
 const [KELSIN, WAYMOST] = PROTECTED_ADMIN_IDS;
 
 describe("effectiveUser", () => {
-  it.each([null, member, pending, { role: "member", status: "pending" }])(
+  it.each([null, member])(
     "makes built-in ids approved admins for row %j",
     (row) => {
       for (const id of PROTECTED_ADMIN_IDS)
@@ -27,21 +26,14 @@ describe("effectiveUser", () => {
     expect(effectiveUser(OTHER, member)).toEqual(member);
   });
 
-  it("treats an unknown id as a pending member", () => {
-    expect(effectiveUser(OTHER, null)).toEqual(pending);
+  it("treats an unknown id as a plain member", () => {
+    expect(effectiveUser(OTHER, null)).toEqual(member);
   });
 });
 
 describe("validateChange", () => {
   const run = (body: unknown, target: UserRow | null = member, id = OTHER) =>
     validateChange(admin, id, target, body);
-
-  it("allows approving a pending user", () => {
-    expect(run({ status: "approved" }, pending)).toEqual({
-      ok: true,
-      value: { status: "approved" },
-    });
-  });
 
   it("allows promoting and demoting an approved user", () => {
     expect(run({ role: "admin" })).toEqual({
@@ -85,22 +77,12 @@ describe("validateChange", () => {
     });
   });
 
-  it("rejects promoting or changing the role of a pending user", () => {
-    expect(run({ role: "admin" }, pending)).toMatchObject({
-      status: 400,
-      error: "approve_first",
-    });
-    expect(run({ role: "member" }, pending)).toMatchObject({
-      error: "approve_first",
-    });
-  });
-
   it.each([
     ["unknown key", { status: "approved", extra: 1 }],
     ["only an unknown key", { name: "x" }],
     ["empty object", {}],
     ["bad role", { role: "owner" }],
-    ["bad status", { status: "pending" }],
+    ["a status", { status: "approved" }],
     ["status and role together", { status: "approved", role: "member" }],
     ["an array", []],
     ["null", null],
@@ -109,23 +91,18 @@ describe("validateChange", () => {
     expect(run(body)).toMatchObject({ ok: false, status: 400 });
   });
 
-  it("rejects a non-admin or unapproved actor", () => {
+  it("rejects a non-admin actor", () => {
     expect(validateChange(member, OTHER, member, { role: "admin" })).toEqual({
       ok: false,
       status: 403,
       error: "forbidden",
     });
-    expect(
-      validateChange({ role: "admin", status: "pending" }, OTHER, member, {
-        role: "admin",
-      }),
-    ).toMatchObject({ status: 403 });
   });
 });
 
 describe("validateRemove", () => {
   it("allows removing a regular user, including yourself", () => {
-    expect(validateRemove(admin, OTHER, pending)).toEqual({
+    expect(validateRemove(admin, OTHER, member)).toEqual({
       ok: true,
       value: null,
     });

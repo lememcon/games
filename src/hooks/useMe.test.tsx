@@ -22,26 +22,18 @@ describe("useMe", () => {
     expect(result.current.error).toBe(false);
   });
 
-  it("loads a pending and an approved user", async () => {
-    const pending = {
-      status: "pending",
-      user: { discordId: "2", name: "Al", image: null },
-    };
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValueOnce(ok(pending))
-      .mockResolvedValueOnce(ok(approved));
+  it("loads an approved user", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(ok(approved));
     const { result } = renderHook(() => useMe(fetchImpl));
 
-    await waitFor(() => expect(result.current.me).toEqual(pending));
-    act(() => result.current.retry());
     await waitFor(() => expect(result.current.me).toEqual(approved));
   });
 
   it.each([
     ["an HTML body", new Response("<html>")],
     ["an unknown status", ok({ status: "weird" })],
-    ["a missing user", ok({ status: "pending" })],
+    ["a pending status", ok({ status: "pending", user: { discordId: "2" } })],
+    ["a missing user", ok({ status: "approved" })],
     ["a non-object body", ok(5)],
     ["an HTTP error", new Response("{}", { status: 500 })],
   ])("is the error state for %s", async (_, res) => {

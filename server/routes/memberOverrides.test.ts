@@ -29,7 +29,7 @@ const approved: AppUser = {
 const users: Record<string, AppUser> = {
   member: approved,
   other: { ...approved, discordId: PAT },
-  pending: { ...approved, status: "pending" },
+  pending: { ...approved, status: "pending" } as unknown as AppUser,
 };
 
 function makeApp() {

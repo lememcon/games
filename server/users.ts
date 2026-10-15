@@ -18,19 +18,16 @@ function toAdminUser(stored: StoredUser): AdminUser {
   };
 }
 
-/** Pending first, then oldest first. */
-function byQueue(a: AdminUser, b: AdminUser) {
-  const pending =
-    Number(b.status === "pending") - Number(a.status === "pending");
-  return pending || a.createdAt.localeCompare(b.createdAt);
-}
+/** Oldest first. */
+const byAge = (a: AdminUser, b: AdminUser) =>
+  a.createdAt.localeCompare(b.createdAt);
 
 /** Admin routes, mounted at /api/admin behind requireAdmin. */
 export function adminRoutes(store: UserStore) {
   const routes = new Hono<AppEnv>();
 
   routes.get("/users", async (c) =>
-    c.json((await store.list()).map(toAdminUser).sort(byQueue)),
+    c.json((await store.list()).map(toAdminUser).sort(byAge)),
   );
 
   routes.patch("/users/:discordId", async (c) => {

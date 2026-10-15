@@ -87,15 +87,10 @@ describe("list", () => {
     await users.getOrCreate("555555555555555555"); // no login
     await addLogin(client, ALEX, "Alex");
     await addLogin(client, JO, "jo");
-    await db
-      .update(appUser)
-      .set({ status: "approved" })
-      .where(eq(appUser.discordId, ALEX));
-
     const { users: members } = await store.list();
     expect(members).toEqual([
       { discordId: ALEX, name: "Alex", status: "approved" },
-      { discordId: JO, name: "jo", status: "pending" },
+      { discordId: JO, name: "jo", status: "approved" },
     ]);
   });
 });

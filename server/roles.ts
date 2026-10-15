@@ -11,17 +11,16 @@ export const PROTECTED_ADMIN_IDS: readonly string[] = [
 export const isProtected = (discordId: string) =>
   PROTECTED_ADMIN_IDS.includes(discordId);
 
-const PENDING_MEMBER: UserRow = { role: "member", status: "pending" };
+const MEMBER: UserRow = { role: "member", status: "approved" };
 
 /** The role and status that apply, ignoring a missing or tampered row for built-ins. */
 export function effectiveUser(discordId: string, row: UserRow | null): UserRow {
   if (isProtected(discordId)) return { role: "admin", status: "approved" };
-  const { role, status } = row ?? PENDING_MEMBER;
+  const { role, status } = row ?? MEMBER;
   return { role, status };
 }
 
 export interface Change {
-  status?: "approved";
   role?: Role;
 }
 
@@ -31,8 +30,7 @@ function parseChange(body: unknown): Change | null {
   if (entries.length === 0) return null;
   const change: Change = {};
   for (const [key, value] of entries) {
-    if (key === "status" && value === "approved") change.status = value;
-    else if (key === "role" && (value === "member" || value === "admin"))
+    if (key === "role" && (value === "member" || value === "admin"))
       change.role = value;
     else return null;
   }
@@ -67,9 +65,6 @@ export function validateChange(
   if (!checked.ok) return checked;
   const change = parseChange(body);
   if (!change) return refuse(400, "invalid_body");
-  if (change.role && checked.value.status !== "approved")
-    return refuse(400, "approve_first");
-  if (change.status && change.role) return refuse(400, "invalid_body");
   return { ok: true, value: change };
 }
 

@@ -31,7 +31,7 @@ describe("describeAuthError", () => {
     ["state_invalid", /took too long/],
     ["state_not_found", /took too long/],
     ["access_denied", /cancelled/],
-    ["unable_to_get_user_info", /details from Discord/],
+    ["unable_to_get_user_info", /LememCon Discord server/],
     ["no_code", /details from Discord/],
     ["invalid_code", /details from Discord/],
     ["oauth_provider_not_found", /details from Discord/],

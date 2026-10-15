@@ -104,7 +104,7 @@ export interface GameSplit {
 
 // Account model served by the API (GET /api/me, GET /api/admin/users).
 export type Role = "member" | "admin";
-export type Status = "pending" | "approved";
+export type Status = "approved";
 
 export interface MeUser {
   discordId: string;
@@ -122,9 +122,7 @@ export interface ApprovedUser extends MeUser {
 }
 
 export type Me =
-  | { status: "anonymous" }
-  | { status: "pending"; user: MeUser }
-  | { status: "approved"; user: ApprovedUser };
+  { status: "anonymous" } | { status: "approved"; user: ApprovedUser };
 
 export interface AdminUser {
   discordId: string;

@@ -1,7 +1,7 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 
 import { refuse } from "../result";
-import type { LinkStore, PlayerLinks } from "../types";
+import type { LinkStore, PlayerLinks, Status } from "../types";
 import { lockDisplayNames, pgCode } from "./import";
 import { account, appUser, player, score, user } from "./schema";
 import type { StoreDb } from "./userStore";
@@ -51,10 +51,7 @@ export function createLinkStore(db: StoreDb): LinkStore {
 
       return {
         players,
-        users: users.map((u) => ({
-          ...u,
-          status: u.status as "pending" | "approved",
-        })),
+        users: users.map((u) => ({ ...u, status: u.status as Status })),
       };
     },
 

@@ -79,7 +79,7 @@ describe("SignIn", () => {
     it.each([
       ["state_mismatch", /took too long/],
       ["access_denied", /cancelled/],
-      ["unable_to_get_user_info", /details from Discord/],
+      ["unable_to_get_user_info", /LememCon Discord server/],
     ])("explains %s", (code, message) => {
       renderWithMantine(<SignIn errorCode={code} />);
       const alert = screen.getByRole("alert");

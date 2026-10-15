@@ -29,7 +29,7 @@ describe("migrations", () => {
     await client.close();
   });
 
-  it("leaves existing accounts pending, not approved", async () => {
+  it("drops accounts that were still pending, which never had access", async () => {
     const client = new PGlite();
     await applyMigrations(client, 0, 1);
     await client.exec(`
@@ -42,7 +42,7 @@ describe("migrations", () => {
     const store = createUserStore(drizzle(client, { schema }));
     expect(await store.getOrCreate(ALEX)).toEqual({
       role: "member",
-      status: "pending",
+      status: "approved",
       displayName: null,
       color: null,
     });
@@ -109,16 +109,16 @@ describe("user store", () => {
   });
 
   describe("getOrCreate", () => {
-    it("creates a pending member and never resets an existing row", async () => {
+    it("creates an approved member and never resets an existing row", async () => {
       expect(await store.getOrCreate(SAM)).toEqual({
         role: "member",
-        status: "pending",
+        status: "approved",
         displayName: null,
         color: null,
       });
-      await setRow(SAM, "member", "approved");
+      await setRow(SAM, "admin", "approved");
       expect(await store.getOrCreate(SAM)).toEqual({
-        role: "member",
+        role: "admin",
         status: "approved",
         displayName: null,
         color: null,
@@ -179,7 +179,7 @@ describe("user store", () => {
       expect(users.find((u) => u.discordId === ALEX)).toMatchObject({
         name: "Alex",
         username: "Alex_handle",
-        status: "pending",
+        status: "approved",
       });
       expect(users.find((u) => u.discordId === KELSIN)).toMatchObject({
         name: null,
@@ -189,23 +189,18 @@ describe("user store", () => {
   });
 
   describe("update", () => {
-    it("approves a pending user and promotes them", async () => {
+    it("promotes a member", async () => {
       await addLogin(client, ALEX, "Alex");
       await store.getOrCreate(ALEX);
-      const approved = await store.update(KELSIN, ALEX, { status: "approved" });
-      expect(approved).toMatchObject({
-        ok: true,
-        value: { discordId: ALEX, status: "approved", name: "Alex" },
-      });
       const promoted = await store.update(KELSIN, ALEX, { role: "admin" });
       expect(promoted).toMatchObject({ ok: true, value: { role: "admin" } });
     });
 
     it("refuses invalid changes without writing", async () => {
       await store.getOrCreate(ALEX);
-      expect(await store.update(KELSIN, ALEX, { role: "admin" })).toMatchObject(
-        { status: 400 },
-      );
+      expect(
+        await store.update(KELSIN, ALEX, { status: "approved" }),
+      ).toMatchObject({ status: 400 });
       expect(
         await store.update(KELSIN, KELSIN, { role: "member" }),
       ).toMatchObject({ status: 409 });
@@ -214,16 +209,16 @@ describe("user store", () => {
       );
       expect(await rowOf(ALEX)).toMatchObject({
         role: "member",
-        status: "pending",
+        status: "approved",
       });
     });
 
     it("refuses a non-admin actor", async () => {
       await setRow(ALEX, "member", "approved");
       await store.getOrCreate(JO);
-      expect(
-        await store.update(ALEX, JO, { status: "approved" }),
-      ).toMatchObject({ status: 403 });
+      expect(await store.update(ALEX, JO, { role: "admin" })).toMatchObject({
+        status: 403,
+      });
     });
 
     // PGlite runs one transaction at a time, so this checks the actor is
@@ -266,13 +261,13 @@ describe("user store", () => {
       expect(rows).toEqual([{ user_id: bystander }]);
     });
 
-    it("lets a later login start over as pending", async () => {
+    it("lets a later login start over as a plain member", async () => {
       await store.getOrCreate(ALEX);
-      await store.update(KELSIN, ALEX, { status: "approved" });
+      await store.update(KELSIN, ALEX, { role: "admin" });
       await store.remove(KELSIN, ALEX);
       expect(await store.getOrCreate(ALEX)).toEqual({
         role: "member",
-        status: "pending",
+        status: "approved",
         displayName: null,
         color: null,
       });

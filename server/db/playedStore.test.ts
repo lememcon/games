@@ -38,6 +38,9 @@ beforeEach(async () => {
   );
   const users = createUserStore(db);
   for (const id of [ALEX, JO]) await users.getOrCreate(id);
+  // Sign-in no longer creates pending rows, but the schema still allows them
+  // and the queries still exclude them.
+  await client.query("UPDATE app_user SET status = 'pending'");
 });
 
 const insert = (discordId: string, year: number, bggId: number) =>
@@ -234,7 +237,7 @@ describe("collapsing counts to played (migration 0016)", () => {
     const pre = new PGlite();
     await applyMigrations(pre, 0, 16);
     await pre.exec(
-      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}'), ('${JO}');
+      `INSERT INTO app_user (discord_id, status) VALUES ('${ALEX}', 'approved'), ('${JO}', 'approved');
        INSERT INTO year (year) VALUES (2025), (2026);
        INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');
        INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES
@@ -270,7 +273,7 @@ describe("dropping the count column (migration 0017)", () => {
     const pre = new PGlite();
     await applyMigrations(pre, 0, 17);
     await pre.exec(
-      `INSERT INTO app_user (discord_id) VALUES ('${ALEX}'), ('${JO}');
+      `INSERT INTO app_user (discord_id, status) VALUES ('${ALEX}', 'approved'), ('${JO}', 'approved');
        INSERT INTO year (year) VALUES (2025);
        INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');
        INSERT INTO played_count (discord_id, year, bgg_id, count) VALUES

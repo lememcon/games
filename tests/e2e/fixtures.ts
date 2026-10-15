@@ -23,10 +23,6 @@ export const approvedUser: ApprovedUser = {
 
 export const approvedMe: Me = { status: "approved", user: approvedUser };
 export const anonymousMe: Me = { status: "anonymous" };
-export const pendingMe: Me = {
-  status: "pending",
-  user: { discordId: "2002", name: "Newcomer", image: null },
-};
 
 export const years = [2023, 2024];
 

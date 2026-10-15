@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { createAuth, createSessionResolver, resolveErrorUrl } from "./auth";
+import {
+  GUILD_ID,
+  createAuth,
+  createSessionResolver,
+  isGuildMember,
+  resolveErrorUrl,
+} from "./auth";
 import type { Db } from "./db";
 import type { Env } from "./env";
 import { PROTECTED_ADMIN_IDS } from "./roles";
@@ -121,7 +127,7 @@ describe("createSessionResolver", () => {
     expect((await resolve(setup([ALEX]), null)).user).toBeNull();
   });
 
-  it("creates an unknown Discord id as a pending member, never approved", async () => {
+  it("creates an unknown Discord id as an approved plain member", async () => {
     const fake = setup([ALEX]);
     const { user, headers } = await resolve(fake);
     expect(user).toEqual({
@@ -132,9 +138,12 @@ describe("createSessionResolver", () => {
       discordName: "Pat",
       image: "pat.png",
       role: "member",
-      status: "pending",
+      status: "approved",
     });
-    expect(fake.users.get(ALEX)).toEqual({ role: "member", status: "pending" });
+    expect(fake.users.get(ALEX)).toEqual({
+      role: "member",
+      status: "approved",
+    });
     expect(headers?.getSetCookie()).toEqual(["session=refreshed"]);
   });
 
@@ -167,13 +176,11 @@ describe("createSessionResolver", () => {
     });
     fake.users.set(ALEX, { role: "admin", status: "approved" });
     expect((await resolve(fake)).user).toMatchObject({ role: "admin" });
-    fake.users.set(ALEX, { role: "admin", status: "pending" });
-    expect((await resolve(fake)).user).toMatchObject({ status: "pending" });
   });
 
   it("makes a built-in admin approved even with a tampered row, and repairs it", async () => {
     const fake = setup([KELSIN], {
-      [KELSIN]: { role: "member", status: "pending" },
+      [KELSIN]: { role: "member", status: "approved" },
     });
     expect((await resolve(fake)).user).toMatchObject({
       role: "admin",
@@ -268,5 +275,39 @@ describe("OAuth callback failures", () => {
     const location = new URL(res.headers.get("location")!);
     expect(location.origin).toBe("https://games.lememcon.com");
     expect(location.searchParams.get("error")).toBe("state_mismatch");
+  });
+});
+
+describe("isGuildMember", () => {
+  const reply = (body: unknown, status = 200) =>
+    (async () => Response.json(body, { status })) as typeof fetch;
+
+  it("is true when the guild list includes the LememCon server", async () => {
+    expect(
+      await isGuildMember("t", reply([{ id: "1" }, { id: GUILD_ID }])),
+    ).toBe(true);
+  });
+
+  it("sends the token as a bearer", async () => {
+    const fetchImpl = vi.fn(reply([]));
+    await isGuildMember("tok", fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://discord.com/api/users/@me/guilds",
+      { headers: { authorization: "Bearer tok" } },
+    );
+  });
+
+  it.each([
+    ["another server", reply([{ id: "1" }])],
+    ["a Discord error", reply({ message: "401" }, 401)],
+    ["a non-list body", reply({ id: GUILD_ID })],
+    [
+      "a network failure",
+      (async () => {
+        throw new TypeError("offline");
+      }) as typeof fetch,
+    ],
+  ])("is false for %s", async (_, fetchImpl) => {
+    expect(await isGuildMember("t", fetchImpl)).toBe(false);
   });
 });

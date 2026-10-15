@@ -52,7 +52,7 @@ export function fakeStore(initial: Record<string, FakeUser> = {}) {
     discordIds: async (userId) => (userId in logins ? logins[userId] : []),
     getOrCreate: async (discordId) => {
       if (!users.has(discordId))
-        users.set(discordId, { role: "member", status: "pending" });
+        users.set(discordId, { role: "member", status: "approved" });
       return { displayName: null, color: null, ...users.get(discordId)! };
     },
     repairProtected: async (discordId) => {

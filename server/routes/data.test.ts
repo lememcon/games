@@ -26,7 +26,7 @@ const MEMBER: AppUser = {
   role: "member",
   status: "approved",
 };
-const PENDING: AppUser = { ...MEMBER, status: "pending" };
+const PENDING: AppUser = { ...MEMBER, status: "pending" } as unknown as AppUser;
 
 function makeApp(user: AppUser | null = null) {
   const { data, scoreCalls } = fakeData({

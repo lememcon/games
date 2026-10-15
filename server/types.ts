@@ -3,7 +3,7 @@ import type { BggService } from "./bgg/service";
 import type { NormalizedImport } from "./import";
 
 export type Role = "member" | "admin";
-export type Status = "pending" | "approved";
+export type Status = "approved";
 
 /** The signed-in user as resolved from a session. */
 export interface AppUser {

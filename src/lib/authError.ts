@@ -8,6 +8,8 @@ const EXPIRED =
 const CANCELLED = "You cancelled the Discord sign-in.";
 const DISCORD_FAILED =
   "We couldn't get your details from Discord. Please try again in a moment.";
+const NOT_IN_SERVER =
+  "Sign-in is limited to members of the LememCon Discord server. If you're in it, please try again in a moment.";
 const GENERIC = "Something went wrong signing you in. Please try again.";
 
 const MESSAGES: Record<string, string> = {
@@ -15,7 +17,7 @@ const MESSAGES: Record<string, string> = {
   state_invalid: EXPIRED,
   state_not_found: EXPIRED,
   access_denied: CANCELLED,
-  unable_to_get_user_info: DISCORD_FAILED,
+  unable_to_get_user_info: NOT_IN_SERVER,
   no_code: DISCORD_FAILED,
   invalid_code: DISCORD_FAILED,
   oauth_provider_not_found: DISCORD_FAILED,
