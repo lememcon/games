@@ -183,7 +183,6 @@ describe("SplitSuggestions", () => {
     ) as HTMLElement;
     expect(row.querySelector(".tray-cover")).toBeNull();
     expect(row.querySelector("a")).toBeNull();
-    expect(row).not.toHaveTextContent(/least happy:/);
   });
 
   it("names the least happy member and score on expanded rows", async () => {
@@ -225,19 +224,17 @@ describe("SplitSuggestions", () => {
     expect(utils.queryByTestId("split-least-happy")).toBeNull();
   });
 
-  it("shows the least happy line on the collapsed summary", () => {
+  it("hides the least happy line on the collapsed summary", () => {
     const s = split(null);
     s.groups[0].games[0] = scored(s.groups[0].games[0], [
       ["Kelsin", 1, 90],
       ["Waymost", 2, 60],
     ]);
     const { getByTestId } = renderSplits([s]);
-    expect(getByTestId("split-summary")).toHaveTextContent(
-      "least happy: Waymost (60.0)",
-    );
+    expect(getByTestId("split-summary")).not.toHaveTextContent(/least happy:/);
   });
 
-  it("shows each group's own picked game line in its summary row", () => {
+  it("keeps players, cover and game link in summary rows without least happy", () => {
     const s = split(null);
     s.groups[0].games[0] = scored(s.groups[0].games[0], [
       ["Kelsin", 1, 90],
@@ -251,32 +248,14 @@ describe("SplitSuggestions", () => {
     const rows = getByTestId("split-summary").querySelectorAll(
       ".splits__summary-row",
     );
-    expect(rows[0]).toHaveTextContent("least happy: Waymost (60.0)");
-    expect(rows[1]).toHaveTextContent("least happy: Lemem (70.0)");
-    expect(rows[1]).not.toHaveTextContent("Waymost (60.0)");
-  });
-
-  it("omits the summary line with fewer than two scorers", () => {
-    const s = split(null);
-    s.groups[0].games[0] = scored(s.groups[0].games[0], [["Kelsin", 1, 90]]);
-    const { getByTestId } = renderSplits([s]);
-    expect(getByTestId("split-summary")).not.toHaveTextContent(/least happy:/);
-  });
-
-  it("uses the picked game, not other games, for the summary line", () => {
-    const s = split(null);
-    s.groups[0].games[0] = scored(s.groups[0].games[0], [
-      ["Kelsin", 1, 90],
-      ["Waymost", 2, 60],
-    ]);
-    s.groups[0].games[1] = scored(s.groups[0].games[1], [
-      ["Kelsin", 2, 50],
-      ["Waymost", 1, 80],
-    ]);
-    const { getByTestId } = renderSplits([s]);
-    const summary = getByTestId("split-summary");
-    expect(summary).toHaveTextContent("least happy: Waymost (60.0)");
-    expect(summary).not.toHaveTextContent("Kelsin (50.0)");
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => {
+      expect(row).not.toHaveTextContent(/least happy:/);
+      expect(row.querySelector(".tray-cover")).not.toBeNull();
+      expect(row.querySelector("a")).not.toBeNull();
+    });
+    expect(rows[0]).toHaveTextContent("Kelsin");
+    expect(rows[1]).toHaveTextContent("Lemem");
   });
 
   it("shows group rank on expanded cards only", async () => {
@@ -309,6 +288,9 @@ describe("SplitSuggestions", () => {
     const line = utils.getByTestId("split-least-happy");
     expect(line).toHaveTextContent("least happy: Lemem (70.0)");
     expect(utils.getByTestId("split-summary")).not.toContainElement(line);
+    expect(utils.getByTestId("split-summary")).not.toHaveTextContent(
+      /least happy:/,
+    );
     await expand(utils);
     expect(utils.getAllByTestId("split-least-happy")).toHaveLength(1);
     expect(utils.getByTestId("split-least-happy")).toHaveTextContent(
