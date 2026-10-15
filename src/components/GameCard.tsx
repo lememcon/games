@@ -109,7 +109,9 @@ const GameCard = ({
           />
         )}
 
-        <PlayedByList playedBy={game.playedBy} />
+        <div className="tray-card__played-by">
+          <PlayedByList playedBy={game.playedBy} />
+        </div>
 
         <div className="tray-card__foot">
           {bounds && <span className="tray-meta">{formatBounds(bounds)}</span>}
