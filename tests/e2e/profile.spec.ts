@@ -85,6 +85,12 @@ test("own profile does not overflow horizontally", async ({ page }) => {
   await expect(
     page.getByRole("combobox", { name: "Game to add" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: `Minimum players for ${longTitle}` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Undo veto of ${longTitle}` }),
+  ).toBeVisible();
   await expectNoOverflow(page);
 });
 
