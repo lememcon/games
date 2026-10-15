@@ -16,9 +16,9 @@ const longName = "Bartholomew Maximilian Featherstonehaugh-Wetherington";
 const longTitle =
   "Twilight Imperium Fourth Edition Prophecy of Kings Expansion Deluxe";
 
-const profile: Profile = {
+const profileFor = (name: string): Profile => ({
   discordId: aliceId,
-  name: longName,
+  name,
   image: null,
   linkedPlayers: ["Alice"],
   gamesPlayed: 12,
@@ -33,7 +33,7 @@ const profile: Profile = {
       ],
     })),
   },
-};
+});
 
 const namedGames: GamesData = {
   ...games,
@@ -45,15 +45,15 @@ const longScores: PlayerGameScore[] = scores.map((s) =>
   s.bgg_id === 101 ? { ...s, game: longTitle } : s,
 );
 
-const setup = (page: Page) =>
+const setup = (page: Page, name = longName) =>
   mockApi(page, {
     me: {
       status: "approved",
-      user: { ...approvedUser, displayName: longName },
+      user: { ...approvedUser, displayName: name },
     },
     games: namedGames,
     scores: longScores,
-    profile,
+    profile: profileFor(name),
     overrides: [{ discordId: aliceId, bggId: 101, min: 2, max: 3 }],
     vetoes: [{ bggId: 101, name: longTitle }],
     played: ["101", "102"],
@@ -99,6 +99,22 @@ test("public profile does not overflow horizontally", async ({ page }) => {
   await page.goto(`/players/${aliceId}`);
   await expect(page.getByRole("heading", { name: longName })).toBeVisible();
   await expect(page.getByText("2024 in review")).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("public profile wraps an unbreakable name", async ({ page }) => {
+  const name = "A".repeat(60);
+  await setup(page, name);
+  await page.goto(`/players/${aliceId}`);
+  await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("year recap wraps an unbreakable name", async ({ page }) => {
+  const name = "A".repeat(60);
+  await setup(page, name);
+  await page.goto(`/players/${aliceId}/recap/2024`);
+  await expect(page.getByText(`Only ${name} played`)).toBeVisible();
   await expectNoOverflow(page);
 });
 

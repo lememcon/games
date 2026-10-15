@@ -81,8 +81,16 @@ const factRows = (facts: RecapFacts, name: string): [string, string][] => {
 
 const Row = ({ label, children }: { label: string; children: string }) => (
   <Group justify="space-between" wrap="nowrap" align="flex-start">
-    <Text fw={600}>{label}</Text>
-    <Text c="dimmed" ta="right">
+    <Text fw={600} flex="1 1 auto" miw={0} style={{ overflowWrap: "anywhere" }}>
+      {label}
+    </Text>
+    <Text
+      c="dimmed"
+      ta="right"
+      flex="1 1 auto"
+      miw={0}
+      style={{ overflowWrap: "anywhere" }}
+    >
       {children}
     </Text>
   </Group>
@@ -174,7 +182,7 @@ const Loaded = ({
 
   return (
     <Stack mt="md">
-      <Title order={2}>
+      <Title order={2} style={{ overflowWrap: "anywhere" }}>
         {name}&apos;s {year} in review
       </Title>
       <Text c="dimmed">
@@ -199,11 +207,13 @@ const Loaded = ({
       )}
 
       <Paper withBorder p="sm">
-        <Title order={4} mb="xs">
+        <Title order={4} mb="xs" style={{ overflowWrap: "anywhere" }}>
           In the {year} top {RECAP_TOP}, not played by {name}
         </Title>
         {recap.unplayedTop.length === 0 ? (
-          <Text c="dimmed">{name} played every game in the top.</Text>
+          <Text c="dimmed" style={{ overflowWrap: "anywhere" }}>
+            {name} played every game in the top.
+          </Text>
         ) : (
           <Stack gap="xs">
             {recap.unplayedTop.map((g) => (

@@ -83,6 +83,14 @@ describe("PublicProfile", () => {
       expect(screen.queryByText(gone)).toBeNull();
   });
 
+  it("wraps an unbreakable name", () => {
+    set({ status: "ready", profile: { ...base, name: "A".repeat(60) } });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.getByRole("heading", { name: "A".repeat(60) })).toHaveStyle({
+      overflowWrap: "anywhere",
+    });
+  });
+
   it("shows top games by year when there are any", () => {
     set({ status: "ready", profile: base });
     renderWithMantine(<PublicProfile discordId="5" />);

@@ -240,6 +240,38 @@ describe("YearRecap", () => {
     ).toBeInTheDocument();
   });
 
+  it("wraps an unbreakable member name", () => {
+    const name = "A".repeat(60);
+    h.data = dataFor([...scores, row(9, "Wingspan", "Bo", 10, 3)]);
+    h.played = ready({
+      byYear: { "2025": { "1": 2, "9": 1 }, "2024": { "1": 1 } },
+    } as never);
+    h.profile = {
+      status: "ready",
+      profile: { ...(h.profile as { profile: object }).profile, name },
+    };
+    const { unmount } = show();
+    const wrap = { overflowWrap: "anywhere" };
+    expect(
+      screen.getByRole("heading", { name: `${name}'s 2025 in review` }),
+    ).toHaveStyle(wrap);
+    expect(screen.getByRole("heading", { name: /not played by/ })).toHaveStyle(
+      wrap,
+    );
+    expect(screen.getByText(`Only ${name} played`)).toHaveStyle(wrap);
+    expect(screen.getByText("Wingspan", { selector: "p" })).toHaveStyle(wrap);
+    unmount();
+
+    h.data = dataFor(scores);
+    h.played = ready({
+      byYear: { "2025": { "1": 1, "2": 1, "3": 1 }, "2024": { "9": 1 } },
+    } as never);
+    show();
+    expect(
+      screen.getByText(`${name} played every game in the top.`),
+    ).toHaveStyle(wrap);
+  });
+
   it("shows a note when there are no earlier years with data", () => {
     h.played = ready({ byYear: { "2025": { "1": 1 }, "2024": {} } } as never);
     show();

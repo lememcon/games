@@ -51,7 +51,9 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
     <Stack mt="md">
       <Group>
         <Avatar src={image} name={name} size="lg" />
-        <Title order={2}>{name}</Title>
+        <Title order={2} flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
+          {name}
+        </Title>
       </Group>
       <SimpleGrid cols={2}>
         {stats && <StatTile label="years of data" value={`${stats.years}`} />}
