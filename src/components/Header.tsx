@@ -30,9 +30,7 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
   };
 
   return (
-    <AppShell.Header
-      style={{ background: "#ffffff", borderBottom: "1px solid #ece4d5" }}
-    >
+    <AppShell.Header className="tray-header">
       <Group h="100%" px="md">
         <Link
           href="/"
@@ -45,7 +43,7 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
           }}
         >
           <img src={logo} width={35} height={40} alt="" className="tray-logo" />
-          <h3 style={{ margin: 0, color: "#2b2723" }}>LememCon</h3>
+          <h3 className="tray-title">LememCon</h3>
         </Link>
         {years && (
           <Select
