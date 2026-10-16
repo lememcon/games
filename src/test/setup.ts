@@ -1,6 +1,7 @@
 import { beforeEach, vi } from "vitest";
 
 import { resetScoresCache } from "@/lib/scoresCache";
+import { resetScoresSync } from "@/lib/scoresSync";
 
 import "@testing-library/jest-dom/vitest";
 
@@ -32,5 +33,29 @@ window.ResizeObserver = class {
 // so scrollIntoView is undefined.
 window.Element.prototype.scrollIntoView = vi.fn();
 
-// Scores are cached per year at module level; start every test clean.
-beforeEach(() => resetScoresCache());
+// Node 22 has a real BroadcastChannel that crosses threads; tests get an
+// in-process fake that records instances and posts, and delivers nothing.
+export class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+  posted: unknown[] = [];
+  closed = false;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  constructor(public name: string) {
+    FakeBroadcastChannel.instances.push(this);
+  }
+  postMessage(message: unknown) {
+    this.posted.push(message);
+  }
+  close() {
+    this.closed = true;
+  }
+}
+vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
+
+// Scores are cached per year at module level, and the import channel is a
+// module singleton; start every test clean.
+beforeEach(() => {
+  FakeBroadcastChannel.instances = [];
+  resetScoresCache();
+  resetScoresSync();
+});

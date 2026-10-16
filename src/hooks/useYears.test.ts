@@ -1,7 +1,8 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useYears from "@/hooks/useYears";
+import { announceImport } from "@/lib/scoresSync";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -56,5 +57,37 @@ describe("useYears", () => {
     resolve(res({ years: [2025] }));
     await Promise.resolve();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches after an import and lists the new year", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ years: [2025] }))
+      .mockResolvedValueOnce(res({ years: [2025, 2026] }));
+    const { result } = renderHook(() => useYears(fetchImpl));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => announceImport());
+    expect(result.current.loading).toBe(false);
+    expect(result.current.years).toEqual(["2025"]);
+    await waitFor(() => expect(result.current.years).toEqual(["2025", "2026"]));
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("drops a response from before an import", async () => {
+    let resolveOld!: (r: Response) => void;
+    const fetchImpl = vi
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise<Response>((r) => (resolveOld = r)),
+      )
+      .mockResolvedValueOnce(res({ years: [2026] }));
+    const { result } = renderHook(() => useYears(fetchImpl));
+    act(() => announceImport());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      resolveOld(res({ years: [2025] }));
+    });
+    expect(result.current.years).toEqual(["2026"]);
   });
 });
