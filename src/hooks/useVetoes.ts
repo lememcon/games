@@ -1,19 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ApiError } from "@/lib/api";
-import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { GENERIC_ERROR, describeApiError } from "@/lib/apiErrors";
 import { vetoesByMember } from "@/lib/games";
 import { bulkFailureMessage } from "@/lib/selection";
 import { vetoesApi } from "@/lib/vetoesApi";
 import type { Veto } from "@/types";
-
-const MESSAGES: Record<string, string> = {
-  unknown_game: "That game no longer exists.",
-  unknown_year: "That year no longer exists.",
-};
-
-const describe = (e: unknown): string =>
-  (e instanceof ApiError && MESSAGES[e.message]) || GENERIC_ERROR;
 
 type All = ReturnType<typeof vetoesByMember>;
 
@@ -103,7 +94,7 @@ export const useVetoSet = (
       await run(scope);
     } catch (e) {
       ok = false;
-      message = describe(e);
+      message = describeApiError(e);
     }
     // A stale save must not touch the counter, or it would discard the new
     // key's own list fetch.
@@ -138,7 +129,7 @@ export const useVetoSet = (
     let message: string | null = null;
     if (failed.length === bggIds.length) {
       const first = results.find((r) => r.status === "rejected");
-      message = describe(first?.reason);
+      message = describeApiError(first?.reason);
     } else if (failed.length > 0) {
       message = bulkFailureMessage(failed.length, bggIds.length);
     }
