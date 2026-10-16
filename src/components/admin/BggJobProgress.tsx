@@ -51,7 +51,11 @@ const BggJobProgress = ({
           {job.notFound > 0 && `, ${job.notFound} not found on BoardGameGeek`}
         </Text>
         {job.errors.length > 0 && (
-          <Alert color="red" title="Some batches had problems">
+          <Alert
+            color="red"
+            title="Some batches had problems"
+            style={{ overflowWrap: "anywhere" }}
+          >
             {job.errors.map((e, i) => (
               <Text size="sm" key={i}>
                 {e}

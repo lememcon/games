@@ -15,6 +15,7 @@ test.use({ viewport: { width: 375, height: 812 } });
 const longName = "Bartholomew Maximilian Featherstonehaugh-Wetherington";
 const longTitle =
   "Twilight Imperium Fourth Edition Prophecy of Kings Expansion Deluxe";
+const unbreakable = "G".repeat(60);
 
 const profileFor = (name: string): Profile => ({
   discordId: aliceId,
@@ -41,22 +42,38 @@ const namedGames: GamesData = {
   "102": { ...games["102"], name: "Beta" },
 };
 
+// Only the own-profile test uses this game: its name has no break points.
+const gamesWithUnbreakable: GamesData = {
+  ...namedGames,
+  "103": { ...games["103"], name: unbreakable },
+};
+
 const longScores: PlayerGameScore[] = scores.map((s) =>
   s.bgg_id === 101 ? { ...s, game: longTitle } : s,
 );
 
-const setup = (page: Page, name = longName) =>
+const unbreakableScores: PlayerGameScore[] = longScores.map((s) =>
+  s.bgg_id === 103 ? { ...s, game: unbreakable } : s,
+);
+
+const setup = (page: Page, name = longName, unbreakableGame = false) =>
   mockApi(page, {
     me: {
       status: "approved",
       user: { ...approvedUser, displayName: name },
     },
-    games: namedGames,
-    scores: longScores,
+    games: unbreakableGame ? gamesWithUnbreakable : namedGames,
+    scores: unbreakableGame ? unbreakableScores : longScores,
     profile: profileFor(name),
-    overrides: [{ discordId: aliceId, bggId: 101, min: 2, max: 3 }],
-    vetoes: [{ bggId: 101, name: longTitle }],
-    played: ["101", "102"],
+    overrides: [
+      { discordId: aliceId, bggId: 101, min: 2, max: 3 },
+      { discordId: aliceId, bggId: 103, min: 2, max: 3 },
+    ],
+    vetoes: [
+      { bggId: 101, name: longTitle },
+      { bggId: 103, name: unbreakable },
+    ],
+    played: ["101", "102", "103"],
     playedByYear: {
       "2024": { [aliceId]: ["101", "102"] },
       "2023": { [aliceId]: ["102"] },
@@ -73,7 +90,7 @@ const expectNoOverflow = async (page: Page) => {
 };
 
 test("own profile does not overflow horizontally", async ({ page }) => {
-  await setup(page);
+  await setup(page, longName, true);
   await page.goto("/profile");
   await expect(
     page.getByRole("heading", { name: "Your profile" }),
@@ -90,6 +107,15 @@ test("own profile does not overflow horizontally", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: `Undo veto of ${longTitle}` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Undo veto of ${unbreakable}` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: `Minimum players for ${unbreakable}` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Remove ${unbreakable}` }),
   ).toBeVisible();
   await expectNoOverflow(page);
 });
