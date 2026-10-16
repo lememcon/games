@@ -13,11 +13,14 @@ interface VetoDialogProps {
   savingYear: boolean;
   onVeto: (on: boolean) => void;
   onYearVeto: (on: boolean) => void;
+  // Moves the veto to the other scope; `to` is the scope it ends up in.
+  onSwitch: (to: "all" | "year") => void;
   onClose: () => void;
 }
 
 // Chooses how a game is vetoed: for every year or only for the viewed year.
-// A scope that is already set offers its removal instead. A choice closes the
+// A scope that is already set offers its removal instead, and when only one
+// is set, a switch to the other. A choice closes the
 // dialog; the save carries on in the caller.
 const VetoDialog = ({
   game,
@@ -28,6 +31,7 @@ const VetoDialog = ({
   savingYear,
   onVeto,
   onYearVeto,
+  onSwitch,
   onClose,
 }: VetoDialogProps) => {
   // The dialog is mounted already open, so Mantine never sees it close; give
@@ -63,6 +67,18 @@ const VetoDialog = ({
         >
           {yearVetoed ? `Remove: not in ${year}` : `Not in ${year}`}
         </Button>
+        {vetoed !== yearVetoed && (
+          <Button
+            variant="light"
+            disabled={savingVeto || savingYear}
+            onClick={() => {
+              onSwitch(vetoed ? "year" : "all");
+              onClose();
+            }}
+          >
+            {vetoed ? `Only for ${year}` : "Make permanent"}
+          </Button>
+        )}
       </Stack>
       <Group justify="flex-end" mt="md">
         <Button variant="subtle" onClick={onClose}>

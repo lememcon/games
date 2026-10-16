@@ -8,6 +8,7 @@ import { renderWithMantine } from "@/test/utils";
 const setup = (over: Partial<Parameters<typeof MyVeto>[0]> = {}) => {
   const onVeto = vi.fn();
   const onYearVeto = vi.fn();
+  const onSwitch = vi.fn();
   renderWithMantine(
     <MyVeto
       game="Azul"
@@ -19,10 +20,11 @@ const setup = (over: Partial<Parameters<typeof MyVeto>[0]> = {}) => {
       error={null}
       onVeto={onVeto}
       onYearVeto={onYearVeto}
+      onSwitch={onSwitch}
       {...over}
     />,
   );
-  return { onVeto, onYearVeto };
+  return { onVeto, onYearVeto, onSwitch };
 };
 
 const opener = () => screen.getByRole("button", { name: "Veto: Azul" });
@@ -70,6 +72,18 @@ describe("MyVeto", () => {
     );
     expect(onVeto).toHaveBeenCalledWith(false);
     expect(onYearVeto).toHaveBeenCalledWith(false);
+  });
+
+  it("switches a year veto to every year through the dialog", async () => {
+    const { onSwitch, onVeto, onYearVeto } = setup({ yearVetoed: true });
+    await userEvent.click(opener());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Make permanent" }),
+    );
+    expect(onSwitch).toHaveBeenCalledWith("all");
+    expect(onVeto).not.toHaveBeenCalled();
+    expect(onYearVeto).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("is disabled while either scope saves and shows an error", () => {

@@ -1567,14 +1567,14 @@ describe("Scoreboard", () => {
         const { getByRole, rerender } = await yearVeto("Belfort");
         expect(getByRole("button", { name: "Undo" })).toBeEnabled();
 
-        // The every-year set saving does not matter for a year veto.
+        // A switch touches both scopes, so either one saving locks Undo.
         state.vetoSaving = new Set([11]);
         rerender(
           <MantineProvider>
             <Scoreboard user={member} />
           </MantineProvider>,
         );
-        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+        expect(getByRole("button", { name: "Undo" })).toBeDisabled();
 
         state.vetoSaving = new Set();
         state.yearVetoSaving = new Set([11]);
@@ -1749,6 +1749,175 @@ describe("Scoreboard", () => {
 
         unmount();
         expect(vi.getTimerCount()).toBeLessThanOrEqual(before);
+      });
+    });
+
+    describe("switching a veto", () => {
+      const again = (rerender: (ui: React.ReactElement) => void) =>
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+      const makePermanent = async () => {
+        state.yearVetoes = { "1": new Set(["11"]) };
+        const user = userEvent.setup();
+        const view = render();
+        await chooseVeto(user, "Belfort", "Make permanent");
+        return { user, ...view };
+      };
+      const onlyThisYear = async () => {
+        state.vetoes = { "1": new Set(["11"]) };
+        const user = userEvent.setup();
+        const view = render();
+        await chooseVeto(user, "Belfort", "Only for 2026");
+        return { user, ...view };
+      };
+
+      it("makes a year veto permanent, adding before removing", async () => {
+        at("/2026");
+        const { getByRole } = await makePermanent();
+
+        expect(state.veto).toHaveBeenCalledWith(11);
+        expect(state.yearUnveto).toHaveBeenCalledWith(11);
+        expect(state.veto.mock.invocationCallOrder[0]).toBeLessThan(
+          state.yearUnveto.mock.invocationCallOrder[0],
+        );
+        expect(getByRole("status")).toHaveTextContent(
+          "Veto changed to every year.",
+        );
+      });
+
+      it("narrows a permanent veto to the year", async () => {
+        at("/2026");
+        const { getByRole } = await onlyThisYear();
+
+        expect(state.yearVeto.mock.invocationCallOrder[0]).toBeLessThan(
+          state.unveto.mock.invocationCallOrder[0],
+        );
+        expect(state.yearVeto).toHaveBeenCalledWith(11);
+        expect(state.unveto).toHaveBeenCalledWith(11);
+        expect(getByRole("status")).toHaveTextContent(
+          "Veto changed to 2026 only.",
+        );
+      });
+
+      it("undoes a switch by switching back", async () => {
+        at("/2026");
+        const { user, getByRole, queryByRole } = await makePermanent();
+        state.veto.mockClear();
+        state.yearUnveto.mockClear();
+
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.yearVeto).toHaveBeenCalledWith(11);
+        expect(state.unveto).toHaveBeenCalledWith(11);
+        expect(state.yearVeto.mock.invocationCallOrder[0]).toBeLessThan(
+          state.unveto.mock.invocationCallOrder[0],
+        );
+        expect(state.veto).not.toHaveBeenCalled();
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
+      it("keeps the source and shows no bar when the add fails", async () => {
+        at("/2026");
+        state.veto = vi.fn(async () => {
+          state.vetoErrors = { 11: "Add failed" };
+          return false;
+        });
+        const { getByRole, queryByRole, rerender } = await makePermanent();
+        again(rerender);
+
+        expect(state.yearUnveto).not.toHaveBeenCalled();
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(getByRole("status")).toHaveTextContent("Add failed");
+      });
+
+      it("shows the removing scope's error when the removal fails", async () => {
+        at("/2026");
+        state.yearUnveto = vi.fn(async () => {
+          state.yearVetoErrors = { 11: "Remove failed" };
+          return false;
+        });
+        const { getByRole, queryByRole, rerender } = await makePermanent();
+        again(rerender);
+
+        expect(state.veto).toHaveBeenCalledWith(11);
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(getByRole("status")).toHaveTextContent("Remove failed");
+      });
+
+      it("shows no bar for a switch that finishes after the year changed", async () => {
+        at("/2026");
+        let finish!: (ok: boolean) => void;
+        state.veto = vi.fn(() => new Promise<boolean>((r) => (finish = r)));
+        const { queryByRole } = await makePermanent();
+
+        act(() => {
+          at("/2025");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+        await waitFor(() => expect(path()).toBe("/2025"));
+        await act(async () => finish(true));
+
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(queryByRole("alert")).toBeNull();
+      });
+
+      it("leaves both vetoes when the year changes before the year removal", async () => {
+        at("/2026");
+        let finish!: (ok: boolean) => void;
+        state.veto = vi.fn(() => new Promise<boolean>((r) => (finish = r)));
+        // A save for the old year reports false once the year has moved on.
+        state.yearUnveto = vi.fn(async () => false);
+        const { queryByRole } = await makePermanent();
+
+        act(() => {
+          at("/2025");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+        await waitFor(() => expect(path()).toBe("/2025"));
+        await act(async () => finish(true));
+
+        expect(state.veto).toHaveBeenCalledWith(11);
+        expect(state.yearUnveto).toHaveBeenCalledWith(11);
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(queryByRole("alert")).toBeNull();
+      });
+
+      it("disables Undo while either scope saves", async () => {
+        at("/2026");
+        const { getByRole, rerender } = await makePermanent();
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+
+        state.vetoSaving = new Set([11]);
+        again(rerender);
+        expect(getByRole("button", { name: "Undo" })).toBeDisabled();
+
+        state.vetoSaving = new Set();
+        state.yearVetoSaving = new Set([11]);
+        again(rerender);
+        expect(getByRole("button", { name: "Undo" })).toBeDisabled();
+
+        state.yearVetoSaving = new Set();
+        again(rerender);
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+      });
+
+      it("keeps the bar with the error when the undo only half works", async () => {
+        at("/2026");
+        const { user, getByRole, rerender } = await makePermanent();
+        state.unveto = vi.fn(async () => {
+          state.vetoErrors = { 11: "Undo failed" };
+          return false;
+        });
+
+        await user.click(getByRole("button", { name: "Undo" }));
+        again(rerender);
+
+        expect(state.yearVeto).toHaveBeenCalledWith(11);
+        expect(getByRole("button", { name: "Undo" })).toBeInTheDocument();
+        expect(getByRole("status")).toHaveTextContent("Undo failed");
       });
     });
 

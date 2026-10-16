@@ -15,6 +15,7 @@ interface MyVetoProps {
   error: string | null;
   onVeto: (on: boolean) => void;
   onYearVeto: (on: boolean) => void;
+  onSwitch: (to: "all" | "year") => void;
 }
 
 const stateLine = (vetoed: boolean, yearVetoed: boolean, year: string) => {
@@ -38,6 +39,7 @@ const MyVeto = ({
   error,
   onVeto,
   onYearVeto,
+  onSwitch,
 }: MyVetoProps) => {
   const [opened, setOpened] = useState(false);
   return (
@@ -73,6 +75,7 @@ const MyVeto = ({
           savingYear={savingYear}
           onVeto={onVeto}
           onYearVeto={onYearVeto}
+          onSwitch={onSwitch}
           onClose={() => setOpened(false)}
         />
       )}
