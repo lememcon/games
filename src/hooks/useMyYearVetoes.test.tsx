@@ -63,7 +63,7 @@ describe("useMyYearVetoes", () => {
       .mockResolvedValueOnce(res({ vetoes: [] }));
     const hook = renderHook(() => useMyYearVetoes(fetchImpl));
     await waitFor(() => expect(hook.result.current.vetoes).toEqual(mine));
-    let first!: Promise<void>;
+    let first!: Promise<boolean>;
     act(() => {
       first = hook.result.current.clear(2026, 1);
     });
@@ -76,6 +76,69 @@ describe("useMyYearVetoes", () => {
     });
     expect(hook.result.current.saving).toBe(false);
     expect(hook.result.current.vetoes).toEqual([]);
+  });
+
+  it("adds a veto with a string year then refetches", async () => {
+    const added = [{ year: 2024, bggId: 5, name: "Brass" }];
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: [] }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(res({ vetoes: added }));
+    const hook = renderHook(() => useMyYearVetoes(fetchImpl));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await hook.result.current.add(2024, 5);
+    });
+    expect(ok).toBe(true);
+    expect(fetchImpl.mock.calls[1][0]).toBe("/api/me/year-vetoes/2024/5");
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ method: "PUT" });
+    expect(hook.result.current.vetoes).toEqual(added);
+  });
+
+  it.each([
+    ["unknown_game", "That game no longer exists."],
+    ["unknown_year", "That year has no data."],
+    ["boom", GENERIC_ERROR],
+  ])("reports %s from a failed add", async (code, copy) => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: [] }))
+      .mockResolvedValueOnce(res({ error: code }, 400));
+    const hook = renderHook(() => useMyYearVetoes(fetchImpl));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await hook.result.current.add(2024, 5);
+    });
+    expect(ok).toBe(false);
+    expect(hook.result.current.error).toBe(copy);
+  });
+
+  it("ignores a second add while one runs", async () => {
+    let finish!: (r: Response) => void;
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: [] }))
+      .mockReturnValueOnce(new Promise<Response>((r) => (finish = r)))
+      .mockResolvedValueOnce(res({ vetoes: [] }));
+    const hook = renderHook(() => useMyYearVetoes(fetchImpl));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+    let first!: Promise<boolean>;
+    act(() => {
+      first = hook.result.current.add(2024, 5);
+    });
+    let second: boolean | undefined;
+    await act(async () => {
+      second = await hook.result.current.add(2024, 6);
+    });
+    expect(second).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      finish(new Response(null, { status: 204 }));
+      await first;
+    });
   });
 
   it("ignores a load that finishes after unmount", async () => {

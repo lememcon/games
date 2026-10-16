@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
 import { vetoesApi } from "@/lib/vetoesApi";
 import type { MyYearVeto } from "@/types";
 
-// The signed-in member's single-year vetoes, with undo. Not optimistic: the
-// list is refetched after each change.
+const MESSAGES: Record<string, string> = {
+  unknown_game: "That game no longer exists.",
+  unknown_year: "That year has no data.",
+};
+
+const describe = (e: unknown): string =>
+  (e instanceof ApiError && MESSAGES[e.message]) || GENERIC_ERROR;
+
+// The signed-in member's single-year vetoes, with add and undo. Not optimistic:
+// the list is refetched after each change.
 const useMyYearVetoes = (fetchImpl: typeof fetch = fetch) => {
   const [vetoes, setVetoes] = useState<MyYearVeto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,26 +34,35 @@ const useMyYearVetoes = (fetchImpl: typeof fetch = fetch) => {
     };
   }, [fetchImpl]);
 
-  // A second call while one runs is ignored.
-  const clear = useCallback(
-    async (year: number, bggId: number) => {
-      if (busy.current) return;
+  // Runs one mutation then refetches; a second call while one runs is ignored.
+  // Resolves true only when the change and the refetch both succeeded.
+  const mutate = useCallback(
+    async (run: () => Promise<void>) => {
+      if (busy.current) return false;
       busy.current = true;
       setSaving(true);
       setError(null);
+      let ok = false;
       try {
-        await vetoesApi(fetchImpl).clearYear(String(year), bggId);
+        await run();
         setVetoes((await vetoesApi(fetchImpl).listMineYear()).vetoes);
-      } catch {
-        setError(GENERIC_ERROR);
+        ok = true;
+      } catch (e) {
+        setError(describe(e));
       }
       busy.current = false;
       setSaving(false);
+      return ok;
     },
     [fetchImpl],
   );
 
-  return { vetoes, loading, saving, error, clear };
+  const add = (year: number, bggId: number) =>
+    mutate(() => vetoesApi(fetchImpl).setYear(String(year), bggId));
+  const clear = (year: number, bggId: number) =>
+    mutate(() => vetoesApi(fetchImpl).clearYear(String(year), bggId));
+
+  return { vetoes, loading, saving, error, add, clear };
 };
 
 export default useMyYearVetoes;
