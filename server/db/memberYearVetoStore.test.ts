@@ -82,6 +82,28 @@ describe("getAll", () => {
   });
 });
 
+describe("listMine", () => {
+  it("lists only the member's vetoes, newest year then name, unnamed last", async () => {
+    await client.exec("INSERT INTO game (bgg_id, name) VALUES (3, NULL)");
+    await store.set(ALEX, 2025, 1);
+    await store.set(ALEX, 2026, 3);
+    await store.set(ALEX, 2026, 1);
+    await store.set(ALEX, 2026, 2);
+    await store.set(JO, 2026, 2);
+    expect(await store.listMine(ALEX)).toEqual([
+      { year: 2026, bggId: 2, name: "Azul" },
+      { year: 2026, bggId: 1, name: "Root" },
+      { year: 2026, bggId: 3, name: null },
+      { year: 2025, bggId: 1, name: "Root" },
+    ]);
+  });
+
+  it("excludes permanent vetoes and is empty without any", async () => {
+    await createMemberVetoStore(db).set(ALEX, 1);
+    expect(await store.listMine(ALEX)).toEqual([]);
+  });
+});
+
 describe("clear", () => {
   it("removes only that member's row for that year and game", async () => {
     await store.set(ALEX, 2026, 1);

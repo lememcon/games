@@ -32,6 +32,9 @@ vi.mock("@/components/ProfileVetoes", () => ({
     <div>vetoes section {games === hook.games ? "shared" : "other"}</div>
   ),
 }));
+vi.mock("@/components/ProfileYearVetoes", () => ({
+  default: () => <div>year vetoes section</div>,
+}));
 vi.mock("@/components/ProfilePlayed", () => ({
   default: () => <div>played section</div>,
 }));
@@ -179,6 +182,7 @@ describe("ProfilePage", () => {
     renderPage();
     expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
     expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
+    expect(screen.getByText("year vetoes section")).toBeInTheDocument();
     expect(screen.getByText("played section")).toBeInTheDocument();
   });
 });

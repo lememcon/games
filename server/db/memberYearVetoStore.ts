@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { MemberYearVetoStore } from "../types";
@@ -24,6 +24,23 @@ export function createMemberYearVetoStore(db: StoreDb): MemberYearVetoStore {
         })
         .from(memberYearVeto)
         .where(eq(memberYearVeto.year, year));
+    },
+
+    listMine(discordId) {
+      return db
+        .select({
+          year: memberYearVeto.year,
+          bggId: memberYearVeto.bggId,
+          name: game.name,
+        })
+        .from(memberYearVeto)
+        .leftJoin(game, eq(game.bggId, memberYearVeto.bggId))
+        .where(eq(memberYearVeto.discordId, discordId))
+        .orderBy(
+          desc(memberYearVeto.year),
+          asc(game.name),
+          asc(memberYearVeto.bggId),
+        );
     },
 
     async set(discordId, year, bggId) {

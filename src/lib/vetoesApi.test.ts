@@ -42,19 +42,28 @@ describe("vetoesApi", () => {
           JSON.stringify({ vetoes: [{ discordId: "d", bggId: 7 }] }),
         ),
       )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ vetoes: [{ year: 2026, bggId: 7, name: "Root" }] }),
+        ),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     const api = vetoesApi(fetchImpl);
     expect(await api.listYear("2026")).toEqual({
       vetoes: [{ discordId: "d", bggId: 7 }],
     });
+    expect(await api.listMineYear()).toEqual({
+      vetoes: [{ year: 2026, bggId: 7, name: "Root" }],
+    });
     await api.setYear("2026", 7);
     await api.clearYear("2026", 7);
     const calls = fetchImpl.mock.calls;
     expect(calls[0][0]).toBe("/api/year-vetoes/2026");
-    expect(calls[1][0]).toBe("/api/me/year-vetoes/2026/7");
-    expect(calls[1][1]).toMatchObject({ method: "PUT" });
+    expect(calls[1][0]).toBe("/api/me/year-vetoes");
     expect(calls[2][0]).toBe("/api/me/year-vetoes/2026/7");
-    expect(calls[2][1]).toMatchObject({ method: "DELETE" });
+    expect(calls[2][1]).toMatchObject({ method: "PUT" });
+    expect(calls[3][0]).toBe("/api/me/year-vetoes/2026/7");
+    expect(calls[3][1]).toMatchObject({ method: "DELETE" });
   });
 });

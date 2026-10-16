@@ -10,6 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 
+import VetoRow from "@/components/VetoRow";
 import type { GamesState } from "@/hooks/useGames";
 import useMyVetoes from "@/hooks/useMyVetoes";
 import { gameOptions } from "@/lib/games";
@@ -52,21 +53,16 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
       {myVetoes.vetoes.length > 0 && (
         <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
           {myVetoes.vetoes.map((v) => (
-            <Group key={v.bggId} justify="space-between" wrap="nowrap">
-              <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
-                {v.name ?? `Game ${v.bggId}`}
-              </Text>
-              <Button
-                size="xs"
-                variant="default"
-                style={{ flex: "none" }}
-                aria-label={`Undo veto of ${v.name ?? `Game ${v.bggId}`}`}
-                disabled={myVetoes.saving}
-                onClick={() => myVetoes.clear(v.bggId)}
-              >
-                Undo
-              </Button>
-            </Group>
+            <VetoRow
+              key={v.bggId}
+              bggId={v.bggId}
+              name={v.name}
+              undo={{
+                label: `Undo veto of ${v.name ?? `Game ${v.bggId}`}`,
+                disabled: myVetoes.saving,
+                onClick: () => myVetoes.clear(v.bggId),
+              }}
+            />
           ))}
         </Stack>
       )}

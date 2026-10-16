@@ -16,6 +16,7 @@ import type {
   MemberVetoStore,
   MemberYearVetoStore,
   MyVetoRow,
+  MyYearVetoRow,
   PlayedGames,
   PlayedStore,
   PlayerLink,
@@ -469,17 +470,22 @@ export function fakeMemberVetoes(
 
 /**
  * In-memory MemberYearVetoStore for tests. `years` are the known years and
- * `games` the known bgg ids; it applies the same refusals as the SQL store.
+ * `games` the known games by bgg id (name or null); it applies the same refusals as the SQL store.
  */
 export function fakeMemberYearVetoes(
   initial: {
     years?: number[];
-    games?: number[];
+    games?: Record<number, string | null>;
     vetoes?: { discordId: string; year: number; bggId: number }[];
   } = {},
 ) {
   const years = new Set(initial.years ?? [2025, 2026]);
-  const games = new Set(initial.games ?? [1]);
+  const games = new Map(
+    Object.entries(initial.games ?? { 1: "Root" }).map(([id, n]) => [
+      Number(id),
+      n,
+    ]),
+  );
   const rows = [...(initial.vetoes ?? [])];
   const calls: {
     discordId: string;
@@ -499,6 +505,21 @@ export function fakeMemberYearVetoes(
             .filter((r) => r.year === year)
             .map(({ discordId, bggId }) => ({ discordId, bggId }))
         : null,
+    listMine: async (discordId) =>
+      rows
+        .filter((r) => r.discordId === discordId)
+        .map(({ year, bggId }): MyYearVetoRow => ({
+          year,
+          bggId,
+          name: games.get(bggId) ?? null,
+        }))
+        .sort(
+          (a, b) =>
+            b.year - a.year ||
+            Number(a.name === null) - Number(b.name === null) ||
+            (a.name ?? "").localeCompare(b.name ?? "") ||
+            a.bggId - b.bggId,
+        ),
     set: async (discordId, year, bggId) => {
       calls.push({ discordId, year, bggId });
       if (!years.has(year)) return refuse(404, "unknown_year");

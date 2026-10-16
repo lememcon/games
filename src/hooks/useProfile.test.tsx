@@ -11,6 +11,8 @@ const profile: Profile = {
   linkedPlayers: [],
   stats: null,
   gamesPlayed: 0,
+  vetoes: [],
+  yearVetoes: [],
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });

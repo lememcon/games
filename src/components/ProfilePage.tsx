@@ -16,6 +16,7 @@ import ColorPicker from "@/components/ColorPicker";
 import ProfileOverrides from "@/components/ProfileOverrides";
 import ProfilePlayed from "@/components/ProfilePlayed";
 import ProfileVetoes from "@/components/ProfileVetoes";
+import ProfileYearVetoes from "@/components/ProfileYearVetoes";
 import useDisplayName from "@/hooks/useDisplayName";
 import useGames from "@/hooks/useGames";
 import usePageMeta from "@/hooks/usePageMeta";
@@ -98,6 +99,7 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
       )}
       <ProfileOverrides discordId={user.discordId} games={games} />
       <ProfileVetoes games={games} />
+      <ProfileYearVetoes />
       <ProfilePlayed />
     </Stack>
   );

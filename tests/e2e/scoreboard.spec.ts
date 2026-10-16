@@ -202,7 +202,12 @@ test("phone rows with a year veto fit the viewport and keep 44px targets", async
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await mockApi(page, { yearVetoes: [101, 102, 103, 104] });
+  await mockApi(page, {
+    yearVetoes: [101, 102, 103, 104].map((bggId) => ({
+      year: 2024,
+      bggId,
+    })),
+  });
   await page.goto("/");
   await expect(page.getByText("4 of 4 games")).toBeVisible();
   await expect(page.getByRole("button", { name: "Veto: Delta" })).toHaveText(
@@ -247,7 +252,7 @@ test("a year veto from the dialog hides the game for its vetoer, and Undo restor
 test("a year veto can be made permanent from the dialog, and Undo reverses it", async ({
   page,
 }) => {
-  await mockApi(page, { yearVetoes: [104] });
+  await mockApi(page, { yearVetoes: [{ year: 2024, bggId: 104 }] });
   await page.goto("/");
   await expect(page.getByText("4 of 4 games")).toBeVisible();
   await page.getByRole("button", { name: "Veto: Delta" }).click();

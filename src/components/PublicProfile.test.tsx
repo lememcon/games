@@ -37,6 +37,8 @@ const base: Profile = {
     ],
   },
   gamesPlayed: 120,
+  vetoes: [],
+  yearVetoes: [],
 };
 
 describe("PublicProfile", () => {
@@ -62,6 +64,13 @@ describe("PublicProfile", () => {
     set({ status: "error" });
     renderWithMantine(<PublicProfile discordId="5" />);
     expect(screen.getByText("Couldn't load this profile")).toBeInTheDocument();
+  });
+
+  it("tolerates a profile from an older API without veto lists", () => {
+    const { vetoes: _v, yearVetoes: _y, ...legacy } = base;
+    set({ status: "ready", profile: legacy as Profile });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.getByRole("heading", { name: "Kel" })).toBeInTheDocument();
   });
 
   it("shows the name and the years and games played tiles", () => {
@@ -129,6 +138,41 @@ describe("PublicProfile", () => {
     expect(
       screen.getByRole("link", { name: "2025 in review" }),
     ).toHaveAttribute("href", "/players/5/recap/2025");
+  });
+
+  it("lists permanent and year vetoes read-only, newest year first", () => {
+    set({
+      status: "ready",
+      profile: {
+        ...base,
+        vetoes: [{ bggId: 1, name: "Catan" }],
+        yearVetoes: [
+          { year: 2025, bggId: 2, name: "Wingspan" },
+          { year: 2026, bggId: 3, name: "Brass" },
+          { year: 2026, bggId: 4, name: null },
+        ],
+      },
+    });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(
+      screen.getByRole("heading", { name: "Vetoed games" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Catan")).toBeInTheDocument();
+    const years = screen
+      .getAllByRole("heading", { name: /^Vetoed in / })
+      .map((h) => h.textContent);
+    expect(years).toEqual(["Vetoed in 2026", "Vetoed in 2025"]);
+    expect(screen.getByText("Brass")).toBeInTheDocument();
+    expect(screen.getByText("Game 4")).toBeInTheDocument();
+    expect(screen.getByText("Wingspan")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("hides empty veto sections", () => {
+    set({ status: "ready", profile: base });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.queryByText("Vetoed games")).toBeNull();
+    expect(screen.queryByText(/Vetoed in/)).toBeNull();
   });
 
   it("has no recap links without stats or years", () => {

@@ -3,11 +3,21 @@ import { Hono } from "hono";
 import { parseColor } from "../colors";
 import { parseDisplayName } from "../profile";
 import { privateNoCache, refusalResponse } from "../result";
-import type { AppEnv, ProfileStore } from "../types";
+import type {
+  AppEnv,
+  MemberVetoStore,
+  MemberYearVetoStore,
+  ProfileResponse,
+  ProfileStore,
+} from "../types";
 import { readJson } from "../validate";
 
 /** Own display name, own color and public profiles; both need an approved user (checked in app.ts). */
-export function profileRoutes(profiles: ProfileStore) {
+export function profileRoutes(
+  profiles: ProfileStore,
+  memberVetoes: MemberVetoStore,
+  memberYearVetoes: MemberYearVetoStore,
+) {
   const routes = new Hono<AppEnv>();
 
   routes.put("/me/display-name", async (c) => {
@@ -38,8 +48,12 @@ export function profileRoutes(profiles: ProfileStore) {
     if (!/^\d{15,25}$/.test(id)) return c.json({ error: "invalid_id" }, 400);
     const profile = await profiles.getProfile(id);
     if (!profile) return c.json({ error: "not_found" }, 404);
+    const [vetoes, yearVetoes] = await Promise.all([
+      memberVetoes.listMine(id),
+      memberYearVetoes.listMine(id),
+    ]);
     privateNoCache(c);
-    return c.json(profile);
+    return c.json({ ...profile, vetoes, yearVetoes } satisfies ProfileResponse);
   });
 
   return routes;
