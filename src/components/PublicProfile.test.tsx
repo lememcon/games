@@ -214,6 +214,44 @@ describe("PublicProfile", () => {
       renderWithMantine(<PublicProfile discordId="5" />);
     };
 
+    it("prefers the mirrored cover for permanent and year vetoes", () => {
+      hook.games = {
+        games: {
+          "7": { image: null, cover: "https://cdn.example.com/7.webp" },
+          "8": { image: null, cover: "https://cdn.example.com/8.webp" },
+        },
+        loading: false,
+        error: false,
+      };
+      show({
+        vetoes: [
+          {
+            bggId: 7,
+            name: "Azul",
+            image: "https://example.com/a.jpg",
+            ext: ".jpg",
+          },
+        ],
+        yearVetoes: [
+          {
+            year: 2026,
+            bggId: 8,
+            name: "Brass",
+            image: "https://example.com/b.jpg",
+          },
+        ],
+      });
+      expect(section("Vetoed games").querySelector("img")).toHaveAttribute(
+        "src",
+        "https://cdn.example.com/7.webp",
+      );
+      expect(section("Vetoed in 2026").querySelector("img")).toHaveAttribute(
+        "src",
+        "https://cdn.example.com/8.webp",
+      );
+      hook.games = { games: {}, loading: false, error: false };
+    });
+
     it("prefers the bundled cover for a permanent veto with an ext", () => {
       show({
         vetoes: [

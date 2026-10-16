@@ -10,16 +10,25 @@ interface VetoRowProps {
   name: string | null;
   image?: string | null;
   ext?: string | null;
+  cover?: string | null;
   // Year-scoped rows link to that year's game page; permanent vetoes use the legacy redirect.
   year?: number | string;
   // Renders an Undo button when given; read-only rows omit it.
   undo?: { label: string; disabled: boolean; onClick: () => void };
 }
 
-const VetoRow = ({ bggId, name, image, ext, year, undo }: VetoRowProps) => {
+const VetoRow = ({
+  bggId,
+  name,
+  image,
+  ext,
+  cover,
+  year,
+  undo,
+}: VetoRowProps) => {
   return (
     <Group justify="space-between" wrap="nowrap">
-      <GameCover bggId={bggId} image={image} ext={ext} />
+      <GameCover bggId={bggId} image={image} ext={ext} cover={cover} />
       <Text
         component={Link}
         href={year !== undefined ? gamePath(year, bggId) : `/games/${bggId}`}

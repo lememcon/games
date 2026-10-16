@@ -37,6 +37,37 @@ describe("VetoRow", () => {
     expect(cover(container)).toHaveAttribute("src", "/bundled/7.jpg");
   });
 
+  it("prefers the mirrored cover over the bundled image and ext", () => {
+    const { container } = renderWithMantine(
+      <VetoRow
+        bggId={7}
+        name="Azul"
+        image="https://example.com/a.jpg"
+        ext=".jpg"
+        cover="https://cdn.example.com/7.webp"
+      />,
+    );
+    expect(cover(container)).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/7.webp",
+    );
+  });
+
+  it("ignores a non-https mirrored cover", () => {
+    const { container } = renderWithMantine(
+      <VetoRow
+        bggId={1}
+        name="Root"
+        image="https://example.com/r.jpg"
+        cover="http://cdn.example.com/1.webp"
+      />,
+    );
+    expect(cover(container)).toHaveAttribute(
+      "src",
+      "https://example.com/r.jpg",
+    );
+  });
+
   it("shows a blank box without a cover", () => {
     const { container } = renderWithMantine(<VetoRow bggId={1} name="Root" />);
     expect(cover(container)).toBeNull();
