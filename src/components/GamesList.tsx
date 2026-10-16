@@ -66,14 +66,16 @@ const GamesList = ({
 
   const exit = () => {
     vetoes?.clearBulkError();
+    yearVetoes?.clearBulkError();
     setSelecting(false);
     setPicked(new Set());
   };
 
-  const apply = async () => {
-    if (!vetoes || !discordId) return;
-    const targets = vetoTargets(selected, vetoes.all[discordId]);
-    const failed = new Set((await vetoes.vetoMany(targets)).map(String));
+  const apply = async (scope: "all" | "year") => {
+    const store = scope === "year" ? yearVetoes : vetoes;
+    if (!store || !discordId) return;
+    const targets = vetoTargets(selected, store.all[discordId]);
+    const failed = new Set((await store.vetoMany(targets)).map(String));
     if (failed.size === 0) exit();
     else setPicked(new Set([...selected].filter((id) => failed.has(id))));
   };
@@ -116,6 +118,7 @@ const GamesList = ({
             if (active) exit();
             else {
               vetoes?.clearBulkError();
+              yearVetoes?.clearBulkError();
               setSelecting(true);
             }
           }}
@@ -124,9 +127,11 @@ const GamesList = ({
           Select
         </Button>
       )}
-      {vetoes?.bulkError && (
+      {(vetoes?.bulkError || yearVetoes?.bulkError) && (
         <Text role="alert" c="red" size="sm">
-          {vetoes.bulkError}
+          {vetoes?.bulkError}
+          {vetoes?.bulkError && yearVetoes?.bulkError && " "}
+          {yearVetoes?.bulkError}
         </Text>
       )}
       <div className="tray-podium">
@@ -175,6 +180,8 @@ const GamesList = ({
         <SelectBar
           count={selected.size}
           disabled={busy}
+          year={year}
+          showYear={!!yearVetoes}
           onApply={apply}
           onCancel={exit}
         />

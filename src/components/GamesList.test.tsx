@@ -355,7 +355,9 @@ describe("GamesList", () => {
         await user.click(getByLabelText("Select Root"));
         await user.click(getByLabelText("Select Chess"));
         await user.click(getByLabelText("Select Go"));
-        await user.click(getByRole("button", { name: "Not for me" }));
+        await user.click(
+          getByRole("button", { name: "Not for me · every year" }),
+        );
         expect(vetoes.vetoMany).toHaveBeenCalledWith([200, 300]);
         await waitFor(() => expect(queryByText(/selected$/)).toBeNull());
       });
@@ -367,12 +369,97 @@ describe("GamesList", () => {
         });
         await user.click(getByLabelText("Select Chess"));
         await user.click(getByLabelText("Select Go"));
-        await user.click(getByRole("button", { name: "Not for me" }));
+        await user.click(
+          getByRole("button", { name: "Not for me · every year" }),
+        );
         await waitFor(() =>
           expect(getByText("1 selected")).toBeInTheDocument(),
         );
         expect(getByLabelText("Select Go")).toBeChecked();
         expect(getByLabelText("Select Chess")).not.toBeChecked();
+      });
+
+      it("every-year button saves only to vetoes", async () => {
+        const vetoes = makeVetoes();
+        const yearVetoes = makeYear();
+        const { user, getByLabelText, getByRole } = await open({
+          vetoes,
+          yearVetoes,
+        });
+        await user.click(getByLabelText("Select Go"));
+        await user.click(
+          getByRole("button", { name: "Not for me · every year" }),
+        );
+        expect(vetoes.vetoMany).toHaveBeenCalledWith([300]);
+        expect(yearVetoes.vetoMany).not.toHaveBeenCalled();
+      });
+
+      it("year button saves only to yearVetoes, skipping year-vetoed", async () => {
+        const vetoes = makeVetoes();
+        const yearVetoes = makeYear();
+        const { user, getByLabelText, getByRole, queryByText } = await open({
+          vetoes,
+          yearVetoes,
+        });
+        await user.click(getByLabelText("Select Root"));
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByLabelText("Select Go"));
+        await user.click(getByRole("button", { name: "Not in 2024" }));
+        expect(yearVetoes.vetoMany).toHaveBeenCalledWith([100, 300]);
+        expect(vetoes.vetoMany).not.toHaveBeenCalled();
+        await waitFor(() => expect(queryByText(/selected$/)).toBeNull());
+      });
+
+      it("keeps only failed ids after a partial year failure", async () => {
+        const yearVetoes = makeYear({ vetoMany: vi.fn(async () => [300]) });
+        const { user, getByLabelText, getByRole, getByText } = await open({
+          vetoes: makeVetoes(),
+          yearVetoes,
+        });
+        await user.click(getByLabelText("Select Go"));
+        await user.click(getByLabelText("Select Nim"));
+        await user.click(getByRole("button", { name: "Not in 2024" }));
+        await waitFor(() =>
+          expect(getByText("1 selected")).toBeInTheDocument(),
+        );
+        expect(getByLabelText("Select Go")).toBeChecked();
+        expect(getByLabelText("Select Nim")).not.toBeChecked();
+      });
+
+      it("shows the year bulk error and Cancel clears both", async () => {
+        const vetoes = makeVetoes();
+        const yearVetoes = makeYear({ bulkError: "1 of 2 didn't save" });
+        const { user, getByRole } = await open({ vetoes, yearVetoes });
+        expect(getByRole("alert")).toHaveTextContent("1 of 2 didn't save");
+        await user.click(getByRole("button", { name: "Cancel" }));
+        expect(vetoes.clearBulkError).toHaveBeenCalledTimes(2);
+        expect(yearVetoes.clearBulkError).toHaveBeenCalledTimes(2);
+      });
+
+      it("shows both bulk errors in one alert", () => {
+        const { getByRole } = renderList({
+          vetoes: makeVetoes({ bulkError: "A" }),
+          yearVetoes: makeYear({ bulkError: "B" }),
+          discordId: "d1",
+        });
+        expect(getByRole("alert")).toHaveTextContent("A B");
+      });
+
+      it("saves nothing and exits when all are already vetoed in scope", async () => {
+        const yearVetoes = makeYear();
+        const { user, getByLabelText, getByRole, queryByText } = await open({
+          vetoes: makeVetoes(),
+          yearVetoes,
+        });
+        await user.click(getByLabelText("Select Chess"));
+        await user.click(getByRole("button", { name: "Not in 2024" }));
+        expect(yearVetoes.vetoMany).toHaveBeenCalledWith([]);
+        await waitFor(() => expect(queryByText(/selected$/)).toBeNull());
+      });
+
+      it("hides the year button without a year hook", async () => {
+        const { queryByRole } = await open({ vetoes: makeVetoes() });
+        expect(queryByRole("button", { name: "Not in 2024" })).toBeNull();
       });
 
       it("shows the bulk error", () => {
@@ -388,7 +475,9 @@ describe("GamesList", () => {
           vetoes: makeVetoes(),
         });
         await user.click(getByLabelText("Select Chess"));
-        expect(getByRole("button", { name: "Not for me" })).toBeEnabled();
+        expect(
+          getByRole("button", { name: "Not for me · every year" }),
+        ).toBeEnabled();
         rerender(
           <MantineProvider>
             <GamesList
@@ -404,7 +493,9 @@ describe("GamesList", () => {
             />
           </MantineProvider>,
         );
-        expect(getByRole("button", { name: "Not for me" })).toBeDisabled();
+        expect(
+          getByRole("button", { name: "Not for me · every year" }),
+        ).toBeDisabled();
         expect(getByRole("button", { name: "Select" })).toBeDisabled();
       });
 
@@ -443,7 +534,9 @@ describe("GamesList", () => {
         await user.click(getByRole("button", { name: "Select" }));
         expect(vetoes.clearBulkError).toHaveBeenCalledTimes(3);
         await user.click(getByLabelText("Select Chess"));
-        await user.click(getByRole("button", { name: "Not for me" }));
+        await user.click(
+          getByRole("button", { name: "Not for me · every year" }),
+        );
         await waitFor(() =>
           expect(vetoes.clearBulkError).toHaveBeenCalledTimes(4),
         );
