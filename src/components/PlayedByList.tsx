@@ -10,8 +10,8 @@ interface PlayedByListProps {
   label?: string;
 }
 
-// A "Played by:" label and the players who played a game this year, each as
-// avatar and name. Renders nothing when nobody has.
+// A labelled list of players (label defaults to "Played by"), each as avatar
+// and name. Renders nothing when the list is empty.
 const PlayedByList = ({ playedBy, label = "Played by" }: PlayedByListProps) => {
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
