@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import TopPicks from "@/components/TopPicks";
 import { renderWithMantine } from "@/test/utils";
-import type { PlayerGameScore } from "@/types";
+import type { GamesData, PlayerGameScore } from "@/types";
 
 const row = (
   bgg_id: number,
@@ -31,7 +31,7 @@ const scores = [
 const show = (
   rows = scores,
   allPlayed: Record<string, Record<string, 1>> = { alice: { "3": 1 } },
-  games = { "1": { image: "https://x/alpha.png" } },
+  games: GamesData = { "1": { image: "https://x/alpha.png" } },
 ) =>
   renderWithMantine(
     <TopPicks year="2025" scores={rows} allPlayed={allPlayed} games={games} />,
@@ -70,6 +70,24 @@ describe("TopPicks", () => {
     expect(
       container.querySelector("img[src='https://x/alice.png']"),
     ).not.toBeNull();
+  });
+
+  it("renders the shared cover, preferring the mirrored cover URL", () => {
+    const { container } = show(
+      scores,
+      { alice: { "3": 1 } },
+      {
+        "1": { image: "https://x/alpha.png", cover: "https://x/cover.png" },
+      },
+    );
+
+    expect(container.querySelector(".tray-cover")).toHaveClass(
+      "tray-cover--xs",
+    );
+    expect(container.querySelector(".tray-cover img")).toHaveAttribute(
+      "src",
+      "https://x/cover.png",
+    );
   });
 
   it("strikes through an owner who played the game", () => {
