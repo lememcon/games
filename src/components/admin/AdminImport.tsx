@@ -97,7 +97,7 @@ const AdminImport = () => {
         method: "POST",
         body: prepared.body,
       });
-      invalidateScores(result.year ?? undefined);
+      invalidateScores();
       setOutcome({ kind: "success", result });
     } catch (e) {
       setOutcome(failure(e, prepared.year));

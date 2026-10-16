@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
+import { invalidateScores } from "@/lib/scoresCache";
 import type { ColorResult } from "@/types";
 
 const describe = (e: unknown): string =>
@@ -25,6 +26,7 @@ const useColor = (onSaved: () => void, fetchImpl: typeof fetch = fetch) => {
           { method: "PUT", body: { color } },
           fetchImpl,
         );
+        invalidateScores();
         onSaved();
         return result;
       } catch (e) {

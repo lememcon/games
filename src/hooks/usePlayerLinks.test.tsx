@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import usePlayerLinks from "@/hooks/usePlayerLinks";
+import * as cache from "@/lib/scoresCache";
 import type { PlayerLinks } from "@/types";
 
 const res = (body: unknown, status = 200) =>
@@ -27,6 +28,20 @@ const setup = async (...next: Response[]) => {
 };
 
 describe("usePlayerLinks", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ["succeeds", new Response(null, { status: 204 })],
+    ["fails", res({ error: "boom" }, 500)],
+  ])("drops cached scores when a link change %s", async (_, patch) => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const { hook } = await setup(patch, res(initial));
+    expect(spy).not.toHaveBeenCalled();
+    await act(() => hook.result.current.link(1, "10"));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith();
+  });
+
   it("loads players and members", async () => {
     const { hook } = await setup();
     expect(hook.result.current.players).toHaveLength(1);
