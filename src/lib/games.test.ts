@@ -23,6 +23,7 @@ import {
   suggestSplits,
   validateMemberOverride,
   validateOverride,
+  vetoedByFor,
   vetoesByMember,
   worstRank,
   type PlayerPlayed,
@@ -1651,5 +1652,74 @@ describe("member vetoes", () => {
         else expect(shown).toContain("Root");
       }
     }
+  });
+});
+
+describe("vetoedByFor", () => {
+  const row = (
+    player: string,
+    bgg_id: number,
+    extra: Partial<PlayerGameScore> = {},
+  ): PlayerGameScore => ({
+    player,
+    game: "G",
+    rank: 1,
+    score: 1,
+    bgg_id,
+    ...extra,
+  });
+  const scores: Record<string, PlayerGameScore[]> = {
+    zed: [row("zed", 1, { discord_id: "z" })],
+    amy: [
+      row("amy", 1, {
+        discord_id: "a",
+        discord_image: "https://x.test/a.png",
+      }),
+    ],
+    nolink: [row("nolink", 1)],
+    other: [row("other", 2, { discord_id: "o" })],
+  };
+
+  it("maps vetoers to names, sorted, with discord id and avatar", () => {
+    const result = vetoedByFor(
+      scores,
+      { z: new Set(["1"]), a: new Set(["1"]) },
+      "1",
+    );
+    expect(result).toEqual([
+      { name: "amy", discordId: "a", discordImage: "https://x.test/a.png" },
+      { name: "zed", discordId: "z" },
+    ]);
+  });
+
+  it("skips players without a discord id and ids without a score row", () => {
+    expect(
+      vetoedByFor(
+        scores,
+        { ghost: new Set(["1"]), nolink: new Set(["1"]) },
+        "1",
+      ),
+    ).toEqual([]);
+  });
+
+  it("ignores vetoes of other games and an empty map", () => {
+    expect(vetoedByFor(scores, { z: new Set(["2"]) }, "1")).toEqual([]);
+    expect(vetoedByFor(scores, {}, "1")).toEqual([]);
+  });
+
+  it("includes a vetoer who only has rows for other games", () => {
+    expect(vetoedByFor(scores, { o: new Set(["1"]) }, "1")).toEqual([
+      { name: "other", discordId: "o" },
+    ]);
+  });
+
+  it("dedupes by discord id, keeping the first name", () => {
+    const dup = {
+      bob: [row("bob", 1, { discord_id: "b" })],
+      Bobby: [row("Bobby", 1, { discord_id: "b" })],
+    };
+    expect(vetoedByFor(dup, { b: new Set(["1"]) }, "1")).toEqual([
+      { name: "Bobby", discordId: "b" },
+    ]);
   });
 });

@@ -278,6 +278,40 @@ export const splitLeastHappy = (
     : null;
 };
 
+// A player's name with the Discord id and avatar from their first score row
+// that carries an id.
+export const identityOf = (
+  byPlayer: Record<string, PlayerGameScore[]>,
+  name: string,
+): PlayedByPlayer => {
+  const row = (byPlayer[name] ?? []).find((item) => item.discord_id);
+  const image = avatarUrl(row?.discord_image);
+  return {
+    name,
+    ...(row?.discord_id ? { discordId: row.discord_id } : {}),
+    ...(image ? { discordImage: image } : {}),
+  };
+};
+
+// The members who vetoed a game, from a map of Discord id to vetoed game ids.
+// Names come from the score rows; a vetoer with no score row is left out.
+export const vetoedByFor = (
+  byPlayer: Record<string, PlayerGameScore[]>,
+  vetoes: Record<string, ReadonlySet<string>>,
+  id: string,
+): PlayedByPlayer[] => {
+  const seen = new Set<string>();
+  return sort(byText, keys(byPlayer))
+    .map((name) => identityOf(byPlayer, name))
+    .filter(({ discordId }) => {
+      if (!discordId || seen.has(discordId) || !vetoes[discordId]?.has(id)) {
+        return false;
+      }
+      seen.add(discordId);
+      return true;
+    });
+};
+
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
 // (images/gameData/playerPlayed injected) so it can be tested without Vite or
 // a rendered tree.
@@ -316,16 +350,10 @@ export const buildSelectedGames = ({
   // A player may have played without scoring, so identity comes from their
   // first score row that carries a Discord id, resolved once per player.
   const identities = new Map<string, PlayedByPlayer>();
-  const identityOf = (name: string): PlayedByPlayer => {
+  const cachedIdentityOf = (name: string): PlayedByPlayer => {
     let identity = identities.get(name);
     if (!identity) {
-      const row = (byPlayer[name] ?? []).find((item) => item.discord_id);
-      const image = avatarUrl(row?.discord_image);
-      identity = {
-        name,
-        ...(row?.discord_id ? { discordId: row.discord_id } : {}),
-        ...(image ? { discordImage: image } : {}),
-      };
+      identity = identityOf(byPlayer, name);
       identities.set(name, identity);
     }
     return identity;
@@ -333,7 +361,7 @@ export const buildSelectedGames = ({
   const playedByFor = (id: string): PlayedByPlayer[] =>
     selectedPlayers
       .filter((player) => id in (playerPlayed[player] ?? {}))
-      .map(identityOf);
+      .map(cachedIdentityOf);
 
   // Whether a not-yet-seen game should be left out of the list entirely.
   const isExcluded = (

@@ -844,6 +844,21 @@ describe("Scoreboard", () => {
       expect(search()).toBe("?players=alice");
     });
 
+    it("shows another member's year veto on the game page", () => {
+      state.data = {
+        ...loadedData,
+        by_player: {
+          ...loadedData.by_player,
+          bob: [{ ...loadedData.by_player.bob[0], discord_id: "d2" }],
+        },
+      };
+      state.yearVetoes = { d2: new Set(["11"]) };
+      at("/2026/games/11");
+      const { getByLabelText } = render();
+
+      expect(getByLabelText("Vetoed by")).toHaveTextContent("bob");
+    });
+
     it("ignores query changes off the year list", () => {
       at("/2026/games/11");
       render();

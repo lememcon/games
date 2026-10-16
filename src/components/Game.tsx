@@ -1,14 +1,17 @@
+import { Box } from "@mantine/core";
+
 import BackButton from "@/components/BackButton";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import MyPlayerRange from "@/components/MyPlayerRange";
 import MyVeto from "@/components/MyVeto";
+import PlayedByList from "@/components/PlayedByList";
 import PlayerScoresTable from "@/components/PlayerScoresTable";
 import YearSparkline from "@/components/YearSparkline";
 import type { PlayerOverridesState } from "@/hooks/usePlayerOverrides";
 import type { VetoesState } from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
 import type { YearVetoesState } from "@/hooks/useYearVetoes";
-import { realBounds, resolveImage } from "@/lib/games";
+import { realBounds, resolveImage, vetoedByFor } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
 import { switchVeto } from "@/lib/vetoSwitch";
@@ -55,6 +58,7 @@ const Game = ({
   const meta = gameData[id];
   const image = resolveImage(id, meta, bundledImages) ?? null;
   const bounds = realBounds(meta);
+  const vetoedBy = vetoedByFor(data.by_player, yearVetoes?.all ?? {}, id);
   const stored = (discordId && overrides?.all[discordId]?.[id]) || null;
 
   return (
@@ -67,6 +71,11 @@ const Game = ({
         image={image}
       />
       <PlayerScoresTable players={players} max={max} />
+      {vetoedBy.length > 0 && (
+        <Box mt="sm">
+          <PlayedByList label="Vetoed by" playedBy={vetoedBy} />
+        </Box>
+      )}
       <YearSparkline series={seriesFor(totals, bggId)} />
       {overrides && discordId && bounds && (
         <MyPlayerRange
