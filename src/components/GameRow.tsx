@@ -86,23 +86,25 @@ const GameRow = ({
       </div>
 
       <div className="tray-row__main">
-        <Link href={gamePath(year, game.id)} className="tray-name">
-          {game.name}
-        </Link>
-        {(bounds || leastHappy) && (
-          <div className="tray-row__meta">
-            {bounds && (
-              <span className="tray-meta">{formatBounds(bounds)}</span>
-            )}
-            {leastHappy && (
-              <LeastHappy
-                game={game}
-                name={leastHappy}
-                individualMax={individualMax}
-              />
-            )}
-          </div>
-        )}
+        <div className="tray-row__head">
+          <Link href={gamePath(year, game.id)} className="tray-name">
+            {game.name}
+          </Link>
+          {(bounds || leastHappy) && (
+            <div className="tray-row__meta">
+              {bounds && (
+                <span className="tray-meta">{formatBounds(bounds)}</span>
+              )}
+              {leastHappy && (
+                <LeastHappy
+                  game={game}
+                  name={leastHappy}
+                  individualMax={individualMax}
+                />
+              )}
+            </div>
+          )}
+        </div>
         <PlayedByList playedBy={game.playedBy} />
       </div>
 

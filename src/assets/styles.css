@@ -293,6 +293,25 @@ body {
   min-width: 140px;
 }
 
+/* On a phone, flatten the main block so its head (title, meta) sits beside the
+   cover and the long played-by list drops to its own last line instead of
+   stretching the row. */
+@media (max-width: 600px) {
+  .tray-row__main:has(> .tray-row__head) {
+    display: contents;
+  }
+
+  .tray-row__head {
+    flex: 1 1 90px;
+    min-width: 0;
+  }
+
+  .tray-row__main > .tray-played-by {
+    flex: 1 1 100%;
+    order: 1;
+  }
+}
+
 /* ---- Played toggle ---- */
 .tray-played {
   border: 1px solid #d9cfba;

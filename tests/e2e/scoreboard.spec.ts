@@ -130,3 +130,43 @@ test("podium card feet stay aligned when played-by wraps", async ({ page }) => {
     expect(Math.abs(bottom - bottoms[0])).toBeLessThanOrEqual(1);
   }
 });
+
+test("compact row keeps the cover at the top on a phone when played-by is long", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const { members, rows } = longNamedMembers(6);
+  await mockApi(page, {
+    scores: [...rows, ...scores.filter((s) => s.bgg_id !== 101)],
+    playedByYear: {
+      "2024": Object.fromEntries(members.map((m) => [m.discordId, ["104"]])),
+    },
+  });
+  await page.goto("/");
+  const row = page.locator(".tray-row").filter({ hasText: "Delta" });
+  // Wait for the async /api/played mock so the row is measured after the list
+  // has grown.
+  await expect(
+    row
+      .locator(".tray-played-by__list")
+      .filter({ hasText: "Featherstonehaugh 6" }),
+  ).toBeVisible();
+
+  const box = (selector: string) =>
+    row
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        const { top, bottom } = el.getBoundingClientRect();
+        return { top, bottom };
+      });
+  const rowBox = await row.evaluate((el) => el.getBoundingClientRect().top);
+  const cover = await box(".tray-cover");
+  const head = await box(".tray-row__head");
+  const actions = await box(".tray-row__actions");
+  const playedBy = await box(".tray-played-by");
+
+  expect(cover.top - rowBox).toBeLessThanOrEqual(40);
+  expect(Math.abs(cover.top - head.top)).toBeLessThanOrEqual(40);
+  expect(playedBy.top).toBeGreaterThanOrEqual(actions.bottom - 1);
+});
