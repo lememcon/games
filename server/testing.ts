@@ -138,7 +138,8 @@ export function fakeBggRepo() {
             (!c || c.source !== r.imageUrl)
           );
         })
-        .map((r) => ({ bggId: r.bggId, imageUrl: r.imageUrl! })),
+        .map((r) => ({ bggId: r.bggId, imageUrl: r.imageUrl! }))
+        .sort((a, b) => a.bggId - b.bggId),
   };
   return { repo, settings, rows, writes, covers };
 }

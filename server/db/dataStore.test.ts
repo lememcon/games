@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { parseImport } from "../import";
 import type { ImportContext } from "../types";
+import { createBggRepo } from "./bggRepo";
 import { createDataStore } from "./dataStore";
 import { addLogin, createTestDb } from "./testDb";
 
@@ -648,5 +649,28 @@ describe("top games", () => {
     );
     await link(PENDING_ID, "top3%");
     expect(await store.getTopGames(2071, PENDING_ID)).toEqual([]);
+  });
+});
+
+describe("cover urls", () => {
+  it("serves a mirrored cover until the image url changes", async () => {
+    const repo = createBggRepo(db);
+    const covered = createDataStore(db, "https://cdn.example");
+    const img = (n: number) => `https://cf.geekdo-images.com/c/${n}.jpg`;
+    const meta = (imageUrl: string) => ({
+      bggId: 987001,
+      minPlayers: 2,
+      maxPlayers: 4,
+      imageUrl,
+      ext: ".jpg",
+    });
+    await repo.upsertMetadata([meta(img(1))], new Date());
+    expect((await covered.getGames())["987001"].cover).toBeUndefined();
+    await repo.setCover(987001, "covers/987001.jpg", img(1));
+    expect((await covered.getGames())["987001"].cover).toBe(
+      "https://cdn.example/covers/987001.jpg",
+    );
+    await repo.upsertMetadata([meta(img(2))], new Date());
+    expect((await covered.getGames())["987001"].cover).toBeUndefined();
   });
 });

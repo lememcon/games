@@ -175,9 +175,10 @@ describe("covers", () => {
     await repo.setCover(9103, "k3", url(13));
     // The image changes after mirroring: the stored source is now stale.
     await repo.upsertMetadata([game(9103, { imageUrl: url(14) })], new Date());
-    // A custom cover is never re-mirrored.
+    // A custom cover is never re-mirrored, even with an https image_url.
+    await repo.upsertMetadata([game(9106, { imageUrl: url(16) })], new Date());
     await client.query(
-      "update game_metadata set image_url = 'custom', image_key = 'c', image_source = 'custom' where bgg_id = 9001",
+      "update game_metadata set image_key = 'c', image_source = 'custom' where bgg_id = 9106",
     );
     const ids = (await repo.listCoverNeeds())
       .map((n) => n.bggId)

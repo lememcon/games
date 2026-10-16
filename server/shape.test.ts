@@ -274,6 +274,8 @@ describe("toGamesMap", () => {
     maxPlayers: null,
     imageUrl: null,
     imageExt: null,
+    imageKey: null,
+    imageSource: null,
     ...over,
   });
 
@@ -482,7 +484,13 @@ describe("round trip", () => {
   it("reads back every game of games.json, custom image included", () => {
     const parsed = parseImport(realGames);
     if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
-    const map = toGamesMap(parsed.value.games);
+    const map = toGamesMap(
+      parsed.value.games.map((g) => ({
+        ...g,
+        imageKey: null,
+        imageSource: null,
+      })),
+    );
     expect(Object.keys(map)).toHaveLength(191);
     // games with no scores are present, with only metadata.
     expect(map).toEqual(realGames);

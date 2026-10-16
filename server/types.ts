@@ -194,8 +194,8 @@ export interface GameRow {
   maxPlayers: number | null;
   imageUrl: string | null;
   imageExt: string | null;
-  imageKey?: string | null;
-  imageSource?: string | null;
+  imageKey: string | null;
+  imageSource: string | null;
 }
 
 /** An inclusive player count range. */
