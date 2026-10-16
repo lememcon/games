@@ -6,6 +6,10 @@ import ProfileYearVetoes from "@/components/ProfileYearVetoes";
 import type { GamesState } from "@/hooks/useGames";
 import { renderWithMantine } from "@/test/utils";
 
+vi.mock("@/lib/images", () => ({
+  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
+}));
+
 const hook = vi.hoisted(() => ({
   state: {
     vetoes: [] as {
@@ -13,6 +17,7 @@ const hook = vi.hoisted(() => ({
       bggId: number;
       name: string | null;
       image?: string | null;
+      ext?: string | null;
     }[],
     loading: false,
     saving: false,
@@ -234,6 +239,23 @@ describe("ProfileYearVetoes", () => {
     expect(container.querySelector("img")).toHaveAttribute(
       "src",
       "https://example.com/brass.jpg",
+    );
+  });
+
+  it("prefers the bundled cover when the veto has an ext", () => {
+    hook.state.vetoes = [
+      {
+        year: 2026,
+        bggId: 7,
+        name: "Azul",
+        image: "https://example.com/a.jpg",
+        ext: ".jpg",
+      },
+    ];
+    const { container } = renderIt();
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "/bundled/7.jpg",
     );
   });
 
