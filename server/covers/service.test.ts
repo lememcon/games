@@ -295,16 +295,38 @@ describe("mirror job", () => {
     expect(put).toHaveBeenCalledTimes(1);
   });
 
-  it("continues past other store failures", async () => {
+  it.each([500, undefined])(
+    "stops after three store failures in a row (status %s)",
+    async (status) => {
+      const put = vi.fn(async () => {
+        throw new CoverStorageError(status);
+      });
+      const s = setup({ ids: [1, 2, 3, 4, 5], storage: { put } });
+      await s.service.start({ mode: "missing" });
+      const job = await s.finished();
+      expect(job).toMatchObject({ state: "failed", failed: 3, done: 2 });
+      expect(job.errors.at(-1)).toBe("Cover storage keeps failing.");
+      expect(put).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it("resets the store failure count after a success", async () => {
+    let calls = 0;
     const s = setup({
+      ids: [1, 2, 3, 4, 5],
       storage: {
         put: async () => {
-          throw new CoverStorageError(500);
+          calls += 1;
+          if (calls !== 3) throw new CoverStorageError(500);
         },
       },
     });
     await s.service.start({ mode: "missing" });
-    expect(await s.finished()).toMatchObject({ state: "done", failed: 3 });
+    expect(await s.finished()).toMatchObject({
+      state: "done",
+      failed: 4,
+      mirrored: 1,
+    });
   });
 
   it("stops on an unexpected error without echoing it", async () => {

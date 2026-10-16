@@ -8,6 +8,8 @@ export const COVER_DELAY_MS = 1000;
 const MAX_JOB_ERRORS = 20;
 /** Consecutive 403/429 answers from BGG before the job gives up. */
 const BLOCKED_LIMIT = 3;
+/** Consecutive store failures before the job gives up (a 403 stops at once). */
+const STORAGE_FAIL_LIMIT = 3;
 
 export type CoverFail = {
   ok: false;
@@ -117,6 +119,7 @@ export function createCoverService(deps: CoverServiceDeps) {
     };
     let stopped = false;
     let blocked = 0;
+    let storeFailed = 0;
     try {
       for (const [i, need] of needs.entries()) {
         if (i > 0) await sleep(COVER_DELAY_MS, signal);
@@ -127,6 +130,7 @@ export function createCoverService(deps: CoverServiceDeps) {
           blocked = 0;
           const key = coverKey(need.bggId, image.bytes, image.ext);
           await store.put(key, image.bytes, image.contentType);
+          storeFailed = 0;
           // False when the image changed meanwhile; the next run mirrors the new one.
           if (await repo.setCover(need.bggId, key, need.imageUrl))
             job.mirrored += 1;
@@ -146,6 +150,12 @@ export function createCoverService(deps: CoverServiceDeps) {
             record(`${label}: ${e.message}`);
             if (e.status === 403) {
               record("Cover storage refused the upload.");
+              stopped = true;
+              break;
+            }
+            storeFailed += 1;
+            if (storeFailed >= STORAGE_FAIL_LIMIT) {
+              record("Cover storage keeps failing.");
               stopped = true;
               break;
             }
