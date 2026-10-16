@@ -1,4 +1,4 @@
-import { gameLabel } from "@/lib/games";
+import { avatarUrl, gameLabel } from "@/lib/games";
 import type { PlayedMap } from "@/lib/played";
 import type {
   GamesData,
@@ -58,7 +58,7 @@ export const buildTopPicks = ({
   for (const row of sorted) {
     const id = row.discord_id as string;
     if (!labels.has(id)) {
-      labels.set(id, { name: row.player, image: row.discord_image });
+      labels.set(id, { name: row.player, image: avatarUrl(row.discord_image) });
     }
     const perGame = best.get(String(row.bgg_id)) ?? new Map();
     const have = perGame.get(id);

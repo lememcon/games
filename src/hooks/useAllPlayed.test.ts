@@ -295,4 +295,49 @@ describe("useMarkPlayed", () => {
 
     expect(result.current[0]).toEqual(playedMaps("2026"));
   });
+
+  describe("loaded flag", () => {
+    it("is false without a year", () => {
+      const { result } = renderHook(() =>
+        useMarkPlayed("", vi.fn() as unknown as typeof fetch),
+      );
+      expect(result.current[3]).toBe(false);
+    });
+
+    it("turns true once the load succeeds, and resets for a new year", async () => {
+      const fetchImpl = vi.fn(async (url: RequestInfo | URL) =>
+        json({ played: played(String(url).slice(-4)) }),
+      ) as unknown as typeof fetch;
+      const { result, rerender } = renderHook(
+        ({ y }) => useMarkPlayed(y, fetchImpl),
+        { initialProps: { y: "2025" } },
+      );
+      expect(result.current[3]).toBe(false);
+      await waitFor(() => expect(result.current[3]).toBe(true));
+
+      rerender({ y: "2026" });
+      expect(result.current[3]).toBe(false);
+      await waitFor(() => expect(result.current[3]).toBe(true));
+    });
+
+    it.each([403, 500])("turns true after a %i", async (status) => {
+      const fetchImpl = vi.fn(async () =>
+        json({ error: "x" }, status),
+      ) as unknown as typeof fetch;
+      const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
+      await waitFor(() => expect(result.current[3]).toBe(true));
+    });
+
+    it("turns true when a mark response beats the load", async () => {
+      const fetchImpl = vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === "POST"
+          ? Promise.resolve(json({ played: { d1: ["12"] } }))
+          : new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+      const { result } = renderHook(() => useMarkPlayed("2025", fetchImpl));
+      expect(result.current[3]).toBe(false);
+      await act(() => result.current[1]("12", ["d1"]));
+      expect(result.current[3]).toBe(true);
+    });
+  });
 });
