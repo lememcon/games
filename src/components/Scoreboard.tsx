@@ -11,6 +11,7 @@ import GamesList from "@/components/GamesList";
 import Header from "@/components/Header";
 import MarkPlayedDialog from "@/components/MarkPlayedDialog";
 import SplitSuggestions from "@/components/SplitSuggestions";
+import TopPicks from "@/components/TopPicks";
 import UnplayedShelf from "@/components/UnplayedShelf";
 import YearTrends from "@/components/YearTrends";
 import { useMarkPlayed } from "@/hooks/useAllPlayed";
@@ -41,6 +42,7 @@ import {
   parseFilterSearch,
   parseScoreboardPath,
   sharePath,
+  topPicksPath,
   yearPath,
 } from "@/lib/routes";
 import type { ApprovedUser } from "@/types";
@@ -94,6 +96,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     scoreboardMeta({
       routeYear: route.kind === "year" ? route.year : null,
       gameId: route.kind === "year" ? route.gameId : undefined,
+      page: route.kind === "year" ? route.page : undefined,
       // The year is known and its scores and game details are in.
       loaded: year !== null && dataReady && !gamesLoading && !gamesError,
       yearKnown: year !== null,
@@ -110,7 +113,8 @@ function Scoreboard({ user }: ScoreboardProps) {
   const sortMode = parseSortMode(storedSort);
   const [isPlayed, togglePlayed, ownPlayed, markConfirmed, playedError] =
     usePlayed(year ?? "");
-  const [allPlayed, markPlayed, allPlayedError] = useMarkPlayed(year ?? "");
+  const [allPlayed, markPlayed, allPlayedError, allPlayedLoaded] =
+    useMarkPlayed(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
   // A dialog opened for one year must not confirm against another.
   const [markingYear, setMarkingYear] = useState(year);
@@ -217,7 +221,10 @@ function Scoreboard({ user }: ScoreboardProps) {
   // Filters from a shared link, read once. They wait here until the scores are
   // loaded (so unknown names can be dropped), then replace the saved filters.
   const pending = useRef(parseFilterSearch(window.location.search));
-  const isYearList = route.kind === "year" && route.gameId === undefined;
+  const isYearList =
+    route.kind === "year" &&
+    route.gameId === undefined &&
+    route.page === undefined;
 
   // Remember the viewed year as the default for bare /. Keyed on [year] only:
   // the useLocalState setters change identity every render.
@@ -398,7 +405,11 @@ function Scoreboard({ user }: ScoreboardProps) {
     if (year === null) return;
     pending.current = null;
     setPlayers([]);
-    setLocation(yearPath(year));
+    setLocation(
+      route.kind === "year" && route.page === "topPicks"
+        ? topPicksPath(year)
+        : yearPath(year),
+    );
   };
 
   return (
@@ -453,6 +464,24 @@ function Scoreboard({ user }: ScoreboardProps) {
               The {year} scores didn&apos;t load. Check your connection and
               refresh the page.
             </Notice>
+          ) : route.page === "topPicks" ? (
+            !allPlayedLoaded ? (
+              skeleton
+            ) : (
+              <>
+                {allPlayedError && (
+                  <Text c="red" size="sm" role="alert">
+                    {allPlayedError}
+                  </Text>
+                )}
+                <TopPicks
+                  year={year}
+                  scores={data.scores}
+                  allPlayed={everyonesPlayed}
+                  games={game_data}
+                />
+              </>
+            )
           ) : route.gameId !== undefined ? (
             <Game
               data={data}
@@ -579,6 +608,14 @@ function Scoreboard({ user }: ScoreboardProps) {
                   <UnplayedShelf />
                 </>
               )}
+              <Button
+                component={Link}
+                href={topPicksPath(year)}
+                variant="light"
+                mt="md"
+              >
+                Top picks still unplayed
+              </Button>
             </>
           )}
         </AppShell.Main>

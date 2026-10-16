@@ -13,7 +13,8 @@ const EMPTY: AllPlayed = {};
 // several members at once. An empty year ("") skips the request, and a failure
 // leaves the map empty so nothing is hidden. The third item is a message when
 // the load failed unexpectedly (not signed in, not approved or an unknown year
-// stay silent), for the current year only.
+// stay silent), for the current year only. The fourth is whether the load for
+// this year has settled (succeeded or failed), so a page can wait for it.
 export const useMarkPlayed = (
   year: string,
   fetchImpl: typeof fetch = fetch,
@@ -21,11 +22,15 @@ export const useMarkPlayed = (
   AllPlayed,
   (bggId: string, discordIds: string[]) => Promise<void>,
   string | null,
+  boolean,
 ] => {
   const [loaded, setLoaded] = useState<{ year: string; played: AllPlayed }>({
     year: "",
     played: EMPTY,
   });
+
+  // The year whose load has settled, one way or another.
+  const [settled, setSettled] = useState("");
 
   const [errorState, setErrorState] = useState<{
     year: string;
@@ -50,9 +55,11 @@ export const useMarkPlayed = (
         if (cancelled || marked.current) return;
         setErrorState(null);
         setLoaded({ year, played: toPlayedMaps(played) });
+        setSettled(year);
       })
       .catch((e: unknown) => {
         if (cancelled || marked.current) return;
+        setSettled(year);
         const expected =
           e instanceof ApiError &&
           (e.status === 401 || e.status === 403 || e.status === 404);
@@ -78,6 +85,7 @@ export const useMarkPlayed = (
       marked.current = true;
       setErrorState(null);
       setLoaded({ year, played: toPlayedMaps(played) });
+      setSettled(year);
     },
     [year, fetchImpl],
   );
@@ -86,6 +94,7 @@ export const useMarkPlayed = (
     loaded.year === year ? loaded.played : EMPTY,
     markPlayed,
     errorState?.year === year ? errorState.message : null,
+    year !== "" && settled === year,
   ];
 };
 

@@ -64,6 +64,7 @@ const state = vi.hoisted(() => ({
   vetoSaving: new Set<number>(),
   playedError: null as string | null,
   allPlayedError: null as string | null,
+  allPlayedLoaded: true,
   unplayed: [] as { bgg_id: number; name: string }[],
 }));
 vi.mock("@/hooks/useData", () => ({
@@ -124,7 +125,12 @@ vi.mock("@/hooks/useVetoes", () => ({
 vi.mock("@/hooks/useAllPlayed", () => ({
   useMarkPlayed: (year: string) => {
     state.useAllPlayed(year);
-    return [state.allPlayed, state.markPlayed, state.allPlayedError];
+    return [
+      state.allPlayed,
+      state.markPlayed,
+      state.allPlayedError,
+      state.allPlayedLoaded,
+    ];
   },
 }));
 
@@ -161,6 +167,7 @@ describe("Scoreboard", () => {
     state.vetoSaving = new Set();
     state.playedError = null;
     state.allPlayedError = null;
+    state.allPlayedLoaded = true;
     state.unplayed = [];
   });
   afterEach(() => {
@@ -242,6 +249,99 @@ describe("Scoreboard", () => {
     expect(state.useData).toHaveBeenLastCalledWith("2025");
 
     expect(JSON.parse(localStorage.getItem("players")!)).toEqual([]);
+  });
+
+  describe("top picks page", () => {
+    const linkedScores: Data["scores"] = [
+      {
+        game: "Belfort",
+        player: "alice",
+        rank: 1,
+        score: 50,
+        bgg_id: 11,
+        discord_id: "1",
+      },
+      { game: "Belfort", player: "bob", rank: 2, score: 30, bgg_id: 11 },
+    ];
+    beforeEach(() => {
+      state.data = { ...loadedData, scores: linkedScores };
+    });
+
+    it("renders on /:year/top-picks without the filters", () => {
+      at("/2026/top-picks");
+      const { getByRole, queryByText } = render();
+
+      expect(
+        getByRole("heading", { name: "Top picks still unplayed" }),
+      ).toBeInTheDocument();
+      expect(getByRole("heading", { name: "#1 picks" })).toBeInTheDocument();
+      expect(getByRole("link", { name: "Belfort" })).toHaveAttribute(
+        "href",
+        "/2026/games/11",
+      );
+      expect(queryByText("Filter By Players")).toBeNull();
+      expect(state.useData).toHaveBeenLastCalledWith("2026");
+      expect(document.title).toContain("2026 top picks");
+    });
+
+    it("shows the skeleton until who has played is loaded", () => {
+      at("/2026/top-picks");
+      state.allPlayedLoaded = false;
+      const { container, queryByRole, queryByText } = render();
+
+      expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
+      expect(
+        queryByRole("heading", { name: "Top picks still unplayed" }),
+      ).toBeNull();
+      expect(queryByText("Filter By Players")).toBeNull();
+    });
+
+    it("keeps the page when the year is switched", async () => {
+      const user = userEvent.setup();
+      at("/2026/top-picks");
+      const { container } = render();
+
+      await user.click(container.querySelector("#year")!);
+      await user.click(await screen.findByText("2025"));
+      expect(path()).toBe("/2025/top-picks");
+    });
+
+    it("writes no filter params to the address", () => {
+      at("/2026/top-picks");
+      localStorage.setItem("players", JSON.stringify(["alice"]));
+      render();
+
+      expect(window.location.search).toBe("");
+    });
+
+    it("links to the page from the year list", () => {
+      at("/2026");
+      const { getByRole } = render();
+
+      expect(
+        getByRole("link", { name: "Top picks still unplayed" }),
+      ).toHaveAttribute("href", "/2026/top-picks");
+    });
+
+    it("lets the viewer's own played games override the fetched ones", () => {
+      at("/2026/top-picks");
+      state.allPlayed = { "1": {} };
+      state.own = { "11": 1 };
+      const { getByText } = render();
+
+      expect(getByText("No unplayed top picks")).toBeInTheDocument();
+    });
+
+    it("lists the picks under the alert when who has played failed to load", () => {
+      at("/2026/top-picks");
+      state.allPlayedError = "Couldn't load who has played.";
+      const { getByRole } = render();
+
+      expect(getByRole("alert")).toHaveTextContent(
+        "Couldn't load who has played.",
+      );
+      expect(getByRole("heading", { name: "#1 picks" })).toBeInTheDocument();
+    });
   });
 
   describe("marking played", () => {
@@ -1769,6 +1869,18 @@ describe("Scoreboard", () => {
       expect(getByText("No games to rank")).toBeInTheDocument();
       expect(getByText("Suggested splits")).toBeInTheDocument();
     });
+  });
+
+  it("keeps the top picks link when no games are left to rank", () => {
+    at("/2026");
+    state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
+    localStorage.setItem("players", JSON.stringify(["alice"]));
+    const { getByText, getByRole } = render();
+
+    expect(getByText("No games to rank")).toBeInTheDocument();
+    expect(
+      getByRole("link", { name: "Top picks still unplayed" }),
+    ).toHaveAttribute("href", "/2026/top-picks");
   });
 
   describe("page metadata", () => {

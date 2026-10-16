@@ -1,4 +1,10 @@
-import { gamePath, playerPath, recapPath, yearPath } from "@/lib/routes";
+import {
+  gamePath,
+  playerPath,
+  recapPath,
+  topPicksPath,
+  yearPath,
+} from "@/lib/routes";
 
 export const SITE_ORIGIN = "https://games.lememcon.com";
 export const SITE_NAME = "Lememcon Games";
@@ -42,6 +48,13 @@ export const yearMeta = (year: string | number): PageMeta =>
     path: yearPath(year),
   });
 
+export const topPicksMeta = (year: string | number): PageMeta =>
+  pageMeta({
+    title: `${year} top picks`,
+    description: `Games in a member's top 10 for LememCon ${year} that they have not played.`,
+    path: topPicksPath(year),
+  });
+
 export const gameMeta = (
   year: string | number,
   id: string | number,
@@ -75,6 +88,7 @@ interface ScoreboardState {
   // The year in the URL, whether or not it has scores.
   routeYear: string | null;
   gameId: string | undefined;
+  page?: "topPicks";
   yearKnown: boolean;
   yearsLoading: boolean;
   // The year's scores and game details have loaded.
@@ -88,12 +102,14 @@ interface ScoreboardState {
 export const scoreboardMeta = ({
   routeYear,
   gameId,
+  page,
   yearKnown,
   yearsLoading,
   loaded,
   gameName,
 }: ScoreboardState): PageMeta => {
   if (routeYear === null || (!yearKnown && !yearsLoading)) return pageMeta();
+  if (page === "topPicks") return topPicksMeta(routeYear);
   if (gameId === undefined || !loaded) return yearMeta(routeYear);
   if (gameName !== undefined) return gameMeta(routeYear, gameId, gameName);
   return { ...yearMeta(routeYear), path: gamePath(routeYear, gameId) };

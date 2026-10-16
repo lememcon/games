@@ -9,6 +9,7 @@ import {
   playerPath,
   recapPath,
   sharePath,
+  topPicksPath,
   yearPath,
   type FilterState,
 } from "@/lib/routes";
@@ -32,8 +33,18 @@ describe("path builders", () => {
   });
 });
 
+describe("topPicksPath", () => {
+  it("builds the top picks path", () => {
+    expect(topPicksPath("2024")).toBe("/2024/top-picks");
+    expect(topPicksPath(2024)).toBe("/2024/top-picks");
+  });
+});
+
 describe("parseScoreboardPath", () => {
   it.each([
+    ["/2024/top-picks", { kind: "year", year: "2024", page: "topPicks" }],
+    ["/2024/top-picks/", { kind: "year", year: "2024", page: "topPicks" }],
+    ["/2024/top-picks/x", { kind: "unknown" }],
     ["/", { kind: "home" }],
     ["/2024", { kind: "year", year: "2024" }],
     ["/2024/", { kind: "year", year: "2024" }],
