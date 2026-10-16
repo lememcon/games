@@ -10,6 +10,16 @@ type All = ReturnType<typeof vetoesByMember>;
 
 const EMPTY: All = {};
 
+type Counts = Record<number, number>;
+
+// Per-game in-flight save counts: a game stays locked until all its saves end.
+const acquire = (counts: Counts, ids: number[]) =>
+  ids.forEach((id) => (counts[id] = (counts[id] ?? 0) + 1));
+
+// Returns the ids that no longer have a save in flight.
+const release = (counts: Counts, ids: number[]) =>
+  ids.filter((id) => --counts[id] === 0);
+
 // What a veto scope needs from the API: the list and the member's own changes.
 export interface VetoApi {
   list: () => Promise<{ vetoes: Veto[] }>;
@@ -44,9 +54,13 @@ export const useVetoSet = (
   const [bulkError, setBulkError] = useState<string | null>(null);
   const latest = useRef(0);
   const gens = useRef<Record<number, number>>({});
+  const inflight = useRef<Counts>({});
   const apiRef = useRef(api);
   const keyRef = useRef(key);
   useEffect(() => {
+    // Mirrors the render-time saving reset: saves from the old key no longer
+    // count toward locks.
+    if (resetOnKeyChange && keyRef.current !== key) inflight.current = {};
     apiRef.current = api;
     keyRef.current = key;
   });
@@ -82,6 +96,18 @@ export const useVetoSet = (
   const bump = (bggId: number) =>
     (gens.current[bggId] = (gens.current[bggId] ?? 0) + 1);
 
+  // Ends one save per id; only games with no save left in flight unlock. A
+  // reset replaced the counts, so the new scope owns the lock then.
+  const unlock = (counts: Counts, ids: number[]) => {
+    const done = release(counts, ids);
+    if (inflight.current !== counts || done.length === 0) return;
+    setSaving((prev) => {
+      const next = new Set(prev);
+      done.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+
   // Resolves true when the change itself saved, false when it threw or the key
   // changed meanwhile.
   const mutate = async (
@@ -92,6 +118,8 @@ export const useVetoSet = (
     const startKey = keyRef.current;
     if (!scope) return false;
     const gen = bump(bggId);
+    const counts = inflight.current;
+    acquire(counts, [bggId]);
     const stale = () => resetOnKeyChange && keyRef.current !== startKey;
     setSaving((prev) => new Set(prev).add(bggId));
     setErrors(({ [bggId]: _dropped, ...rest }) => rest);
@@ -115,11 +143,7 @@ export const useVetoSet = (
       if (mine === latest.current) message ??= GENERIC_ERROR;
     }
     if (stale()) return false;
-    setSaving((prev) => {
-      const next = new Set(prev);
-      next.delete(bggId);
-      return next;
-    });
+    unlock(counts, [bggId]);
     if (message && gens.current[bggId] === gen)
       setErrors((prev) => ({ ...prev, [bggId]: message }));
     return ok;
@@ -130,6 +154,8 @@ export const useVetoSet = (
   const vetoMany = async (bggIds: number[]): Promise<number[]> => {
     const scope = apiRef.current;
     if (!scope || bggIds.length === 0) return [];
+    const counts = inflight.current;
+    acquire(counts, bggIds);
     setSaving((prev) => new Set([...prev, ...bggIds]));
     setBulkError(null);
     const results = await Promise.allSettled(bggIds.map((id) => scope.set(id)));
@@ -148,11 +174,7 @@ export const useVetoSet = (
     } catch {
       if (mine === latest.current) message ??= GENERIC_ERROR;
     }
-    setSaving((prev) => {
-      const next = new Set(prev);
-      bggIds.forEach((id) => next.delete(id));
-      return next;
-    });
+    unlock(counts, bggIds);
     setBulkError(message);
     return failed;
   };
