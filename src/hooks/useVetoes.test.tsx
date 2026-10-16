@@ -343,6 +343,21 @@ describe("useVetoes", () => {
       });
     });
 
+    it("clearError drops only that game's error", async () => {
+      const hook = await start({
+        "PUT /api/me/vetoes/2": [res({}, 500)],
+        "PUT /api/me/vetoes/3": [res({}, 500)],
+        [LIST]: [res({ vetoes: mine }), res({ vetoes: mine })],
+      });
+      await act(() => hook.result.current.veto(2));
+      await act(() => hook.result.current.veto(3));
+      act(() => hook.result.current.clearError(2));
+      expect(hook.result.current.errorFor(2)).toBeNull();
+      expect(hook.result.current.errorFor(3)).toBe(GENERIC_ERROR);
+      expect(hook.result.current.isSaving(2)).toBe(false);
+      expect(hook.result.current.isSaving(3)).toBe(false);
+    });
+
     it("clears only the acted-on game's error on a new action", async () => {
       const retry = deferred();
       const hook = await start({

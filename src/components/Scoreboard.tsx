@@ -235,10 +235,16 @@ function Scoreboard({ user }: ScoreboardProps) {
     scope === "year" ? yearVetoes : vetoes;
   // Moves a veto to the other scope, adding there before removing here. The
   // bar only offers Undo when both steps saved.
+  // A switch touches both scopes, so drop any stale error from either.
+  const clearErrors = (id: number) => {
+    vetoes.clearError(id);
+    yearVetoes.clearError(id);
+  };
   const doSwitch = (to: "all" | "year", id: number, name: string) => {
     const seq = ++vetoSeq.current;
     setLastVetoed(null);
     setSwitchErrorId(null);
+    clearErrors(id);
     setHovered(false);
     setFocused(false);
     void switchVeto(setOf(to === "all" ? "year" : "all"), setOf(to), id).then(
@@ -257,6 +263,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   // to show its error there.
   const undo = async (id: number) => {
     vetoSeq.current++;
+    if (lastVetoed?.switched) clearErrors(id);
     const ok = lastVetoed?.switched
       ? await switchVeto(
           barSet,

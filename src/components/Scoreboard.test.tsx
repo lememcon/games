@@ -61,6 +61,7 @@ const state = vi.hoisted(() => ({
   veto: vi.fn(),
   unveto: vi.fn(),
   vetoErrors: {} as Record<number, string>,
+  clearError: vi.fn(),
   vetoSaving: new Set<number>(),
   // Everyone's vetoes for the viewed year only.
   yearVetoes: {} as Record<string, ReadonlySet<string>>,
@@ -68,6 +69,7 @@ const state = vi.hoisted(() => ({
   yearVeto: vi.fn(),
   yearUnveto: vi.fn(),
   yearVetoErrors: {} as Record<number, string>,
+  yearClearError: vi.fn(),
   yearVetoSaving: new Set<number>(),
   playedError: null as string | null,
   allPlayedError: null as string | null,
@@ -123,6 +125,7 @@ vi.mock("@/hooks/useVetoes", () => ({
       error: state.vetoErrors,
       isSaving: (id: number) => state.vetoSaving.has(id),
       errorFor: (id: number) => state.vetoErrors[id] ?? null,
+      clearError: state.clearError,
       veto: state.veto,
       unveto: state.unveto,
     };
@@ -141,6 +144,7 @@ vi.mock("@/hooks/useYearVetoes", () => ({
       error: state.yearVetoErrors,
       isSaving: (id: number) => state.yearVetoSaving.has(id),
       errorFor: (id: number) => state.yearVetoErrors[id] ?? null,
+      clearError: state.yearClearError,
       veto: state.yearVeto,
       unveto: state.yearUnveto,
     };
@@ -189,11 +193,17 @@ describe("Scoreboard", () => {
     state.veto = vi.fn(async () => true);
     state.unveto = vi.fn(async () => true);
     state.vetoErrors = {};
+    state.clearError = vi.fn((id: number) => {
+      delete state.vetoErrors[id];
+    });
     state.vetoSaving = new Set();
     state.yearVetoes = {};
     state.yearVeto = vi.fn(async () => true);
     state.yearUnveto = vi.fn(async () => true);
     state.yearVetoErrors = {};
+    state.yearClearError = vi.fn((id: number) => {
+      delete state.yearVetoErrors[id];
+    });
     state.yearVetoSaving = new Set();
     state.playedError = null;
     state.allPlayedError = null;
@@ -1242,6 +1252,8 @@ describe("Scoreboard", () => {
       await chooseVeto(user, "Belfort", "Remove: not for me");
 
       expect(state.unveto).toHaveBeenCalledWith(11);
+      expect(state.clearError).not.toHaveBeenCalled();
+      expect(state.yearClearError).not.toHaveBeenCalled();
       expect(queryByRole("button", { name: "Undo" })).toBeNull();
     });
 
@@ -1258,6 +1270,8 @@ describe("Scoreboard", () => {
 
       expect(state.yearUnveto).toHaveBeenCalledWith(11);
       expect(state.unveto).not.toHaveBeenCalled();
+      expect(state.clearError).not.toHaveBeenCalled();
+      expect(state.yearClearError).not.toHaveBeenCalled();
       expect(queryByRole("button", { name: "Undo" })).toBeNull();
     });
 
@@ -1814,6 +1828,51 @@ describe("Scoreboard", () => {
         expect(state.unveto).toHaveBeenCalledWith(11);
         expect(getByRole("status")).toHaveTextContent(
           "Veto changed to 2026 only.",
+        );
+      });
+
+      it("clears both scopes' errors before a switch starts", async () => {
+        at("/2026");
+        await makePermanent();
+
+        expect(state.clearError).toHaveBeenCalledWith(11);
+        expect(state.yearClearError).toHaveBeenCalledWith(11);
+        expect(state.clearError.mock.invocationCallOrder[0]).toBeLessThan(
+          state.veto.mock.invocationCallOrder[0],
+        );
+        expect(state.yearClearError.mock.invocationCallOrder[0]).toBeLessThan(
+          state.veto.mock.invocationCallOrder[0],
+        );
+      });
+
+      it("replaces a stale every-year error with the new year error", async () => {
+        at("/2026");
+        state.vetoErrors = { 11: "Stale every-year error" };
+        state.yearVeto = vi.fn(async () => {
+          state.yearVetoErrors = { 11: "Year add failed" };
+          return false;
+        });
+        const { getByRole, rerender } = await onlyThisYear();
+        again(rerender);
+
+        expect(getByRole("status")).toHaveTextContent("Year add failed");
+      });
+
+      it("clears both scopes' errors before undoing a switch", async () => {
+        at("/2026");
+        const { user, getByRole } = await makePermanent();
+        state.clearError.mockClear();
+        state.yearClearError.mockClear();
+
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.clearError).toHaveBeenCalledWith(11);
+        expect(state.yearClearError).toHaveBeenCalledWith(11);
+        expect(state.clearError.mock.invocationCallOrder[0]).toBeLessThan(
+          state.yearVeto.mock.invocationCallOrder[0],
+        );
+        expect(state.yearClearError.mock.invocationCallOrder[0]).toBeLessThan(
+          state.yearVeto.mock.invocationCallOrder[0],
         );
       });
 

@@ -167,6 +167,8 @@ export const useVetoSet = (
     error: errors,
     isSaving: (bggId: number) => saving.has(bggId),
     errorFor: (bggId: number): string | null => errors[bggId] ?? null,
+    clearError: (bggId: number) =>
+      setErrors(({ [bggId]: _dropped, ...rest }) => rest),
     veto: (bggId: number) => mutate(bggId, (a) => a.set(bggId)),
     unveto: (bggId: number) => mutate(bggId, (a) => a.clear(bggId)),
   };

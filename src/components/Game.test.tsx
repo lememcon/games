@@ -279,6 +279,7 @@ describe("Game", () => {
       error: {},
       isSaving: vi.fn(() => false),
       errorFor: vi.fn((): string | null => null),
+      clearError: vi.fn(),
       veto: vi.fn(),
       unveto: vi.fn(),
       ...extra,
