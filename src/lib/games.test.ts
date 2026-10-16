@@ -10,6 +10,7 @@ import {
   gameLabel,
   gameOptions,
   leastHappyPlayer,
+  mergeVetoes,
   parseSortMode,
   partitions,
   playerCountsByName,
@@ -1533,6 +1534,30 @@ describe("vetoesByMember", () => {
   });
 });
 
+describe("mergeVetoes", () => {
+  it("unions overlapping and disjoint members without mutating", () => {
+    const a = { d1: new Set(["1"]), d2: new Set(["5"]) };
+    const b = { d1: new Set(["2"]), d3: new Set(["9"]) };
+    expect(mergeVetoes(a, b)).toEqual({
+      d1: new Set(["1", "2"]),
+      d2: new Set(["5"]),
+      d3: new Set(["9"]),
+    });
+    expect(a.d1).toEqual(new Set(["1"]));
+    expect(b.d1).toEqual(new Set(["2"]));
+  });
+
+  it("handles empty maps", () => {
+    expect(mergeVetoes({}, {})).toEqual({});
+    expect(mergeVetoes({ d: new Set(["1"]) }, {})).toEqual({
+      d: new Set(["1"]),
+    });
+    expect(mergeVetoes({}, { d: new Set(["1"]) })).toEqual({
+      d: new Set(["1"]),
+    });
+  });
+});
+
 describe("member vetoes", () => {
   const row = (player: string, game: string, bgg_id: number, score = 10) => ({
     player,
@@ -1568,6 +1593,12 @@ describe("member vetoes", () => {
 
   it("hides the game from a group that includes the vetoer", () => {
     expect(names(["Ann", "Bo"])).toEqual(["Azul"]);
+  });
+
+  it("hides a game a merged year-only veto covers, only when the vetoer is selected", () => {
+    const merged = mergeVetoes({}, ann);
+    expect(names(["Ann", "Bo"], merged)).toEqual(["Azul"]);
+    expect(names(["Bo", "Cy"], merged)).toEqual(["Azul", "Root"]);
   });
 
   it("hides it for a group of one", () => {
