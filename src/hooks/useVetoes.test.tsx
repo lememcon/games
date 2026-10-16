@@ -438,6 +438,29 @@ describe("useVetoes", () => {
       expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
     });
 
+    it("ignores an older save's late error after a newer save succeeds", async () => {
+      const putOld = deferred();
+      const hook = await start({
+        "PUT /api/me/vetoes/2": [putOld.promise],
+        "DELETE /api/me/vetoes/2": [none()],
+        [LIST]: [res({ vetoes: mine }), res({ vetoes: mine })],
+      });
+      let older!: Promise<boolean>;
+      let newer!: Promise<boolean>;
+      act(() => {
+        older = hook.result.current.veto(2);
+      });
+      act(() => {
+        newer = hook.result.current.unveto(2);
+      });
+      await act(async () => {
+        await newer;
+        putOld.resolve(res({}, 500));
+        await older;
+      });
+      expect(hook.result.current.errorFor(2)).toBeNull();
+    });
+
     it("keeps a save's error when another game is cleared", async () => {
       const put = deferred();
       const hook = await start({
