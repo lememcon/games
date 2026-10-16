@@ -198,6 +198,52 @@ test("phone rows keep 44px tap targets and fit the viewport", async ({
   ).toBeLessThanOrEqual(375);
 });
 
+test("phone rows with a year veto fit the viewport and keep 44px targets", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockApi(page, { yearVetoes: [101, 102, 103, 104] });
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Veto: Delta" })).toHaveText(
+    "✓ Skipped 2024",
+  );
+
+  const buttons = page.locator(".tray-row__actions button");
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    const box = await buttons.nth(i).boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+  }
+  expect(
+    await page.evaluate("document.documentElement.scrollWidth"),
+  ).toBeLessThanOrEqual(375);
+});
+
+test("a year veto from the dialog hides the game for its vetoer, and Undo restores it", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+  // A veto only hides a game when its vetoer is among the selected players.
+  await page.getByRole("button", { name: "Alice" }).click();
+
+  await page.getByRole("button", { name: "Veto: Delta" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Not in 2024" }).click();
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("status")).toHaveText(/Vetoed Delta for 2024\./);
+  await expect(page.getByRole("link", { name: "Delta" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("link", { name: "Delta" })).toBeVisible();
+});
+
 test("desktop row buttons stay compact", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await mockApi(page);

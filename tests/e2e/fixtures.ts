@@ -92,6 +92,8 @@ interface MockOptions {
   profile?: Profile;
   overrides?: PlayerOverride[];
   vetoes?: { bggId: number; name: string }[];
+  // Game ids Alice has vetoed for the year only; PUT and DELETE change them.
+  yearVetoes?: number[];
   // Everyone's played games per year, for the recap.
   playedByYear?: Record<string, Record<string, string[]>>;
   scores?: PlayerGameScore[];
@@ -112,6 +114,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     profile,
     overrides = [],
     vetoes = [],
+    yearVetoes = [],
     playedByYear,
     scores: scoreRows = scores,
   } = opts;
@@ -159,6 +162,23 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   await page.route(
     (url) => /^\/api\/me\/vetoes\/\d+$/.test(pathOf(url)),
     (route) => route.fulfill({ status: 204 }),
+  );
+  const yearVetoed = new Set(yearVetoes);
+  await page.route(
+    (url) => /^\/api\/year-vetoes\/\d+$/.test(pathOf(url)),
+    (route) =>
+      json(route, {
+        vetoes: [...yearVetoed].map((bggId) => ({ discordId: aliceId, bggId })),
+      }),
+  );
+  await page.route(
+    (url) => /^\/api\/me\/year-vetoes\/\d+\/\d+$/.test(pathOf(url)),
+    (route) => {
+      const bggId = Number(pathOf(route.request().url()).split("/").pop());
+      if (route.request().method() === "PUT") yearVetoed.add(bggId);
+      else yearVetoed.delete(bggId);
+      return route.fulfill({ status: 204 });
+    },
   );
   await page.route(
     (url) => pathOf(url) === "/api/played",
