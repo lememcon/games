@@ -386,6 +386,76 @@ describe("useVetoes", () => {
       expect(hook.result.current.errorFor(2)).toBeNull();
     });
 
+    it("ignores a failing save's error after clearError", async () => {
+      const put = deferred();
+      const hook = await start({
+        "PUT /api/me/vetoes/2": [put.promise],
+        [LIST]: [res({ vetoes: mine })],
+      });
+      let done!: Promise<boolean>;
+      act(() => {
+        done = hook.result.current.veto(2);
+      });
+      act(() => hook.result.current.clearError(2));
+      let ok: boolean | undefined;
+      await act(async () => {
+        put.resolve(res({}, 500));
+        ok = await done;
+      });
+      expect(ok).toBe(false);
+      expect(hook.result.current.errorFor(2)).toBeNull();
+      expect(hook.result.current.isSaving(2)).toBe(false);
+    });
+
+    it("shows a newer save's error after clearError", async () => {
+      const putOld = deferred();
+      const putNew = deferred();
+      const l2 = deferred();
+      const l1 = deferred();
+      const hook = await start({
+        "PUT /api/me/vetoes/2": [putOld.promise, putNew.promise],
+        [LIST]: [l1.promise, l2.promise],
+      });
+      let older!: Promise<boolean>;
+      let newer!: Promise<boolean>;
+      act(() => {
+        older = hook.result.current.veto(2);
+      });
+      act(() => hook.result.current.clearError(2));
+      act(() => {
+        newer = hook.result.current.veto(2);
+      });
+      await act(async () => {
+        putNew.resolve(res({}, 500));
+        await flush();
+        l1.resolve(res({ vetoes: mine }));
+        await newer;
+        putOld.resolve(res({}, 500));
+        await flush();
+        l2.resolve(res({ vetoes: mine }));
+        await older;
+      });
+      expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
+    });
+
+    it("keeps a save's error when another game is cleared", async () => {
+      const put = deferred();
+      const hook = await start({
+        "PUT /api/me/vetoes/2": [put.promise],
+        [LIST]: [res({ vetoes: mine })],
+      });
+      let done!: Promise<boolean>;
+      act(() => {
+        done = hook.result.current.veto(2);
+      });
+      act(() => hook.result.current.clearError(3));
+      await act(async () => {
+        put.resolve(res({}, 500));
+        await done;
+      });
+      expect(hook.result.current.errorFor(2)).toBe(GENERIC_ERROR);
+    });
+
     // Two vetoes whose saves finish in order, so refetch 1 is requested
     // before refetch 2; the lists are then resolved by the test.
     const overlapping = async (list1: Pending, list2: Pending) => {
