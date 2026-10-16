@@ -287,11 +287,13 @@ describe("Scoreboard", () => {
     it("shows the skeleton until who has played is loaded", () => {
       at("/2026/top-picks");
       state.allPlayedLoaded = false;
-      const { queryByRole } = render();
+      const { container, queryByRole, queryByText } = render();
 
+      expect(container.querySelector(".mantine-Skeleton-root")).toBeTruthy();
       expect(
         queryByRole("heading", { name: "Top picks still unplayed" }),
       ).toBeNull();
+      expect(queryByText("Filter By Players")).toBeNull();
     });
 
     it("keeps the page when the year is switched", async () => {
@@ -1867,6 +1869,18 @@ describe("Scoreboard", () => {
       expect(getByText("No games to rank")).toBeInTheDocument();
       expect(getByText("Suggested splits")).toBeInTheDocument();
     });
+  });
+
+  it("keeps the top picks link when no games are left to rank", () => {
+    at("/2026");
+    state.data = { ...loadedData, by_player: { alice: [], bob: [] } };
+    localStorage.setItem("players", JSON.stringify(["alice"]));
+    const { getByText, getByRole } = render();
+
+    expect(getByText("No games to rank")).toBeInTheDocument();
+    expect(
+      getByRole("link", { name: "Top picks still unplayed" }),
+    ).toHaveAttribute("href", "/2026/top-picks");
   });
 
   describe("page metadata", () => {

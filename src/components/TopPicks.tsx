@@ -37,20 +37,15 @@ const Owner = ({ owner }: { owner: UnplayedPickOwner }) => (
       gap: "calc(var(--mantine-spacing-xs) / 2)",
       fontSize: "0.8rem",
       maxWidth: "100%",
+      minWidth: 0,
+      overflowWrap: "anywhere",
       ...(owner.played && {
         textDecoration: "line-through",
-        opacity: 0.55,
+        opacity: 0.8,
       }),
     }}
   >
-    <span
-      aria-hidden
-      style={{
-        fontFamily: "var(--mantine-font-family-monospace)",
-        fontVariantNumeric: "tabular-nums",
-        color: "#7a736a",
-      }}
-    >
+    <span aria-hidden className="tray-meta">
       #{owner.rank}
     </span>
     <PlayerName
@@ -87,14 +82,8 @@ const TopPickRow = ({
       </Link>
       <ul
         aria-label="Picked by"
-        style={{
-          ...list,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "calc(var(--mantine-spacing-xs) / 2) var(--mantine-spacing-sm)",
-          marginTop: "0.25rem",
-        }}
+        className="tray-played-by__list"
+        style={{ marginTop: "0.25rem" }}
       >
         {pick.owners.map((o) => (
           <Owner key={o.discordId} owner={o} />
@@ -117,7 +106,10 @@ const TopPicks = ({ year, scores, allPlayed, games }: TopPicksProps) => {
         Top picks still unplayed
       </Title>
       {!linked ? (
-        <Text c="dimmed">Sign in as an approved member to see top picks</Text>
+        <Text c="dimmed">
+          No players are linked to members for this year, so there are no top
+          picks to show
+        </Text>
       ) : tiers.length === 0 ? (
         <Text c="dimmed">No unplayed top picks</Text>
       ) : (

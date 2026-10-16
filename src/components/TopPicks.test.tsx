@@ -95,11 +95,13 @@ describe("TopPicks", () => {
     expect(screen.getByText("No unplayed top picks")).toBeVisible();
   });
 
-  it("asks to sign in when no score row is linked", () => {
+  it("explains when no score row is linked", () => {
     show([row(1, "Alpha", "Alice", 1, { discord_id: undefined })]);
 
     expect(
-      screen.getByText("Sign in as an approved member to see top picks"),
+      screen.getByText(
+        "No players are linked to members for this year, so there are no top picks to show",
+      ),
     ).toBeVisible();
     expect(screen.queryByText("No unplayed top picks")).toBeNull();
   });
