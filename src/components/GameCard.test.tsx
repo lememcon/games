@@ -154,14 +154,14 @@ describe("GameCard", () => {
     const onVeto = vi.fn();
     const { getByRole } = renderCard({ onVeto });
     const button = getByRole("button", { name: /^Veto:/ });
-    expect(button).toHaveAttribute("aria-pressed", "false");
+    expect(button).toHaveAttribute("aria-haspopup", "dialog");
 
     await user.click(button);
 
     expect(onVeto).toHaveBeenCalledOnce();
   });
 
-  it("shows a pressed, disabled veto button", () => {
+  it("shows a vetoed, disabled veto button", () => {
     const { getByRole } = renderCard({
       onVeto: () => {},
       vetoed: true,
@@ -169,8 +169,17 @@ describe("GameCard", () => {
     });
     const button = getByRole("button", { name: /^Veto:/ });
 
-    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(button).toHaveTextContent("✓ Vetoed");
+    expect(button).toHaveAttribute("aria-haspopup", "dialog");
     expect(button).toBeDisabled();
+  });
+
+  it("shows a year-only veto with the year", () => {
+    const { getByRole } = renderCard({ onVeto: () => {}, yearVetoed: true });
+
+    expect(getByRole("button", { name: /^Veto:/ })).toHaveTextContent(
+      "✓ Skipped 2024",
+    );
   });
 
   it("shows the veto error beside the button", () => {

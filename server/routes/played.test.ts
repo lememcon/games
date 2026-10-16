@@ -6,6 +6,7 @@ import {
   fakeLinks,
   fakeMemberOverrides,
   fakeMemberVetoes,
+  fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -47,6 +48,7 @@ function makeApp(members?: string[], games?: Record<number, number[]>) {
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
     memberVetoes: fakeMemberVetoes().memberVetoes,
+    memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
     profiles: fakeProfiles().profiles,
     played: fake.played,
     resolveSession: async (headers) => {

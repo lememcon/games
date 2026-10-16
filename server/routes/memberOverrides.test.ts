@@ -6,6 +6,7 @@ import {
   fakeLinks,
   fakeMemberOverrides,
   fakeMemberVetoes,
+  fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -49,6 +50,7 @@ function makeApp() {
     played: fakePlayed().played,
     memberOverrides: fake.memberOverrides,
     memberVetoes: fakeMemberVetoes().memberVetoes,
+    memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };

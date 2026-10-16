@@ -4,51 +4,66 @@ import { describe, expect, it, vi } from "vitest";
 import VetoToggle from "@/components/VetoToggle";
 import { renderWithMantine } from "@/test/utils";
 
-describe("VetoToggle", () => {
-  it("offers Not for me when the game is not vetoed", () => {
-    const { getByRole } = renderWithMantine(
-      <VetoToggle game="Azul" vetoed={false} onToggle={() => {}} />,
-    );
+const setup = (over: Partial<Parameters<typeof VetoToggle>[0]> = {}) => {
+  const onOpen = vi.fn();
+  const view = renderWithMantine(
+    <VetoToggle
+      game="Azul"
+      year="2026"
+      vetoed={false}
+      yearVetoed={false}
+      onOpen={onOpen}
+      {...over}
+    />,
+  );
+  return { ...view, onOpen, button: view.getByRole("button") };
+};
 
-    const button = getByRole("button", { name: "Veto: Azul" });
-    expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(button).toHaveTextContent("Not for me");
-    expect(button).not.toHaveAttribute("aria-haspopup");
+describe("VetoToggle", () => {
+  it("offers Not for me when nothing is set", () => {
+    const { button } = setup();
+
+    expect(button).toHaveAccessibleName("Veto: Azul");
+    expect(button).toHaveTextContent("Not for me…");
+    expect(button).toHaveAttribute("aria-haspopup", "dialog");
+    expect(button).not.toHaveAttribute("aria-pressed");
+    expect(button).not.toHaveClass("tray-played--on");
   });
 
-  it("shows a pressed Vetoed badge once vetoed", () => {
-    const { getByRole } = renderWithMantine(
-      <VetoToggle game="Azul" vetoed onToggle={() => {}} />,
-    );
+  it("shows Vetoed for an every-year veto", () => {
+    const { button } = setup({ vetoed: true });
 
-    const button = getByRole("button", { name: "Veto: Azul" });
-    expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toHaveTextContent("✓ Vetoed");
     expect(button).toHaveClass("tray-played--on");
   });
 
-  it("fires onToggle when clicked", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-    const { getByRole } = renderWithMantine(
-      <VetoToggle game="Azul" vetoed={false} onToggle={onToggle} />,
-    );
+  it("shows Skipped with the year for a year-only veto", () => {
+    const { button } = setup({ yearVetoed: true });
 
-    await user.click(getByRole("button"));
+    expect(button).toHaveTextContent("✓ Skipped 2026");
+    expect(button).toHaveClass("tray-played--on");
+  });
 
-    expect(onToggle).toHaveBeenCalledOnce();
+  it("prefers Vetoed when both are set", () => {
+    const { button } = setup({ vetoed: true, yearVetoed: true });
+
+    expect(button).toHaveTextContent("✓ Vetoed");
+  });
+
+  it("fires onOpen when clicked", async () => {
+    const { button, onOpen } = setup();
+
+    await userEvent.setup().click(button);
+
+    expect(onOpen).toHaveBeenCalledOnce();
   });
 
   it("does not fire when disabled", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-    const { getByRole } = renderWithMantine(
-      <VetoToggle game="Azul" vetoed={false} disabled onToggle={onToggle} />,
-    );
+    const { button, onOpen } = setup({ disabled: true });
 
-    expect(getByRole("button")).toBeDisabled();
-    await user.click(getByRole("button"));
+    expect(button).toBeDisabled();
+    await userEvent.setup().click(button);
 
-    expect(onToggle).not.toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });

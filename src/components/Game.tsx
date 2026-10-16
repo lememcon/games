@@ -7,6 +7,7 @@ import YearSparkline from "@/components/YearSparkline";
 import type { PlayerOverridesState } from "@/hooks/usePlayerOverrides";
 import type { VetoesState } from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
+import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
@@ -20,8 +21,10 @@ interface GameProps {
   year: string;
   // The member's own player count range for this game; omitted to hide the form.
   overrides?: PlayerOverridesState;
-  // The members' vetoes, for every year; omitted to hide the switch.
+  // The members' vetoes, for every year; omitted to hide the veto button.
   vetoes?: VetoesState;
+  // The members' vetoes for this year only.
+  yearVetoes?: YearVetoesState;
   // The signed-in member's Discord id, the key of their ranges in `overrides`
   // and their vetoes in `vetoes`.
   discordId?: string;
@@ -36,6 +39,7 @@ const Game = ({
   year,
   overrides,
   vetoes,
+  yearVetoes,
   discordId,
   backHref = yearPath(year),
 }: GameProps) => {
@@ -75,12 +79,19 @@ const Game = ({
           onReset={() => overrides.reset(bggId)}
         />
       )}
-      {vetoes && discordId && (
+      {vetoes && yearVetoes && discordId && (
         <MyVeto
+          game={players[0].game}
+          year={year}
           vetoed={vetoes.all[discordId]?.has(id) ?? false}
-          saving={vetoes.isSaving(bggId)}
-          error={vetoes.errorFor(bggId)}
-          onChange={(on) => (on ? vetoes.veto(bggId) : vetoes.unveto(bggId))}
+          yearVetoed={yearVetoes.all[discordId]?.has(id) ?? false}
+          savingVeto={vetoes.isSaving(bggId)}
+          savingYear={yearVetoes.isSaving(bggId)}
+          error={vetoes.errorFor(bggId) ?? yearVetoes.errorFor(bggId)}
+          onVeto={(on) => (on ? vetoes.veto(bggId) : vetoes.unveto(bggId))}
+          onYearVeto={(on) =>
+            on ? yearVetoes.veto(bggId) : yearVetoes.unveto(bggId)
+          }
         />
       )}
       <BackButton

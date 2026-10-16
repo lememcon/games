@@ -105,7 +105,7 @@ export function createApp(deps: AppDeps) {
   api.route("/", profileRoutes(deps.profiles));
   api.route("/", playedRoutes(deps.played));
   api.route("/", memberOverrideRoutes(deps.memberOverrides));
-  api.route("/", memberVetoRoutes(deps.memberVetoes));
+  api.route("/", memberVetoRoutes(deps.memberVetoes, deps.memberYearVetoes));
   api.route("/", dataRoutes(deps.data));
   api.all("*", (c) => c.json({ error: "not_found" }, 404));
   app.route("/api", api);

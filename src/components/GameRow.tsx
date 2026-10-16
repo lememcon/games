@@ -22,10 +22,12 @@ interface GameRowProps {
   played: boolean;
   onToggle: () => void;
   vetoed?: boolean;
+  // Vetoed for this year only.
+  yearVetoed?: boolean;
   vetoDisabled?: boolean;
   // Shown beside the veto button when saving it failed.
   vetoError?: string | null;
-  // Omitted to hide the veto button.
+  // Opens the veto dialog. Omitted to hide the veto button.
   onVeto?: () => void;
   // Bulk-veto mode: show a checkbox and hide the per-game buttons.
   selectable?: boolean;
@@ -51,6 +53,7 @@ const GameRow = ({
   played,
   onToggle,
   vetoed = false,
+  yearVetoed = false,
   vetoDisabled,
   vetoError,
   onVeto,
@@ -124,8 +127,10 @@ const GameRow = ({
             <VetoToggle
               game={game.name}
               vetoed={vetoed}
+              yearVetoed={yearVetoed}
+              year={year}
               disabled={vetoDisabled}
-              onToggle={onVeto}
+              onOpen={onVeto}
             />
           )}
           {vetoError && (

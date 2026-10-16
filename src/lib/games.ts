@@ -163,6 +163,18 @@ export const vetoesByMember = (
   return result;
 };
 
+// Unions two per-member veto maps (for example every-year and one-year
+// vetoes) without mutating either.
+export const mergeVetoes = (
+  a: Record<string, ReadonlySet<string>>,
+  b: Record<string, ReadonlySet<string>>,
+): Record<string, ReadonlySet<string>> => {
+  const result: Record<string, ReadonlySet<string>> = { ...a };
+  for (const [id, set] of Object.entries(b))
+    result[id] = new Set([...(a[id] ?? []), ...set]);
+  return result;
+};
+
 // Re-keys per-member values (by discord id) to the score data's player names.
 // The name -> discord id link comes from every score row, so it still resolves
 // when all of a player's games are hidden. Players without a linked member get

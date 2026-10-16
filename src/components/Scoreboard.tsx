@@ -13,6 +13,7 @@ import MarkPlayedDialog from "@/components/MarkPlayedDialog";
 import SplitSuggestions from "@/components/SplitSuggestions";
 import TopPicks from "@/components/TopPicks";
 import UnplayedShelf from "@/components/UnplayedShelf";
+import VetoDialog from "@/components/VetoDialog";
 import YearTrends from "@/components/YearTrends";
 import { useMarkPlayed } from "@/hooks/useAllPlayed";
 import useData from "@/hooks/useData";
@@ -23,11 +24,13 @@ import usePlayed from "@/hooks/usePlayed";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useVetoes from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
+import useYearVetoes from "@/hooks/useYearVetoes";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors, pickedColors } from "@/lib/colors";
 import {
   buildSelectedGames,
   computeMaxScores,
+  mergeVetoes,
   parseSortMode,
   playerCountsByName,
   suggestSplits,
@@ -116,11 +119,14 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [allPlayed, markPlayed, allPlayedError, allPlayedLoaded] =
     useMarkPlayed(year ?? "");
   const [markingId, setMarkingId] = useState<string | null>(null);
+  // The game whose veto dialog is open, by bgg id.
+  const [vetoingId, setVetoingId] = useState<number | null>(null);
   // A dialog opened for one year must not confirm against another.
   const [markingYear, setMarkingYear] = useState(year);
   if (markingYear !== year) {
     setMarkingYear(year);
     setMarkingId(null);
+    setVetoingId(null);
   }
   const gameNames = useMemo(
     () => Object.fromEntries(data.scores.map((r) => [r.bgg_id, r.game])),
@@ -145,12 +151,14 @@ function Scoreboard({ user }: ScoreboardProps) {
   );
 
   const vetoes = useVetoes();
+  const yearVetoes = useYearVetoes(year);
   // The last game vetoed from the list, for the undo bar. A new object per
   // veto, so the timer restarts. The game leaves the list, so the name is
-  // captured at click time.
+  // captured at click time. The scope says which kind of veto Undo clears.
   const [lastVetoed, setLastVetoed] = useState<{
     id: number;
     name: string;
+    scope: "all" | "year";
   } | null>(null);
   // Hover and focus hold the timer separately, so leaving with the mouse does
   // not resume it while focus is still inside the bar.
@@ -186,36 +194,55 @@ function Scoreboard({ user }: ScoreboardProps) {
     setBarScope(vetoScope);
     setLastVetoed(null);
   }
+  // A veto still saving for the previous scope must not bring the bar back.
+  useEffect(() => {
+    vetoSeq.current++;
+  }, [vetoScope]);
   useEffect(() => {
     if (!lastVetoed || barHeld) return;
     const timer = setTimeout(() => setLastVetoed(null), UNDO_MS);
     return () => clearTimeout(timer);
   }, [lastVetoed, barHeld]);
-  const listVetoes = {
-    ...vetoes,
-    veto: (id: number, name: string) => {
-      const seq = ++vetoSeq.current;
-      setLastVetoed(null);
-      setHovered(false);
-      setFocused(false);
-      void vetoes.veto(id).then((ok) => {
-        if (ok && seq === vetoSeq.current) setLastVetoed({ id, name });
-      });
-    },
+  const addVeto = (scope: "all" | "year", id: number, name: string) => {
+    const seq = ++vetoSeq.current;
+    setLastVetoed(null);
+    setHovered(false);
+    setFocused(false);
+    const set = scope === "year" ? yearVetoes : vetoes;
+    void set.veto(id).then((ok) => {
+      if (ok && seq === vetoSeq.current) setLastVetoed({ id, name, scope });
+    });
   };
+  // A dialog choice. Closes first so the dialog unmounts and focus can reach
+  // Undo; removing a veto shows no bar.
+  const pickVeto = (
+    scope: "all" | "year",
+    id: number,
+    name: string,
+    on: boolean,
+  ) => {
+    setVetoingId(null);
+    if (on) addVeto(scope, id, name);
+    else void (scope === "year" ? yearVetoes : vetoes).unveto(id);
+  };
+  const barSet = lastVetoed?.scope === "year" ? yearVetoes : vetoes;
   // A vetoed game is filtered out of the list, so a failed undo keeps the bar
   // to show its error there.
   const undo = async (id: number) => {
     vetoSeq.current++;
-    if (await vetoes.unveto(id)) setLastVetoed(null);
+    if (await barSet.unveto(id)) setLastVetoed(null);
   };
   const dismiss = () => {
     vetoSeq.current++;
     setLastVetoed(null);
   };
   const playerVetoes = useMemo(
-    () => playerCountsByName(data.by_player, vetoes.all),
-    [data.by_player, vetoes.all],
+    () =>
+      playerCountsByName(
+        data.by_player,
+        mergeVetoes(vetoes.all, yearVetoes.all),
+      ),
+    [data.by_player, vetoes.all, yearVetoes.all],
   );
 
   // Filters from a shared link, read once. They wait here until the scores are
@@ -401,6 +428,12 @@ function Scoreboard({ user }: ScoreboardProps) {
         })()
       : null;
 
+  const vetoingKey = `${vetoingId}`;
+  const vetoingName =
+    games.find((g) => g.id === vetoingKey)?.name ??
+    gameNames[vetoingKey] ??
+    vetoingKey;
+
   const handleYear = (year: string | null) => {
     if (year === null) return;
     pending.current = null;
@@ -490,6 +523,7 @@ function Scoreboard({ user }: ScoreboardProps) {
               year={year}
               overrides={overrides}
               vetoes={vetoes}
+              yearVetoes={yearVetoes}
               discordId={user.discordId}
               backHref={sharePath(year, {
                 players,
@@ -538,12 +572,15 @@ function Scoreboard({ user }: ScoreboardProps) {
               >
                 {lastVetoed && (
                   <div className="undo-bar">
-                    <span>Vetoed {lastVetoed.name}.</span>
+                    <span>
+                      Vetoed {lastVetoed.name}
+                      {lastVetoed.scope === "year" && ` for ${year}`}.
+                    </span>
                     <div className="undo-bar__actions">
                       <Button
                         ref={undoRef}
                         size="xs"
-                        disabled={vetoes.isSaving(lastVetoed.id)}
+                        disabled={barSet.isSaving(lastVetoed.id)}
                         onClick={() => void undo(lastVetoed.id)}
                       >
                         Undo
@@ -552,9 +589,9 @@ function Scoreboard({ user }: ScoreboardProps) {
                         Dismiss
                       </Button>
                     </div>
-                    {vetoes.errorFor(lastVetoed.id) && (
+                    {barSet.errorFor(lastVetoed.id) && (
                       <Text c="red" size="sm" role="alert">
-                        {vetoes.errorFor(lastVetoed.id)}
+                        {barSet.errorFor(lastVetoed.id)}
                       </Text>
                     )}
                   </div>
@@ -595,11 +632,34 @@ function Scoreboard({ user }: ScoreboardProps) {
                       gameData={game_data}
                       isPlayed={isPlayed}
                       onToggle={handleToggle}
-                      vetoes={listVetoes}
+                      vetoes={vetoes}
+                      yearVetoes={yearVetoes}
                       discordId={user.discordId}
+                      onOpenVeto={setVetoingId}
                     />
                   </div>
                   {markingDialog}
+                  {vetoingId !== null && year !== null && (
+                    <VetoDialog
+                      game={vetoingName}
+                      year={year}
+                      vetoed={
+                        vetoes.all[user.discordId]?.has(vetoingKey) ?? false
+                      }
+                      yearVetoed={
+                        yearVetoes.all[user.discordId]?.has(vetoingKey) ?? false
+                      }
+                      savingVeto={vetoes.isSaving(vetoingId)}
+                      savingYear={yearVetoes.isSaving(vetoingId)}
+                      onClose={() => setVetoingId(null)}
+                      onVeto={(on) =>
+                        pickVeto("all", vetoingId, vetoingName, on)
+                      }
+                      onYearVeto={(on) =>
+                        pickVeto("year", vetoingId, vetoingName, on)
+                      }
+                    />
+                  )}
                   <YearTrends
                     totals={yearTotals}
                     year={Number(year)}

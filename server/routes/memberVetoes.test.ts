@@ -6,6 +6,7 @@ import {
   fakeLinks,
   fakeMemberOverrides,
   fakeMemberVetoes,
+  fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -38,6 +39,14 @@ function makeApp() {
       { discordId: KEL, bggId: 2 },
     ],
   });
+  const year = fakeMemberYearVetoes({
+    years: [2025, 2026],
+    games: [1, 2],
+    vetoes: [
+      { discordId: PAT, year: 2026, bggId: 1 },
+      { discordId: KEL, year: 2025, bggId: 2 },
+    ],
+  });
   const app = createApp({
     baseUrl: "https://api.lememcon.com",
     webOrigin: WEB,
@@ -49,12 +58,18 @@ function makeApp() {
     played: fakePlayed().played,
     memberOverrides: fakeMemberOverrides().memberOverrides,
     memberVetoes: fake.memberVetoes,
+    memberYearVetoes: year.memberYearVetoes,
     resolveSession: async (headers) => {
       const who = headers.get("cookie")?.replace("as=", "") ?? "";
       return { user: users[who] ?? null };
     },
   });
-  return { app, ...fake };
+  return {
+    app,
+    ...fake,
+    yearRows: year.rows,
+    yearCalls: year.calls,
+  };
 }
 
 type App = ReturnType<typeof makeApp>["app"];
@@ -203,5 +218,120 @@ describe("DELETE /api/me/vetoes/:bggId", () => {
     const { app, calls } = makeApp();
     expect((await send(app, "DELETE", "/me/vetoes/2026/2")).status).toBe(404);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("GET /api/year-vetoes/:year", () => {
+  it.each([
+    ["nobody", 401],
+    ["pending", 403],
+    ["member", 200],
+  ])("answers %s with %i", async (who, status) => {
+    expect(
+      (await send(makeApp().app, "GET", "/year-vetoes/2026", who)).status,
+    ).toBe(status);
+  });
+
+  it("lists every member's vetoes for that year, not shared-cacheable", async () => {
+    const res = await send(makeApp().app, "GET", "/year-vetoes/2026");
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(await res.json()).toEqual({
+      vetoes: [{ discordId: PAT, bggId: 1 }],
+    });
+  });
+
+  it.each([
+    ["/year-vetoes/abc", 400, "invalid_year"],
+    ["/year-vetoes/1999", 404, "unknown_year"],
+  ])("refuses %s", async (path, status, error) => {
+    const res = await send(makeApp().app, "GET", path);
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({ error });
+  });
+});
+
+describe("PUT /api/me/year-vetoes/:year/:bggId", () => {
+  it.each([
+    ["nobody", 401],
+    ["pending", 403],
+    ["member", 204],
+  ])("answers %s with %i", async (who, status) => {
+    expect(
+      (await send(makeApp().app, "PUT", "/me/year-vetoes/2026/1", who)).status,
+    ).toBe(status);
+  });
+
+  it("403s a cross-site request", async () => {
+    const { app, yearCalls } = makeApp();
+    const res = await app.request("/api/me/year-vetoes/2026/1", {
+      method: "PUT",
+      headers: { ...headers("member"), "sec-fetch-site": "cross-site" },
+    });
+    expect(res.status).toBe(403);
+    expect(yearCalls).toEqual([]);
+  });
+
+  it("stores the veto for the session member and year, idempotently", async () => {
+    const { app, yearRows, rows } = makeApp();
+    expect((await send(app, "PUT", "/me/year-vetoes/2026/1")).status).toBe(204);
+    expect((await send(app, "PUT", "/me/year-vetoes/2026/1")).status).toBe(204);
+    expect(yearRows.filter((r) => r.discordId === KEL)).toEqual([
+      { discordId: KEL, year: 2025, bggId: 2 },
+      { discordId: KEL, year: 2026, bggId: 1 },
+    ]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it.each([
+    ["/me/year-vetoes/abc/1", 400, "invalid_year"],
+    ["/me/year-vetoes/2026/abc", 400, "invalid_bgg_id"],
+    ["/me/year-vetoes/2026/0", 400, "invalid_bgg_id"],
+    ["/me/year-vetoes/1999/1", 404, "unknown_year"],
+    ["/me/year-vetoes/2026/9", 404, "unknown_game"],
+  ])("refuses %s", async (path, status, error) => {
+    const res = await send(makeApp().app, "PUT", path);
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({ error });
+  });
+
+  it("does not clash with the permanent veto path", async () => {
+    const { app, calls, yearCalls } = makeApp();
+    await send(app, "PUT", "/me/vetoes/2026");
+    expect(yearCalls).toEqual([]);
+    expect(calls).toEqual([{ discordId: KEL, bggId: 2026 }]);
+  });
+});
+
+describe("DELETE /api/me/year-vetoes/:year/:bggId", () => {
+  it.each([
+    ["nobody", 401],
+    ["pending", 403],
+    ["member", 204],
+  ])("answers %s with %i", async (who, status) => {
+    expect(
+      (await send(makeApp().app, "DELETE", "/me/year-vetoes/2025/2", who))
+        .status,
+    ).toBe(status);
+  });
+
+  it("removes only the session member's veto for that year, idempotently", async () => {
+    const { app, yearRows } = makeApp();
+    expect((await send(app, "DELETE", "/me/year-vetoes/2025/2")).status).toBe(
+      204,
+    );
+    expect((await send(app, "DELETE", "/me/year-vetoes/2025/2")).status).toBe(
+      204,
+    );
+    await send(app, "DELETE", "/me/year-vetoes/2026/1");
+    expect(yearRows).toEqual([{ discordId: PAT, year: 2026, bggId: 1 }]);
+  });
+
+  it.each([
+    ["/me/year-vetoes/abc/2", "invalid_year"],
+    ["/me/year-vetoes/2025/abc", "invalid_bgg_id"],
+  ])("answers 400 for %s", async (path, error) => {
+    const res = await send(makeApp().app, "DELETE", path);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error });
   });
 });

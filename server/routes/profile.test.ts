@@ -6,6 +6,7 @@ import {
   fakeLinks,
   fakeMemberOverrides,
   fakeMemberVetoes,
+  fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -63,6 +64,7 @@ function makeApp(members: string[] = [KEL]) {
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
     memberVetoes: fakeMemberVetoes().memberVetoes,
+    memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
     profiles: fake.profiles,
     played: fakePlayed().played,
     resolveSession: async (headers) => {
