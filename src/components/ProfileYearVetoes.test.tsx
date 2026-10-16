@@ -30,10 +30,11 @@ const hook = vi.hoisted(() => ({
 vi.mock("@/hooks/useMyYearVetoes", () => ({ default: () => hook.state }));
 vi.mock("@/hooks/useYears", () => ({ default: () => hook.years }));
 
-const meta = (name: string) => ({
+const meta = (name: string, cover?: string) => ({
   name,
   players: { min: 1, max: 4 },
   image: null,
+  ...(cover ? { cover } : {}),
 });
 const games: GamesState = {
   games: { "1": meta("Brass"), "2": meta("Wingspan"), "3": meta("Root") },
@@ -239,6 +240,26 @@ describe("ProfileYearVetoes", () => {
     expect(container.querySelector("img")).toHaveAttribute(
       "src",
       "https://example.com/brass.jpg",
+    );
+  });
+
+  it("prefers the mirrored cover from the games data", () => {
+    hook.state.vetoes = [
+      {
+        year: 2026,
+        bggId: 7,
+        name: "Azul",
+        image: "https://example.com/a.jpg",
+        ext: ".jpg",
+      },
+    ];
+    const { container } = renderIt({
+      ...games,
+      games: { "7": meta("Azul", "https://cdn.example.com/7.webp") },
+    });
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/7.webp",
     );
   });
 

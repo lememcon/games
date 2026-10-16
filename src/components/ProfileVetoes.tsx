@@ -59,6 +59,7 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
               name={v.name}
               image={v.image}
               ext={v.ext}
+              cover={games.games[String(v.bggId)]?.cover}
               undo={{
                 label: `Undo veto of ${v.name ?? `Game ${v.bggId}`}`,
                 disabled: myVetoes.saving,

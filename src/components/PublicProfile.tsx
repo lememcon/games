@@ -103,6 +103,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
               name={v.name}
               image={v.image}
               ext={v.ext}
+              cover={games.games[String(v.bggId)]?.cover}
             />
           ))}
         </Stack>
@@ -118,6 +119,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
               name={v.name}
               image={v.image}
               ext={v.ext}
+              cover={games.games[String(v.bggId)]?.cover}
             />
           ))}
         </Stack>
