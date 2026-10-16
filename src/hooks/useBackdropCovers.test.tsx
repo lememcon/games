@@ -3,22 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import useBackdropCovers from "@/hooks/useBackdropCovers";
 
-const images = vi.hoisted(() => ({
-  current: {} as Record<string, string>,
-}));
-vi.mock("@/lib/images", () => ({
-  get default() {
-    return images.current;
-  },
-}));
-
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }));
 
 const tot = (year: number, bgg_id: number) => ({ year, bgg_id, total: 1 });
 const allTotals = [tot(2024, 1), tot(2024, 2), tot(2024, 3), tot(2025, 2)];
 
+const gamesBody = Object.fromEntries(
+  [1, 2, 3, 4].map((id) => [`${id}`, { cover: `https://c/${id}.png` }]),
+);
+
 interface Fake {
+  gamesBody?: unknown;
+  gamesStatus?: number;
   top?: unknown;
   totals?: unknown;
   topStatus?: number;
@@ -27,6 +24,8 @@ interface Fake {
 }
 
 const fakeFetch = ({
+  gamesBody: gamesData = gamesBody,
+  gamesStatus = 200,
   top = { games: [] },
   totals = { totals: allTotals },
   topStatus = 200,
@@ -38,7 +37,9 @@ const fakeFetch = ({
       ? json(top, topStatus)
       : url.includes("/years/totals")
         ? json(totals, totalsStatus)
-        : json({ years }),
+        : url.endsWith("/api/games")
+          ? json(gamesData, gamesStatus)
+          : json({ years }),
   ) as unknown as typeof fetch;
 
 const games = (...ids: number[]) => ({
@@ -52,19 +53,54 @@ const calls = (fetchImpl: typeof fetch) =>
 
 describe("useBackdropCovers", () => {
   beforeEach(() => {
-    images.current = Object.fromEntries(
-      [1, 2, 3, 4].map((id) => [`/g/${id}.png`, `/g/${id}.png`]),
-    );
     localStorage.clear();
   });
   afterEach(() => localStorage.clear());
 
-  it("returns every cover and no preferred while loading off a year page", () => {
+  it("has no covers while games load off a year page", () => {
     const { result } = renderHook(() =>
       useBackdropCovers("/profile", fakeFetch()),
     );
-    expect(result.current.pool).toHaveLength(4);
+    expect(result.current.pool).toEqual([]);
+    expect(result.current.covers).toEqual({});
     expect(result.current.preferred).toEqual([]);
+  });
+
+  it("resolves remote covers by BGG id", async () => {
+    const { result } = renderHook(() =>
+      useBackdropCovers("/profile", fakeFetch()),
+    );
+    await waitFor(() => expect(result.current.pool).toHaveLength(4));
+    expect(result.current.covers).toEqual({
+      "1": "https://c/1.png",
+      "2": "https://c/2.png",
+      "3": "https://c/3.png",
+      "4": "https://c/4.png",
+    });
+  });
+
+  it("skips games without a usable cover", async () => {
+    const fetchImpl = fakeFetch({
+      gamesBody: {
+        "1": { cover: "https://c/1.png" },
+        "2": {},
+        "3": { image: "http://x" },
+      },
+    });
+    const { result } = renderHook(() =>
+      useBackdropCovers("/profile", fetchImpl),
+    );
+    await waitFor(() => expect(result.current.pool).toEqual(["1"]));
+  });
+
+  it("has no covers when games fail to load", async () => {
+    const fetchImpl = fakeFetch({ gamesStatus: 500 });
+    const { result } = renderHook(() =>
+      useBackdropCovers("/profile", fetchImpl),
+    );
+    await waitFor(() => expect(calls(fetchImpl).length).toBe(4));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(result.current.pool).toEqual([]);
   });
 
   it("returns no covers while a year page is loading", () => {
@@ -81,7 +117,9 @@ describe("useBackdropCovers", () => {
         ? json(url.endsWith("2024") ? games(1) : games(2))
         : url.includes("/years/totals")
           ? json({ totals: [tot(2024, 1), tot(2025, 2)] })
-          : json({ years: [2024, 2025] }),
+          : url.endsWith("/api/games")
+            ? json(gamesBody)
+            : json({ years: [2024, 2025] }),
     ) as unknown as typeof fetch;
     const seen: string[][] = [];
     const { result, rerender } = renderHook(
@@ -92,9 +130,9 @@ describe("useBackdropCovers", () => {
       },
       { initialProps: { path: "/2024" } },
     );
-    await waitFor(() => expect(result.current.pool).toEqual(["/g/1.png"]));
+    await waitFor(() => expect(result.current.pool).toEqual(["1"]));
     rerender({ path: "/2025" });
-    await waitFor(() => expect(result.current.pool).toEqual(["/g/2.png"]));
+    await waitFor(() => expect(result.current.pool).toEqual(["2"]));
     expect(seen.some((pool) => pool.length === 4)).toBe(false);
   });
 
@@ -121,8 +159,8 @@ describe("useBackdropCovers", () => {
       useBackdropCovers("/2024/games/2", fetchImpl),
     );
     await waitFor(() => expect(result.current.pool).toHaveLength(3));
-    expect(result.current.pool).toEqual(["/g/1.png", "/g/2.png", "/g/3.png"]);
-    expect(result.current.preferred).toEqual(["/g/2.png", "/g/1.png"]);
+    expect(result.current.pool).toEqual(["1", "2", "3"]);
+    expect(result.current.preferred).toEqual(["2", "1"]);
     expect(calls(fetchImpl)).toContain("/api/me/top-games?year=2024");
     expect(calls(fetchImpl).some((u) => u.includes("/scores"))).toBe(false);
   });
@@ -133,7 +171,7 @@ describe("useBackdropCovers", () => {
     const { result } = renderHook(() =>
       useBackdropCovers("/profile", fetchImpl),
     );
-    await waitFor(() => expect(result.current.preferred).toEqual(["/g/4.png"]));
+    await waitFor(() => expect(result.current.preferred).toEqual(["4"]));
     expect(result.current.pool).toHaveLength(4);
     expect(calls(fetchImpl)).toContain("/api/me/top-games?year=2024");
     expect(calls(fetchImpl).some((u) => u.includes("/scores"))).toBe(false);
@@ -151,14 +189,14 @@ describe("useBackdropCovers", () => {
   it("has no preferred covers for a player with no scores", async () => {
     const fetchImpl = fakeFetch();
     const { result } = renderHook(() => useBackdropCovers("/2025", fetchImpl));
-    await waitFor(() => expect(result.current.pool).toEqual(["/g/2.png"]));
+    await waitFor(() => expect(result.current.pool).toEqual(["2"]));
     expect(result.current.preferred).toEqual([]);
   });
 
   it("has no covers on a year page when top games fail", async () => {
     const fetchImpl = fakeFetch({ topStatus: 500 });
     const { result } = renderHook(() => useBackdropCovers("/2025", fetchImpl));
-    await waitFor(() => expect(calls(fetchImpl).length).toBe(3));
+    await waitFor(() => expect(calls(fetchImpl).length).toBe(4));
     await new Promise((r) => setTimeout(r, 0));
     expect(result.current.pool).toEqual([]);
     expect(result.current.preferred).toEqual([]);
@@ -167,7 +205,7 @@ describe("useBackdropCovers", () => {
   it("has no covers on a year page when totals fail but top games succeed", async () => {
     const fetchImpl = fakeFetch({ top: games(2), totalsStatus: 500 });
     const { result } = renderHook(() => useBackdropCovers("/2025", fetchImpl));
-    await waitFor(() => expect(calls(fetchImpl).length).toBe(3));
+    await waitFor(() => expect(calls(fetchImpl).length).toBe(4));
     await new Promise((r) => setTimeout(r, 0));
     expect(result.current.pool).toEqual([]);
     expect(result.current.preferred).toEqual([]);
@@ -183,7 +221,7 @@ describe("useBackdropCovers", () => {
       const { result } = renderHook(() =>
         useBackdropCovers("/profile", fetchImpl),
       );
-      await waitFor(() => expect(calls(fetchImpl).length).toBe(3));
+      await waitFor(() => expect(calls(fetchImpl).length).toBe(4));
       await new Promise((r) => setTimeout(r, 0));
       expect(result.current.pool).toHaveLength(4);
       expect(result.current.preferred).toEqual([]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCoverPool, coverId, pickFloaters } from "@/lib/floaters";
+import { buildCoverPool, pickFloaters } from "@/lib/floaters";
 
 const seeded = (seed: number) => () => {
   seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -92,21 +92,13 @@ describe("pickFloaters with preferred ids", () => {
   });
 });
 
-describe("coverId", () => {
-  it("reads the numeric id from a cover path", () => {
-    expect(coverId("/src/assets/games/123.jpg")).toBe("123");
-    expect(coverId("/a/b/9.min.png")).toBeNull();
-    expect(coverId("/src/assets/games/cover.jpg")).toBeNull();
-  });
-});
-
 describe("buildCoverPool", () => {
-  const keys = ["/g/1.jpg", "/g/2.png", "/g/x.png"];
-  it("keeps every cover without an allow list", () => {
-    expect(buildCoverPool(keys, null)).toEqual(keys);
+  const all = ["1", "2", "x"];
+  it("keeps every id without an allow list", () => {
+    expect(buildCoverPool(all, null)).toEqual(all);
   });
   it("keeps only allowed ids", () => {
-    expect(buildCoverPool(keys, new Set(["2"]))).toEqual(["/g/2.png"]);
-    expect(buildCoverPool(keys, new Set())).toEqual([]);
+    expect(buildCoverPool(all, new Set(["2"]))).toEqual(["2"]);
+    expect(buildCoverPool(all, new Set())).toEqual([]);
   });
 });

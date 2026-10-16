@@ -6,8 +6,8 @@ import useBackdropCovers from "@/hooks/useBackdropCovers";
 /** Drifting game covers behind every signed-in page. */
 const PageBackdrop = () => {
   const [location] = useLocation();
-  const { pool, preferred } = useBackdropCovers(location);
-  return <FloatingCovers pool={pool} preferred={preferred} />;
+  const { pool, preferred, covers } = useBackdropCovers(location);
+  return <FloatingCovers covers={covers} pool={pool} preferred={preferred} />;
 };
 
 export default PageBackdrop;

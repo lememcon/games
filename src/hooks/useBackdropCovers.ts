@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
+import useCovers from "@/hooks/useCovers";
 import useTopGames from "@/hooks/useTopGames";
 import useYearTotals from "@/hooks/useYearTotals";
 import useYears from "@/hooks/useYears";
-import { buildCoverPool, coverId } from "@/lib/floaters";
-import images from "@/lib/images";
+import { buildCoverPool } from "@/lib/floaters";
 import { defaultYear, routeYear } from "@/lib/routes";
 
 // The year the scoreboard last showed. Read fresh (not via useLocalState, which
@@ -20,10 +20,12 @@ const readStoredYear = (): string => {
 };
 
 export interface BackdropCovers {
-  /** Cover keys (image paths) the backdrop may draw from. */
+  /** BGG ids the backdrop may draw from. */
   pool: string[];
-  /** Cover keys to show first: the player's top scores that year. */
+  /** BGG ids to show first: the player's top scores that year. */
   preferred: string[];
+  /** Cover URL by BGG id. */
+  covers: Record<string, string>;
 }
 
 /**
@@ -42,6 +44,7 @@ const useBackdropCovers = (
   const year = defaultYear(years, readStoredYear(), pathYear);
   const top = useTopGames(year, fetchImpl);
   const totals = useYearTotals(fetchImpl);
+  const covers = useCovers(fetchImpl);
 
   const ready = !top.loading && !top.error && !totals.loading && !totals.error;
   // Until a year page's scores arrive, which games it has is unknown.
@@ -62,20 +65,16 @@ const useBackdropCovers = (
   const preferredKey = ready ? top.ids.join(",") : "";
 
   return useMemo(() => {
-    if (unknown) return { pool: [], preferred: [] };
+    if (unknown) return { pool: [], preferred: [], covers };
     const allowed =
       allowedKey === null
         ? null
         : new Set(allowedKey.split(",").filter(Boolean));
-    const keys = Object.keys(images);
-    const pool = buildCoverPool(keys, allowed);
-    const byId = new Map(pool.map((key) => [coverId(key), key]));
-    const preferred = preferredKey
-      .split(",")
-      .filter(Boolean)
-      .flatMap((id) => byId.get(id) ?? []);
-    return { pool, preferred };
-  }, [unknown, allowedKey, preferredKey]);
+    const pool = buildCoverPool(Object.keys(covers), allowed);
+    const inPool = new Set(pool);
+    const preferred = preferredKey.split(",").filter((id) => inPool.has(id));
+    return { pool, preferred, covers };
+  }, [unknown, allowedKey, preferredKey, covers]);
 };
 
 export default useBackdropCovers;

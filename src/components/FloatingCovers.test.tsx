@@ -1,23 +1,17 @@
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import FloatingCovers from "@/components/FloatingCovers";
 
-const images = vi.hoisted(() => ({
-  current: {} as Record<string, string>,
-}));
-vi.mock("@/lib/images", () => ({
-  get default() {
-    return images.current;
-  },
-}));
+const makeCovers = (n: number): Record<string, string> =>
+  Object.fromEntries(
+    Array.from({ length: n }, (_, i) => [`${i}`, `/g${i}.png`]),
+  );
 
 describe("FloatingCovers", () => {
   it("renders decorative lazy images after mount", async () => {
-    images.current = Object.fromEntries(
-      Array.from({ length: 15 }, (_, i) => [`/g${i}.png`, `/g${i}.png`]),
-    );
-    const { container } = render(<FloatingCovers />);
+    const covers = makeCovers(15);
+    const { container } = render(<FloatingCovers covers={covers} />);
     expect(container.querySelector(".floaters")).toBeNull();
     await waitFor(() =>
       expect(container.querySelector(".floaters")).not.toBeNull(),
@@ -34,8 +28,8 @@ describe("FloatingCovers", () => {
   });
 
   it("renders an empty layer when there are no images", async () => {
-    images.current = {};
-    const { container } = render(<FloatingCovers />);
+    const covers = {};
+    const { container } = render(<FloatingCovers covers={covers} />);
     await waitFor(() =>
       expect(container.querySelector(".floaters")).toBeEmptyDOMElement(),
     );
@@ -45,41 +39,45 @@ describe("FloatingCovers", () => {
     [...container.querySelectorAll("img")].map((i) => i.getAttribute("src"));
 
   it("draws only from the pool and puts preferred covers in", async () => {
-    images.current = Object.fromEntries(
-      Array.from({ length: 30 }, (_, i) => [`/g${i}.png`, `/g${i}.png`]),
-    );
-    const pool = Array.from({ length: 12 }, (_, i) => `/g${i}.png`);
-    const preferred = ["/g3.png", "/g7.png"];
+    const covers = makeCovers(30);
+    const pool = Array.from({ length: 12 }, (_, i) => `${i}`);
+    const preferred = ["3", "7"];
     const { container } = render(
-      <FloatingCovers pool={pool} preferred={preferred} />,
+      <FloatingCovers covers={covers} pool={pool} preferred={preferred} />,
     );
     await waitFor(() =>
       expect(container.querySelectorAll("img")).toHaveLength(10),
     );
     const shown = srcs(container) as string[];
-    shown.forEach((s) => expect(pool).toContain(s));
-    expect(shown).toEqual(expect.arrayContaining(preferred));
+    shown.forEach((s) => expect(pool.map((id) => covers[id])).toContain(s));
+    expect(shown).toEqual(
+      expect.arrayContaining(preferred.map((id) => covers[id])),
+    );
   });
 
   it("re-picks when the pool contents change but not on a new identity", async () => {
-    images.current = Object.fromEntries(
-      Array.from({ length: 30 }, (_, i) => [`/g${i}.png`, `/g${i}.png`]),
+    const covers = makeCovers(30);
+    const a = Array.from({ length: 10 }, (_, i) => `${i}`);
+    const b = Array.from({ length: 10 }, (_, i) => `${i + 20}`);
+    const { container, rerender } = render(
+      <FloatingCovers covers={covers} pool={a} />,
     );
-    const a = Array.from({ length: 10 }, (_, i) => `/g${i}.png`);
-    const b = Array.from({ length: 10 }, (_, i) => `/g${i + 20}.png`);
-    const { container, rerender } = render(<FloatingCovers pool={a} />);
     await waitFor(() =>
       expect(container.querySelectorAll("img")).toHaveLength(10),
     );
     const before = srcs(container);
-    rerender(<FloatingCovers pool={[...a]} />);
+    rerender(<FloatingCovers covers={covers} pool={[...a]} />);
     expect(srcs(container)).toEqual(before);
-    rerender(<FloatingCovers pool={b} />);
-    srcs(container).forEach((s) => expect(b).toContain(s));
+    rerender(<FloatingCovers covers={covers} pool={b} />);
+    srcs(container).forEach((s) =>
+      expect(b.map((id) => covers[id])).toContain(s),
+    );
   });
 
   it("shows nothing for an empty pool", async () => {
-    const { container } = render(<FloatingCovers pool={[]} />);
+    const { container } = render(
+      <FloatingCovers covers={makeCovers(3)} pool={[]} />,
+    );
     await waitFor(() =>
       expect(container.querySelector(".floaters")).toBeEmptyDOMElement(),
     );
