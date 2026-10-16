@@ -62,9 +62,19 @@ const user: ApprovedUser = {
   role: "member",
 };
 
-const renderPage = (over: Partial<ApprovedUser> = {}, onSaved = vi.fn()) =>
+const renderPage = (
+  over: Partial<ApprovedUser> = {},
+  onSaved = vi.fn(),
+  showBackdrop = true,
+  onShowBackdropChange = vi.fn(),
+) =>
   renderWithMantine(
-    <ProfilePage user={{ ...user, ...over }} onSaved={onSaved} />,
+    <ProfilePage
+      user={{ ...user, ...over }}
+      onSaved={onSaved}
+      showBackdrop={showBackdrop}
+      onShowBackdropChange={onShowBackdropChange}
+    />,
   );
 
 describe("ProfilePage", () => {
@@ -178,6 +188,30 @@ describe("ProfilePage", () => {
   it("passes null to the color picker when no color is set", () => {
     renderPage();
     expect(screen.getByText("color picker null")).toBeInTheDocument();
+  });
+
+  it("labels the backdrop switch and reflects its state", () => {
+    renderPage();
+    expect(
+      screen.getByRole("switch", { name: /^Show floating game covers/ }),
+    ).toBeChecked();
+    expect(screen.getByText("Saved on this device only")).toBeInTheDocument();
+  });
+
+  it("shows the backdrop switch off when hidden", () => {
+    renderPage({}, vi.fn(), false);
+    expect(
+      screen.getByRole("switch", { name: /^Show floating game covers/ }),
+    ).not.toBeChecked();
+  });
+
+  it("reports the new value when the backdrop switch is clicked", async () => {
+    const onChange = vi.fn();
+    renderPage({}, vi.fn(), true, onChange);
+    await userEvent.click(
+      screen.getByRole("switch", { name: /^Show floating game covers/ }),
+    );
+    expect(onChange).toHaveBeenCalledWith(false);
   });
 
   it("composes the overrides and vetoes sections", () => {

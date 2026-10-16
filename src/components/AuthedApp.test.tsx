@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuthedApp from "@/components/AuthedApp";
 import { renderWithMantine } from "@/test/utils";
@@ -15,7 +16,17 @@ vi.mock("@/components/AdminPage", () => ({
   default: () => <div>admin page</div>,
 }));
 vi.mock("@/components/ProfilePage", () => ({
-  default: () => <div>profile page</div>,
+  default: ({
+    showBackdrop,
+    onShowBackdropChange,
+  }: {
+    showBackdrop: boolean;
+    onShowBackdropChange: (show: boolean) => void;
+  }) => (
+    <button onClick={() => onShowBackdropChange(!showBackdrop)}>
+      profile page
+    </button>
+  ),
 }));
 vi.mock("@/components/PublicProfile", () => ({
   default: ({ discordId }: { discordId: string }) => (
@@ -49,7 +60,29 @@ const at = (path: string, user: ApprovedUser) => {
 };
 
 describe("AuthedApp", () => {
+  beforeEach(() => localStorage.clear());
   afterEach(() => window.history.pushState({}, "", "/"));
+
+  it("renders the backdrop by default", () => {
+    at("/", member);
+    expect(screen.getByText("backdrop")).toBeInTheDocument();
+  });
+
+  it("hides the backdrop when the setting is off", () => {
+    localStorage.setItem("show_backdrop", "false");
+    at("/", member);
+    expect(screen.queryByText("backdrop")).toBeNull();
+  });
+
+  it("hides the backdrop from the profile switch and remembers it", async () => {
+    const { unmount } = at("/profile", member);
+    await userEvent.click(screen.getByRole("button", { name: "profile page" }));
+    expect(screen.queryByText("backdrop")).toBeNull();
+    expect(localStorage.getItem("show_backdrop")).toBe("false");
+    unmount();
+    at("/profile", member);
+    expect(screen.queryByText("backdrop")).toBeNull();
+  });
 
   it.each(["/", "/profile", "/admin"])("renders the backdrop on %s", (path) => {
     at(path, admin);

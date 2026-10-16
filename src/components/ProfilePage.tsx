@@ -7,6 +7,7 @@ import {
   Button,
   Group,
   Stack,
+  Switch,
   Text,
   TextInput,
   Title,
@@ -28,11 +29,19 @@ interface ProfilePageProps {
   user: ApprovedUser;
   // Refreshes the account after a save so the header shows the new name.
   onSaved: () => void;
+  // Whether the floating covers show; saved on this device only.
+  showBackdrop: boolean;
+  onShowBackdropChange: (show: boolean) => void;
 }
 
 const META = pageMeta({ title: "Your profile" });
 
-const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
+const ProfilePage = ({
+  user,
+  onSaved,
+  showBackdrop,
+  onShowBackdropChange,
+}: ProfilePageProps) => {
   const [value, setValue] = useState(user.displayName ?? "");
   usePageMeta(META);
   const [saved, setSaved] = useState(false);
@@ -91,6 +100,12 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
         </Stack>
       </form>
       <ColorPicker color={user.color ?? null} onSaved={onSaved} />
+      <Switch
+        label="Show floating game covers"
+        description="Saved on this device only"
+        checked={showBackdrop}
+        onChange={(e) => onShowBackdropChange(e.currentTarget.checked)}
+      />
       {saved && <Alert color="green">Saved.</Alert>}
       {error && (
         <Alert color="red" role="alert">

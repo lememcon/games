@@ -12,6 +12,7 @@ import PublicProfile from "@/components/PublicProfile";
 import Scoreboard from "@/components/Scoreboard";
 import YearRecap from "@/components/YearRecap";
 import AdminImport from "@/components/admin/AdminImport";
+import useLocalState from "@/hooks/useLocalState";
 import type { ApprovedUser } from "@/types";
 
 interface AuthedAppProps {
@@ -38,10 +39,11 @@ const AdminShell = ({
 
 function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
   const isAdmin = user.role === "admin";
+  const [showBackdrop, setShowBackdrop] = useLocalState("show_backdrop", true);
 
   return (
     <>
-      <PageBackdrop />
+      {showBackdrop && <PageBackdrop />}
       <Switch>
         <Route path="/admin">
           {isAdmin ? (
@@ -63,7 +65,12 @@ function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
         </Route>
         <Route path="/profile">
           <AdminShell user={user}>
-            <ProfilePage user={user} onSaved={onUserChanged} />
+            <ProfilePage
+              user={user}
+              onSaved={onUserChanged}
+              showBackdrop={showBackdrop}
+              onShowBackdropChange={setShowBackdrop}
+            />
           </AdminShell>
         </Route>
         <Route path="/players/:discordId/recap/:year">
