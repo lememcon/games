@@ -114,6 +114,13 @@ test("podium card feet stay aligned when played-by wraps", async ({ page }) => {
   });
   await page.goto("/");
   await expect(page.locator(".tray-card")).toHaveCount(3);
+  // Played-by lists arrive from the async /api/played mock; wait for the long
+  // one to render so the feet are measured after it has wrapped.
+  await expect(
+    page
+      .locator(".tray-played-by__list")
+      .filter({ hasText: "Featherstonehaugh 6" }),
+  ).toBeVisible();
 
   const bottoms = await page
     .locator(".tray-card__foot")
