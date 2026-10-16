@@ -1,7 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useYears from "@/hooks/useYears";
+import { invalidateGlobalData } from "@/lib/globalDataCache";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -56,5 +57,50 @@ describe("useYears", () => {
     resolve(res({ years: [2025] }));
     await Promise.resolve();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  describe("with the global fetch", () => {
+    afterEach(() => vi.unstubAllGlobals());
+    const stub = (...responses: Response[]) => {
+      const f = vi.fn();
+      responses.forEach((r) => f.mockResolvedValueOnce(r));
+      vi.stubGlobal("fetch", f);
+      return f;
+    };
+
+    it("shares one request across hooks and remounts", async () => {
+      const f = stub(res({ years: [2025] }));
+      const a = renderHook(() => useYears());
+      const b = renderHook(() => useYears());
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      await waitFor(() => expect(b.result.current.loading).toBe(false));
+      expect(f).toHaveBeenCalledTimes(1);
+      a.unmount();
+      const c = renderHook(() => useYears());
+      await waitFor(() => expect(c.result.current.loading).toBe(false));
+      expect(c.result.current.years).toEqual(["2025"]);
+      expect(f).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches after a failure", async () => {
+      const f = stub(res({}, 500), res({ years: [2025] }));
+      const a = renderHook(() => useYears());
+      await waitFor(() => expect(a.result.current.error).toBe(true));
+      a.unmount();
+      const b = renderHook(() => useYears());
+      await waitFor(() => expect(b.result.current.years).toEqual(["2025"]));
+      expect(f).toHaveBeenCalledTimes(2);
+    });
+
+    it("refetches after an invalidation", async () => {
+      const f = stub(res({ years: [2025] }), res({ years: [2025, 2026] }));
+      const a = renderHook(() => useYears());
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      a.unmount();
+      invalidateGlobalData("years");
+      const b = renderHook(() => useYears());
+      await waitFor(() => expect(b.result.current.years).toHaveLength(2));
+      expect(f).toHaveBeenCalledTimes(2);
+    });
   });
 });

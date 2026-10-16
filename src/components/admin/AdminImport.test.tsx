@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminImport from "@/components/admin/AdminImport";
+import * as globalCache from "@/lib/globalDataCache";
 import * as cache from "@/lib/scoresCache";
 import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
@@ -166,8 +167,32 @@ describe("AdminImport", () => {
     expect(spy).toHaveBeenCalledWith(2027);
   });
 
+  it("invalidates the global years and games data on success", async () => {
+    const spy = vi.spyOn(globalCache, "invalidateGlobalData");
+    fetchMock.mockResolvedValue(
+      res(
+        {
+          year: 2027,
+          scores: 2,
+          games: { new: 0, updated: 0 },
+          players: { new: 2, total: 2 },
+          warnings: [],
+        },
+        201,
+      ),
+    );
+    renderWithMantine(<AdminImport />);
+    await upload({ year: 2027, player_game_scores: rows });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import 2027" }),
+    );
+    await screen.findByRole("link", { name: "View 2027" });
+    expect(spy).toHaveBeenCalledWith();
+  });
+
   it("invalidates every year after a games-only import", async () => {
     const spy = vi.spyOn(cache, "invalidateScores");
+    const globalSpy = vi.spyOn(globalCache, "invalidateGlobalData");
     fetchMock.mockResolvedValue(
       res(
         {
@@ -187,10 +212,12 @@ describe("AdminImport", () => {
     );
     await screen.findByRole("alert");
     expect(spy).toHaveBeenCalledWith(undefined);
+    expect(globalSpy).toHaveBeenCalledWith();
   });
 
   it("does not invalidate on a 422 or other failure", async () => {
     const spy = vi.spyOn(cache, "invalidateScores");
+    const globalSpy = vi.spyOn(globalCache, "invalidateGlobalData");
     fetchMock.mockResolvedValueOnce(
       res({ errors: [{ path: "a", message: "bad" }] }, 422),
     );
@@ -204,6 +231,7 @@ describe("AdminImport", () => {
     await userEvent.click(screen.getByRole("button", { name: "Import 2027" }));
     await screen.findByText("Something went wrong. Try again.");
     expect(spy).not.toHaveBeenCalled();
+    expect(globalSpy).not.toHaveBeenCalled();
   });
 
   it("links to the imported year and clears the players when viewing it", async () => {

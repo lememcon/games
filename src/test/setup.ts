@@ -1,5 +1,6 @@
 import { beforeEach, vi } from "vitest";
 
+import { resetGlobalDataCache } from "@/lib/globalDataCache";
 import { resetScoresCache } from "@/lib/scoresCache";
 
 import "@testing-library/jest-dom/vitest";
@@ -33,4 +34,7 @@ window.ResizeObserver = class {
 window.Element.prototype.scrollIntoView = vi.fn();
 
 // Scores are cached per year at module level; start every test clean.
-beforeEach(() => resetScoresCache());
+beforeEach(() => {
+  resetScoresCache();
+  resetGlobalDataCache();
+});

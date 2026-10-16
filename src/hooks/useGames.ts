@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { loadGlobal } from "@/lib/globalDataCache";
 import type { GamesData } from "@/types";
 
 export interface GamesState {
@@ -24,11 +25,12 @@ const useGames = (fetchImpl: typeof fetch = fetch): GamesState => {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch<unknown>("/games", {}, fetchImpl)
-      .then((body) => {
-        if (!isGamesData(body)) throw new Error("unexpected /api/games body");
-        return { games: body, loading: false, error: false };
-      })
+    loadGlobal("games", fetchImpl, async (f) => {
+      const body = await apiFetch<unknown>("/games", {}, f);
+      if (!isGamesData(body)) throw new Error("unexpected /api/games body");
+      return body;
+    })
+      .then((games) => ({ games, loading: false, error: false }))
       .catch(() => ({ games: {}, loading: false, error: true }))
       .then((next) => {
         if (!cancelled) setState(next);
