@@ -153,6 +153,34 @@ test("own profile lists year vetoes newest first and undoes one", async ({
   await expectNoOverflow(page);
 });
 
+test("own profile adds a year veto from the form", async ({ page }) => {
+  await setup(page, longName, true);
+  await page.goto("/profile");
+  const game = page.getByRole("combobox", {
+    name: "Game for a one-year veto",
+    exact: true,
+  });
+  await expect(
+    page.getByRole("combobox", { name: "Year for the veto", exact: true }),
+  ).toHaveValue("2024");
+  await game.click();
+  await page.getByRole("option", { name: longTitle, exact: true }).click();
+  await expectNoOverflow(page);
+  // The other Veto buttons stay disabled: no game is picked in their forms.
+  await page
+    .getByRole("button", { name: "Veto", exact: true })
+    .and(page.locator(":enabled"))
+    .click();
+  // The seeded 2024 veto of game 102 already reports this long title.
+  await expect(
+    page.getByRole("button", {
+      name: `Undo 2024 veto of ${longTitle}`,
+      exact: true,
+    }),
+  ).toHaveCount(2);
+  await expectNoOverflow(page);
+});
+
 test("public profile does not overflow horizontally", async ({ page }) => {
   await setup(page);
   await page.goto(`/players/${aliceId}`);

@@ -99,7 +99,7 @@ const ProfilePage = ({ user, onSaved }: ProfilePageProps) => {
       )}
       <ProfileOverrides discordId={user.discordId} games={games} />
       <ProfileVetoes games={games} />
-      <ProfileYearVetoes />
+      <ProfileYearVetoes games={games} />
       <ProfilePlayed />
     </Stack>
   );

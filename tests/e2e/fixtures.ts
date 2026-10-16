@@ -208,7 +208,13 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
         (v) => v.year === year && v.bggId === bggId,
       );
       if (route.request().method() === "PUT") {
-        if (at < 0) yearVetoed.push({ year, bggId });
+        if (at < 0) {
+          yearVetoed.push({
+            year,
+            bggId,
+            name: gamesData[String(bggId)]?.name,
+          });
+        }
       } else if (at >= 0) yearVetoed.splice(at, 1);
       return route.fulfill({ status: 204 });
     },
