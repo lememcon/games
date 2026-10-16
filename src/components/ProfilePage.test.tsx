@@ -38,7 +38,9 @@ vi.mock("@/components/ProfileYearVetoes", () => ({
   ),
 }));
 vi.mock("@/components/ProfilePlayed", () => ({
-  default: () => <div>played section</div>,
+  default: ({ games }: { games: unknown }) => (
+    <div>played section {games === hook.games ? "shared" : "other"}</div>
+  ),
 }));
 vi.mock("@/hooks/useGames", () => ({
   default: () => {
@@ -90,6 +92,7 @@ describe("ProfilePage", () => {
     expect(hook.useGames).toHaveBeenCalledTimes(1);
     expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
     expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
+    expect(screen.getByText("played section shared")).toBeInTheDocument();
   });
 
   it("shows the Discord name, a blank input and the public profile link", () => {
@@ -219,7 +222,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("overrides for 9 shared")).toBeInTheDocument();
     expect(screen.getByText("vetoes section shared")).toBeInTheDocument();
     expect(screen.getByText("year vetoes section shared")).toBeInTheDocument();
-    expect(screen.getByText("played section")).toBeInTheDocument();
+    expect(screen.getByText("played section shared")).toBeInTheDocument();
   });
 });
 

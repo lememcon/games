@@ -11,7 +11,9 @@ import {
   Title,
 } from "@mantine/core";
 
+import GameCover from "@/components/GameCover";
 import useData from "@/hooks/useData";
+import type { GamesState } from "@/hooks/useGames";
 import usePlayed from "@/hooks/usePlayed";
 import useYears from "@/hooks/useYears";
 import {
@@ -22,7 +24,7 @@ import {
 } from "@/lib/played";
 
 // The member's own played games for a year, with remove and add.
-const ProfilePlayed = () => {
+const ProfilePlayed = ({ games }: { games: GamesState }) => {
   const { years, loading: yearsLoading, error: yearsError } = useYears();
   // Empty until the member picks one, so a refetched years list cannot reset it.
   const [chosen, setChosen] = useState("");
@@ -82,6 +84,11 @@ const ProfilePlayed = () => {
             <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
               {playedGames(played, names).map((g) => (
                 <Group key={g.id} justify="space-between" wrap="nowrap">
+                  <GameCover
+                    bggId={g.id}
+                    image={games.games[g.id]?.image}
+                    ext={games.games[g.id]?.ext}
+                  />
                   <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
                     {g.name}
                   </Text>

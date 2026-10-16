@@ -46,6 +46,12 @@ vi.mock("@/hooks/usePlayed", () => ({
 const row = (bgg_id: number, game: string) =>
   ({ bgg_id, game, player: "p", score: 1, rank: 1 }) as PlayerGameScore;
 
+const gm = {
+  games: { "1": { image: "https://example.com/1.jpg" }, "2": {} },
+  loading: false,
+  error: false,
+};
+
 const thisYear = String(new Date().getFullYear());
 
 describe("ProfilePlayed", () => {
@@ -65,7 +71,7 @@ describe("ProfilePlayed", () => {
   });
 
   it("defaults to the current year and lists played games", () => {
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByRole("combobox", { name: "Year" })).toHaveValue(
       thisYear,
     );
@@ -74,14 +80,40 @@ describe("ProfilePlayed", () => {
     expect(screen.getByText("Azul")).toBeInTheDocument();
   });
 
+  it("shows a cover for a game with an image and a blank box otherwise", () => {
+    state.played = { "1": 1, "2": 1 };
+    const { container } = renderWithMantine(<ProfilePlayed games={gm} />);
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute("src", "https://example.com/1.jpg");
+    expect(container.querySelectorAll(".tray-cover__blank")).toHaveLength(1);
+  });
+
+  it("shows blank squares only while games load or fail", () => {
+    state.played = { "1": 1, "2": 1 };
+    const { container, unmount } = renderWithMantine(
+      <ProfilePlayed games={{ games: {}, loading: true, error: false }} />,
+    );
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    expect(container.querySelectorAll(".tray-cover__blank")).toHaveLength(2);
+    unmount();
+    const failed = renderWithMantine(
+      <ProfilePlayed games={{ games: {}, loading: false, error: true }} />,
+    );
+    expect(failed.container.querySelectorAll("img")).toHaveLength(0);
+    expect(
+      failed.container.querySelectorAll(".tray-cover__blank"),
+    ).toHaveLength(2);
+  });
+
   it("removes a played game", async () => {
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     await userEvent.click(screen.getByRole("button", { name: "Remove Azul" }));
     expect(state.toggle).toHaveBeenCalledWith("2");
   });
 
   it("adds an unplayed game and offers no played ones", async () => {
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
     await userEvent.click(
       screen.getByRole("combobox", { name: "Game to add" }),
@@ -98,7 +130,7 @@ describe("ProfilePlayed", () => {
   });
 
   it("passes a chosen year to the hooks and keeps it on a refetch", async () => {
-    const { rerender } = renderWithMantine(<ProfilePlayed />);
+    const { rerender } = renderWithMantine(<ProfilePlayed games={gm} />);
     await userEvent.click(screen.getByRole("combobox", { name: "Year" }));
     await userEvent.click(
       screen.getByRole("option", { name: "2020", hidden: true }),
@@ -108,7 +140,7 @@ describe("ProfilePlayed", () => {
     state.years = { ...state.years, years: ["2019", "2020", thisYear] };
     rerender(
       <MantineProvider>
-        <ProfilePlayed />
+        <ProfilePlayed games={gm} />
       </MantineProvider>,
     );
     expect(screen.getByRole("combobox", { name: "Year" })).toHaveValue("2020");
@@ -116,7 +148,7 @@ describe("ProfilePlayed", () => {
   });
 
   it("clears the game to add when the year changes", async () => {
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     await userEvent.click(
       screen.getByRole("combobox", { name: "Game to add" }),
     );
@@ -137,11 +169,11 @@ describe("ProfilePlayed", () => {
 
   it("shows loading years and no years", () => {
     state.years = { years: [], loading: true, error: false };
-    const { unmount } = renderWithMantine(<ProfilePlayed />);
+    const { unmount } = renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.queryByText("No years yet.")).toBeNull();
     unmount();
     state.years = { years: [], loading: false, error: false };
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByText("No years yet.")).toBeVisible();
     expect(state.playedYear).toHaveBeenLastCalledWith("");
     expect(state.dataYear).toHaveBeenLastCalledWith(null);
@@ -149,14 +181,14 @@ describe("ProfilePlayed", () => {
 
   it("shows an error when years fail to load", () => {
     state.years = { years: [], loading: false, error: true };
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByText("Couldn't load years.")).toBeVisible();
     expect(screen.queryByText("No years yet.")).toBeNull();
   });
 
   it("shows an empty state", () => {
     state.played = {};
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(
       screen.getByText("You haven't marked any games this year."),
     ).toBeVisible();
@@ -164,7 +196,7 @@ describe("ProfilePlayed", () => {
 
   it("disables Add while games load", () => {
     state.data = { loading: true, error: false, scores: [] };
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByLabelText("Loading games")).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Game to add" }),
@@ -174,7 +206,7 @@ describe("ProfilePlayed", () => {
 
   it("shows an error when games fail to load", () => {
     state.data = { loading: false, error: true, scores: [] };
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByText("Couldn't load games.")).toBeVisible();
     expect(
       screen.getByRole("combobox", { name: "Game to add" }),
@@ -183,7 +215,7 @@ describe("ProfilePlayed", () => {
 
   it("shows a played games error", () => {
     state.error = "Couldn't load your played games.";
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Couldn't load your played games.",
     );
@@ -191,7 +223,7 @@ describe("ProfilePlayed", () => {
 
   it("waits for played games", () => {
     state.played = null;
-    renderWithMantine(<ProfilePlayed />);
+    renderWithMantine(<ProfilePlayed games={gm} />);
     expect(screen.getByText("Loading played games...")).toBeVisible();
     expect(
       screen.getByRole("combobox", { name: "Game to add" }),
@@ -205,22 +237,22 @@ describe("ProfilePlayed", () => {
 
     it("is hidden with no games or while played games load", () => {
       state.played = {};
-      const { unmount } = renderWithMantine(<ProfilePlayed />);
+      const { unmount } = renderWithMantine(<ProfilePlayed games={gm} />);
       expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
       unmount();
       state.played = null;
-      renderWithMantine(<ProfilePlayed />);
+      renderWithMantine(<ProfilePlayed games={gm} />);
       expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
     });
 
     it("is disabled while games load", () => {
       state.data = { loading: true, error: false, scores: [] };
-      renderWithMantine(<ProfilePlayed />);
+      renderWithMantine(<ProfilePlayed games={gm} />);
       expect(screen.getByRole("button", { name: "Clear all" })).toBeDisabled();
     });
 
     it("does not clear when cancelled", async () => {
-      renderWithMantine(<ProfilePlayed />);
+      renderWithMantine(<ProfilePlayed games={gm} />);
       await open();
       const dialog = await screen.findByRole("dialog");
       expect(
@@ -237,7 +269,7 @@ describe("ProfilePlayed", () => {
 
     it("pluralizes the title and keeps it while closing", async () => {
       state.played = { "1": 1, "2": 1 };
-      const { rerender } = renderWithMantine(<ProfilePlayed />);
+      const { rerender } = renderWithMantine(<ProfilePlayed games={gm} />);
       await open();
       const dialog = await screen.findByRole("dialog");
       expect(
@@ -246,7 +278,7 @@ describe("ProfilePlayed", () => {
       state.played = {};
       rerender(
         <MantineProvider>
-          <ProfilePlayed />
+          <ProfilePlayed games={gm} />
         </MantineProvider>,
       );
       expect(
@@ -255,7 +287,7 @@ describe("ProfilePlayed", () => {
     });
 
     it("clears once on confirm and closes", async () => {
-      renderWithMantine(<ProfilePlayed />);
+      renderWithMantine(<ProfilePlayed games={gm} />);
       await open();
       const dialog = await screen.findByRole("dialog");
       await userEvent.click(
@@ -268,7 +300,7 @@ describe("ProfilePlayed", () => {
     });
 
     it("closes when the year changes", async () => {
-      renderWithMantine(<ProfilePlayed />);
+      renderWithMantine(<ProfilePlayed games={gm} />);
       await open();
       await screen.findByText("This can't be undone.");
       await userEvent.click(

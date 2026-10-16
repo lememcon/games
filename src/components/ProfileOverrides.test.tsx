@@ -62,6 +62,18 @@ describe("ProfileOverrides", () => {
     ).toHaveValue("4");
   });
 
+  it("shows a cover for a game with an image and a blank box otherwise", () => {
+    Object.assign(ov.state, {
+      all: { d1: { "1": { min: 3, max: 4 }, "3": { min: 1, max: 2 } } },
+    });
+    gm.state.games["1"].image = "https://example.com/1.jpg";
+    const { container } = render();
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute("src", "https://example.com/1.jpg");
+    expect(container.querySelectorAll(".tray-cover__blank")).toHaveLength(1);
+  });
+
   it("saves an edited row", async () => {
     render();
     const maxInput = screen.getByRole("textbox", {

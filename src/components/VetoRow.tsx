@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { Link } from "wouter";
 
 import { Button, Group, Text } from "@mantine/core";
 
-import { resolveImage } from "@/lib/games";
-import bundledImages from "@/lib/images";
+import GameCover from "@/components/GameCover";
 import { gamePath } from "@/lib/routes";
 
 interface VetoRowProps {
@@ -19,24 +17,9 @@ interface VetoRowProps {
 }
 
 const VetoRow = ({ bggId, name, image, ext, year, undo }: VetoRowProps) => {
-  const [failed, setFailed] = useState(false);
-  const cover = resolveImage(String(bggId), { image, ext }, bundledImages);
   return (
     <Group justify="space-between" wrap="nowrap">
-      <div className="tray-cover tray-cover--xs">
-        {cover && !failed ? (
-          <img
-            src={cover}
-            alt=""
-            width={40}
-            height={40}
-            loading="lazy"
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <div className="tray-cover__blank" aria-hidden />
-        )}
-      </div>
+      <GameCover bggId={bggId} image={image} ext={ext} />
       <Text
         component={Link}
         href={year !== undefined ? gamePath(year, bggId) : `/games/${bggId}`}

@@ -115,7 +115,7 @@ const ProfilePage = ({
       <ProfileOverrides discordId={user.discordId} games={games} />
       <ProfileVetoes games={games} />
       <ProfileYearVetoes games={games} />
-      <ProfilePlayed />
+      <ProfilePlayed games={games} />
     </Stack>
   );
 };
