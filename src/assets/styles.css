@@ -720,6 +720,13 @@ body {
   background: rgba(251, 249, 244, 0.96);
 }
 
+/* App content stacks above the signed-in backdrop (the header is fixed at
+   z-index 100 and Mantine portals sit higher, so both stay above). */
+.mantine-AppShell-main {
+  position: relative;
+  z-index: 1;
+}
+
 .floaters {
   position: fixed;
   inset: 0;

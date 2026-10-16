@@ -30,6 +30,8 @@ vi.mock("@/hooks/useMe", () => ({ default: () => gate.value }));
 vi.mock("@/hooks/useData", () => ({ default: gate.useData }));
 vi.mock("@/hooks/useYears", () => ({ default: gate.useYears }));
 vi.mock("@/hooks/useGames", () => ({ default: gate.useGames }));
+// The backdrop reads years and scores itself; the gate assertions below are about the pages.
+vi.mock("@/components/PageBackdrop", () => ({ default: () => null }));
 vi.mock("@/hooks/useAdminUsers", () => ({
   default: () => ({ users: [], loading: true, error: false }),
 }));

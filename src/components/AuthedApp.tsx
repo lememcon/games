@@ -6,6 +6,7 @@ import { AppShell } from "@mantine/core";
 import AdminPage from "@/components/AdminPage";
 import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
+import PageBackdrop from "@/components/PageBackdrop";
 import ProfilePage from "@/components/ProfilePage";
 import PublicProfile from "@/components/PublicProfile";
 import Scoreboard from "@/components/Scoreboard";
@@ -20,7 +21,8 @@ interface AuthedAppProps {
 }
 
 // The admin and profile pages deliberately live outside Scoreboard so they
-// never load scores, years or game data.
+// load no scoreboard data; only the shared backdrop fetches the years and one
+// year's scores for the floating covers.
 const AdminShell = ({
   user,
   children,
@@ -38,48 +40,51 @@ function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
   const isAdmin = user.role === "admin";
 
   return (
-    <Switch>
-      <Route path="/admin">
-        {isAdmin ? (
+    <>
+      <PageBackdrop user={user} />
+      <Switch>
+        <Route path="/admin">
+          {isAdmin ? (
+            <AdminShell user={user}>
+              <AdminPage meId={user.discordId} />
+            </AdminShell>
+          ) : (
+            <Redirect to="/" />
+          )}
+        </Route>
+        <Route path="/admin/import">
+          {isAdmin ? (
+            <AdminShell user={user}>
+              <AdminImport />
+            </AdminShell>
+          ) : (
+            <Redirect to="/" />
+          )}
+        </Route>
+        <Route path="/profile">
           <AdminShell user={user}>
-            <AdminPage meId={user.discordId} />
+            <ProfilePage user={user} onSaved={onUserChanged} />
           </AdminShell>
-        ) : (
-          <Redirect to="/" />
-        )}
-      </Route>
-      <Route path="/admin/import">
-        {isAdmin ? (
-          <AdminShell user={user}>
-            <AdminImport />
-          </AdminShell>
-        ) : (
-          <Redirect to="/" />
-        )}
-      </Route>
-      <Route path="/profile">
-        <AdminShell user={user}>
-          <ProfilePage user={user} onSaved={onUserChanged} />
-        </AdminShell>
-      </Route>
-      <Route path="/players/:discordId/recap/:year">
-        {(params) => (
-          <AdminShell user={user}>
-            <YearRecap discordId={params.discordId} year={params.year} />
-          </AdminShell>
-        )}
-      </Route>
-      <Route path="/players/:discordId">
-        {(params) => (
-          <AdminShell user={user}>
-            <PublicProfile discordId={params.discordId} />
-          </AdminShell>
-        )}
-      </Route>
-      <Route>
-        <Scoreboard user={user} />
-      </Route>
-    </Switch>
+        </Route>
+        <Route path="/players/:discordId/recap/:year">
+          {(params) => (
+            <AdminShell user={user}>
+              <YearRecap discordId={params.discordId} year={params.year} />
+            </AdminShell>
+          )}
+        </Route>
+        <Route path="/players/:discordId">
+          {(params) => (
+            <AdminShell user={user}>
+              <PublicProfile discordId={params.discordId} />
+            </AdminShell>
+          )}
+        </Route>
+        <Route>
+          <Scoreboard user={user} />
+        </Route>
+      </Switch>
+    </>
   );
 }
 

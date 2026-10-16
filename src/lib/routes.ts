@@ -130,3 +130,24 @@ export const recapPath = (discordId: string, year: string | number): string =>
 // A member's public profile.
 export const playerPath = (discordId: string): string =>
   `/players/${encodeURIComponent(discordId)}`;
+
+// The year a path is about: a year page, a game or top picks in it, or a
+// member's recap. null for every other page.
+export const routeYear = (pathname: string): string | null => {
+  const route = parseScoreboardPath(pathname);
+  if (route.kind === "year") return route.year;
+  const recap = /^\/players\/[^/]+\/recap\/(\d{4})\/?$/.exec(pathname);
+  return recap?.[1] ?? null;
+};
+
+// Where bare / and legacy /games/:id go, and the year behind pages without
+// one: the year in the path if it has scores, else the last viewed year if it
+// still does, else the newest.
+export const defaultYear = (
+  years: readonly string[],
+  stored: string,
+  pathYear: string | null = null,
+): string | null => {
+  if (pathYear !== null && years.includes(pathYear)) return pathYear;
+  return years.includes(stored) ? stored : (years[years.length - 1] ?? null);
+};

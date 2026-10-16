@@ -5,9 +5,27 @@ import images from "@/lib/images";
 
 const COUNT = 10;
 
-/** Decorative drifting game covers behind the sign-in card. */
-const FloatingCovers = () => {
-  const [floaters] = useState(() => pickFloaters(Object.keys(images), COUNT));
+interface FloatingCoversProps {
+  /** Cover keys to draw from; defaults to every bundled cover. */
+  pool?: readonly string[];
+  /** Cover keys to show first. */
+  preferred?: readonly string[];
+}
+
+/** Decorative drifting game covers behind the sign-in card and the app. */
+const FloatingCovers = ({ pool, preferred = [] }: FloatingCoversProps) => {
+  const ids = pool ?? Object.keys(images);
+  // Re-pick only when the contents change, not the array identities.
+  const key = `${ids.join("|")}#${preferred.join("|")}`;
+  const [picked, setPicked] = useState(() => ({
+    key,
+    floaters: pickFloaters(ids, COUNT, Math.random, preferred),
+  }));
+  let floaters = picked.floaters;
+  if (picked.key !== key) {
+    floaters = pickFloaters(ids, COUNT, Math.random, preferred);
+    setPicked({ key, floaters });
+  }
   const [mounted, setMounted] = useState(false);
   // Mount after the first paint so the card is never held up by the covers.
   useEffect(() => {
