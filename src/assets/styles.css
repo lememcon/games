@@ -202,6 +202,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--mantine-spacing-sm);
+  flex: 1;
 }
 
 .tray-card__head {
@@ -218,11 +219,8 @@ body {
   font-size: 1.2rem;
 }
 
-.tray-card__played-by {
-  min-height: 20px;
-}
-
 .tray-card__foot {
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: var(--mantine-spacing-xs);

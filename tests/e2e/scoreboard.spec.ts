@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-import { aliceId, bobId, gameOrder, games, mockApi } from "./fixtures";
+import {
+  aliceId,
+  bobId,
+  gameOrder,
+  games,
+  longNamedMembers,
+  mockApi,
+  scores,
+} from "./fixtures";
 
 test("scoreboard ranks the newest year's games", async ({ page }) => {
   await mockApi(page);
@@ -87,4 +95,38 @@ test("a game that does not fit the group size is filtered out", async ({
   await page.getByRole("button", { name: "Bob" }).click();
   await expect(page.getByText("3 of 4 games")).toBeVisible();
   await expect(page.getByRole("link", { name: "Delta" })).toHaveCount(0);
+});
+
+test("podium card feet stay aligned when played-by wraps", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const { members, rows } = longNamedMembers(6);
+  await mockApi(page, {
+    scores: [
+      ...rows,
+      ...scores.filter((s) => s.bgg_id === 102 || s.bgg_id === 103),
+    ],
+    playedByYear: {
+      "2024": Object.fromEntries([
+        ...members.map((m) => [m.discordId, ["101"]]),
+        [aliceId, ["102"]],
+      ]),
+    },
+  });
+  await page.goto("/");
+  await expect(page.locator(".tray-card")).toHaveCount(3);
+  // Played-by lists arrive from the async /api/played mock; wait for the long
+  // one to render so the feet are measured after it has wrapped.
+  await expect(
+    page
+      .locator(".tray-played-by__list")
+      .filter({ hasText: "Featherstonehaugh 6" }),
+  ).toBeVisible();
+
+  const bottoms = await page
+    .locator(".tray-card__foot")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().bottom));
+  expect(bottoms).toHaveLength(3);
+  for (const bottom of bottoms) {
+    expect(Math.abs(bottom - bottoms[0])).toBeLessThanOrEqual(1);
+  }
 });
