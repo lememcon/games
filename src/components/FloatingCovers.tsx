@@ -1,20 +1,25 @@
 import { useEffect, useState, type CSSProperties } from "react";
 
 import { pickFloaters } from "@/lib/floaters";
-import images from "@/lib/images";
 
 const COUNT = 10;
 
 interface FloatingCoversProps {
-  /** Cover keys to draw from; defaults to every bundled cover. */
+  /** Cover URL by BGG id. */
+  covers: Readonly<Record<string, string>>;
+  /** BGG ids to draw from; defaults to every cover. */
   pool?: readonly string[];
-  /** Cover keys to show first. */
+  /** BGG ids to show first. */
   preferred?: readonly string[];
 }
 
 /** Decorative drifting game covers behind the sign-in card and the app. */
-const FloatingCovers = ({ pool, preferred = [] }: FloatingCoversProps) => {
-  const ids = pool ?? Object.keys(images);
+const FloatingCovers = ({
+  covers,
+  pool,
+  preferred = [],
+}: FloatingCoversProps) => {
+  const ids = pool ?? Object.keys(covers);
   // Re-pick only when the contents change, not the array identities.
   const key = `${ids.join("|")}#${preferred.join("|")}`;
   const [picked, setPicked] = useState(() => ({
@@ -40,7 +45,7 @@ const FloatingCovers = ({ pool, preferred = [] }: FloatingCoversProps) => {
       {floaters.map((f) => (
         <img
           key={f.id}
-          src={images[f.id]}
+          src={covers[f.id]}
           alt=""
           loading="lazy"
           decoding="async"

@@ -12,6 +12,7 @@ import {
 
 import logo from "@/assets/logo.png";
 import FloatingCovers from "@/components/FloatingCovers";
+import useCovers from "@/hooks/useCovers";
 import usePageMeta from "@/hooks/usePageMeta";
 import { signInWithDiscord } from "@/lib/auth";
 import { describeAuthError } from "@/lib/authError";
@@ -42,6 +43,7 @@ const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const covers = useCovers();
   usePageMeta(META);
 
   const showAuthError = errorCode !== null && !dismissed && !failed;
@@ -61,7 +63,7 @@ const SignIn = ({ errorCode = null, onDismissError }: SignInProps) => {
 
   return (
     <div className="cover-page">
-      <FloatingCovers />
+      <FloatingCovers covers={covers} />
       <Center mih="100vh" px="md">
         <Paper
           className="cover-card"

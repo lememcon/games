@@ -13,21 +13,12 @@ export interface Floater {
   opacity: number;
 }
 
-/** The numeric game id in a cover path ("/src/assets/games/123.jpg" -> "123"). */
-export const coverId = (path: string): string | null =>
-  /\/(\d+)\.[^./]+$/.exec(path)?.[1] ?? null;
-
-/** The cover keys whose game id is allowed; null allows every cover. */
+/** The ids in `ids` that are allowed; null allows every id. */
 export const buildCoverPool = (
-  keys: readonly string[],
+  ids: readonly string[],
   allowedIds: ReadonlySet<string> | null,
-): string[] => {
-  if (allowedIds === null) return [...keys];
-  return keys.filter((key) => {
-    const id = coverId(key);
-    return id !== null && allowedIds.has(id);
-  });
-};
+): string[] =>
+  allowedIds === null ? [...ids] : ids.filter((id) => allowedIds.has(id));
 
 const motion = (
   id: string,

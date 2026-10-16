@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import SignIn from "@/components/SignIn";
+import useCovers from "@/hooks/useCovers";
 import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
@@ -12,8 +13,21 @@ vi.mock("@/lib/auth", async (orig) => ({
   signInWithDiscord,
 }));
 
+const floatingCovers = vi.hoisted(() => vi.fn((_props: unknown) => null));
+vi.mock("@/hooks/useCovers", () => ({ default: vi.fn(() => ({})) }));
+vi.mock("@/components/FloatingCovers", () => ({
+  default: (props: unknown) => floatingCovers(props),
+}));
+
 describe("SignIn", () => {
   afterEach(() => vi.clearAllMocks());
+
+  it("passes the fetched covers to the backdrop", () => {
+    const covers = { 11: "https://cdn.test/c.jpg" };
+    vi.mocked(useCovers).mockReturnValueOnce(covers);
+    renderWithMantine(<SignIn />);
+    expect(floatingCovers).toHaveBeenCalledWith({ covers });
+  });
 
   it("renders the heading and a Discord button with a decorative icon", () => {
     renderWithMantine(<SignIn />);

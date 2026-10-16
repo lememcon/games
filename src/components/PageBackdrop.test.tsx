@@ -5,14 +5,15 @@ import PageBackdrop from "@/components/PageBackdrop";
 
 const covers = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/useBackdropCovers", () => ({ default: covers }));
-vi.mock("@/lib/images", () => ({
-  default: { "/g/1.png": "/g/1.png", "/g/2.png": "/g/2.png" },
-}));
 
 describe("PageBackdrop", () => {
   it("renders the hook's covers for the current path", async () => {
     window.history.pushState({}, "", "/2025");
-    covers.mockReturnValue({ pool: ["/g/1.png"], preferred: ["/g/1.png"] });
+    covers.mockReturnValue({
+      pool: ["1"],
+      preferred: ["1"],
+      covers: { "1": "/g/1.png", "2": "/g/2.png" },
+    });
     const { container } = render(<PageBackdrop />);
     await waitFor(() =>
       expect(container.querySelectorAll("img")).toHaveLength(1),
