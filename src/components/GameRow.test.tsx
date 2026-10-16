@@ -49,6 +49,50 @@ describe("GameRow", () => {
     expect(queryByLabelText("Played by")).toBeNull();
   });
 
+  it("groups title and meta in a head, then played-by, score and actions", () => {
+    const { container } = renderRow({
+      game: { ...game, playedBy: [{ name: "alice" }] },
+      leastHappy: "bob",
+    });
+    const main = container.querySelector(".tray-row__main")!;
+    const head = main.querySelector(".tray-row__head")!;
+    expect(head.querySelector(".tray-name")).toHaveTextContent("Root");
+    expect(head.querySelector(".tray-row__meta")).not.toBeNull();
+    expect(head.querySelector(".tray-played-by")).toBeNull();
+    const playedBy = main.querySelector(".tray-played-by")!;
+    expect(head.compareDocumentPosition(playedBy)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    const score = container.querySelector(".tray-row__score")!;
+    const actions = container.querySelector(".tray-row__actions")!;
+    expect(main.compareDocumentPosition(score)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(score.compareDocumentPosition(actions)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("renders no played-by element when nobody has played", () => {
+    const { container } = renderRow();
+    expect(container.querySelector(".tray-played-by")).toBeNull();
+    expect(container.querySelector(".tray-row__head")).not.toBeNull();
+  });
+
+  it("omits actions in selectable mode but keeps the head and played-by", () => {
+    const { container } = renderRow({
+      game: { ...game, playedBy: [{ name: "alice" }] },
+      selectable: true,
+    });
+    expect(container.querySelector(".tray-row__actions")).toBeNull();
+    expect(
+      container.querySelector(".tray-row__main > .tray-row__head"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector(".tray-row__main > .tray-played-by"),
+    ).not.toBeNull();
+  });
+
   it("renders the rank chip, cover, name link, score, and bounds", () => {
     const { getByRole, getByText } = renderRow();
 
