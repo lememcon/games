@@ -1,7 +1,12 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useUnplayedGames from "@/hooks/useUnplayedGames";
+import { announceImport } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
+
+const message = () =>
+  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -50,5 +55,53 @@ describe("useUnplayedGames", () => {
     resolve(res({ games: [{ bgg_id: 1, name: "Root" }] }));
     await new Promise((r) => setTimeout(r));
     expect(result.current).toEqual([]);
+  });
+
+  describe("after an import", () => {
+    const first = [{ bgg_id: 1, name: "Root" }];
+    const second = [{ bgg_id: 2, name: "Chess" }];
+    const twoFetches = () =>
+      vi
+        .fn()
+        .mockResolvedValueOnce(res({ games: first }))
+        .mockResolvedValueOnce(res({ games: second }));
+
+    it("reloads on a message from another tab, never showing old data", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useUnplayedGames(fetchImpl));
+      await waitFor(() => expect(result.current).toEqual(first));
+
+      act(() => message());
+      expect(result.current).toEqual([]);
+      await waitFor(() => expect(result.current).toEqual(second));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("reloads on an import announced in the same tab", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useUnplayedGames(fetchImpl));
+      await waitFor(() => expect(result.current).toEqual(first));
+
+      act(() => announceImport());
+      expect(result.current).toEqual([]);
+      await waitFor(() => expect(result.current).toEqual(second));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("stays empty when the refetch fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(res({ games: first }))
+        .mockResolvedValueOnce(res({}, 500));
+      const { result } = renderHook(() => useUnplayedGames(fetchImpl));
+      await waitFor(() => expect(result.current).toEqual(first));
+
+      act(() => message());
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r));
+      });
+      expect(result.current).toEqual([]);
+    });
   });
 });

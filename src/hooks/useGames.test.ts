@@ -1,7 +1,12 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useGames from "@/hooks/useGames";
+import { announceImport } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
+
+const message = () =>
+  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -46,5 +51,46 @@ describe("useGames", () => {
     resolve(res({}));
     await Promise.resolve();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  describe("after an import", () => {
+    const first = {
+      1: { players: { min: 1, max: 2 }, image: null, ext: null },
+    };
+    const second = {
+      2: { players: { min: 3, max: 4 }, image: null, ext: null },
+    };
+    const twoFetches = () =>
+      vi
+        .fn()
+        .mockResolvedValueOnce(res(first))
+        .mockResolvedValueOnce(res(second));
+
+    it("reloads on a message from another tab, never showing old data", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useGames(fetchImpl));
+      await waitFor(() => expect(result.current.games).toEqual(first));
+
+      act(() => message());
+      expect(result.current).toEqual({
+        games: {},
+        loading: true,
+        error: false,
+      });
+      await waitFor(() => expect(result.current.games).toEqual(second));
+      expect(result.current.loading).toBe(false);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("reloads on an import announced in the same tab", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useGames(fetchImpl));
+      await waitFor(() => expect(result.current.games).toEqual(first));
+
+      act(() => announceImport());
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.games).toEqual(second));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
   });
 });

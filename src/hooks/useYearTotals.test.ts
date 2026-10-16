@@ -2,6 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useYearTotals from "@/hooks/useYearTotals";
+import { announceImport } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
+
+const message = () =>
+  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -63,5 +68,42 @@ describe("useYearTotals", () => {
       await new Promise((r) => setTimeout(r));
     });
     expect(result.current.totals).toEqual(fresh);
+  });
+
+  describe("after an import", () => {
+    const first = [{ year: 2025, bgg_id: 1, total: 9 }];
+    const second = [{ year: 2025, bgg_id: 1, total: 12 }];
+    const twoFetches = () =>
+      vi
+        .fn()
+        .mockResolvedValueOnce(res({ totals: first }))
+        .mockResolvedValueOnce(res({ totals: second }));
+
+    it("reloads on a message from another tab, never showing old data", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useYearTotals(fetchImpl));
+      await waitFor(() => expect(result.current.totals).toEqual(first));
+
+      act(() => message());
+      expect(result.current).toEqual({
+        totals: [],
+        loading: true,
+        error: false,
+      });
+      await waitFor(() => expect(result.current.totals).toEqual(second));
+      expect(result.current.loading).toBe(false);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("reloads on an import announced in the same tab", async () => {
+      const fetchImpl = twoFetches();
+      const { result } = renderHook(() => useYearTotals(fetchImpl));
+      await waitFor(() => expect(result.current.totals).toEqual(first));
+
+      act(() => announceImport());
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.totals).toEqual(second));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
   });
 });
