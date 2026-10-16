@@ -22,6 +22,22 @@ describe("PlayedByList", () => {
     expect(getByText("Played by:")).toBeInTheDocument();
   });
 
+  it("uses a custom label for the text and the list name", () => {
+    const { getByText, getByRole, queryByText } = renderWithMantine(
+      <PlayedByList label="Vetoed by" playedBy={[{ name: "Ann" }]} />,
+    );
+    expect(getByText("Vetoed by:")).toBeInTheDocument();
+    expect(getByRole("list", { name: "Vetoed by" })).toBeInTheDocument();
+    expect(queryByText("Played by:")).toBeNull();
+  });
+
+  it("names the list Played by by default", () => {
+    const { getByRole } = renderWithMantine(
+      <PlayedByList playedBy={[{ name: "Ann" }]} />,
+    );
+    expect(getByRole("list", { name: "Played by" })).toBeInTheDocument();
+  });
+
   it("shows each player in their identity color", () => {
     const { getByText } = renderWithMantine(
       <PlayerColorProvider value={{ Ann: PALETTE[1] }}>

@@ -6,11 +6,13 @@ import type { PlayedByPlayer } from "@/types";
 
 interface PlayedByListProps {
   playedBy: PlayedByPlayer[];
+  // Defaults to "Played by".
+  label?: string;
 }
 
-// A "Played by:" label and the players who played a game this year, each as
-// avatar and name. Renders nothing when nobody has.
-const PlayedByList = ({ playedBy }: PlayedByListProps) => {
+// A labelled list of players (label defaults to "Played by"), each as avatar
+// and name. Renders nothing when the list is empty.
+const PlayedByList = ({ playedBy, label = "Played by" }: PlayedByListProps) => {
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
   if (playedBy.length === 0) return null;
@@ -21,9 +23,9 @@ const PlayedByList = ({ playedBy }: PlayedByListProps) => {
   return (
     <div className="tray-played-by">
       <span className="tray-played-by__label" aria-hidden="true">
-        Played by:
+        {label}:
       </span>
-      <ul id={listId} className="tray-played-by__list" aria-label="Played by">
+      <ul id={listId} className="tray-played-by__list" aria-label={label}>
         {visible.map(({ name, discordId, discordImage }) => (
           <li key={name}>
             <PlayerName

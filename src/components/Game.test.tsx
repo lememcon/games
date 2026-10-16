@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import Game from "@/components/Game";
+import type { VetoesState } from "@/hooks/useVetoes";
+import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { renderWithMantine } from "@/test/utils";
 import type { Data, GamesData } from "@/types";
 
@@ -438,6 +440,72 @@ describe("Game", () => {
     it("is hidden without the vetoes props", () => {
       view(undefined);
       expect(screen.queryByRole("button", { name: /^Veto:/ })).toBeNull();
+    });
+  });
+
+  describe("vetoed by", () => {
+    const linked: Data = {
+      ...data,
+      by_player: {
+        alice: [
+          {
+            bgg_id: 11,
+            player: "alice",
+            game: "Belfort",
+            rank: 1,
+            score: 80,
+            discord_id: "d1",
+          },
+        ],
+        bob: [
+          {
+            bgg_id: 11,
+            player: "bob",
+            game: "Belfort",
+            rank: 2,
+            score: 40,
+            discord_id: "d2",
+          },
+        ],
+      },
+    };
+    const year = (all: Record<string, ReadonlySet<string>>) =>
+      ({ all }) as unknown as YearVetoesState;
+    const view = (yearVetoes?: YearVetoesState, vetoes?: VetoesState) =>
+      renderWithMantine(
+        <Game
+          data={linked}
+          gameData={gameData}
+          year="2024"
+          id="11"
+          yearVetoes={yearVetoes}
+          vetoes={vetoes}
+        />,
+      );
+
+    it("lists everyone who vetoed the game this year, including the viewer", () => {
+      view(year({ d1: new Set(["11"]), d2: new Set(["11"]) }));
+      const list = screen.getByRole("list", { name: "Vetoed by" });
+      expect(list).toHaveTextContent("alice");
+      expect(list).toHaveTextContent("bob");
+      expect(screen.getByRole("link", { name: /alice/ })).toHaveAttribute(
+        "href",
+        "/players/d1",
+      );
+    });
+
+    it("is hidden when nobody vetoed or year vetoes are omitted", () => {
+      view(year({ d1: new Set(["50"]) }));
+      expect(screen.queryByText("Vetoed by:")).toBeNull();
+      view();
+      expect(screen.queryByText("Vetoed by:")).toBeNull();
+    });
+
+    it("ignores permanent vetoes", () => {
+      view(year({}), {
+        all: { d1: new Set(["11"]) },
+      } as unknown as VetoesState);
+      expect(screen.queryByText("Vetoed by:")).toBeNull();
     });
   });
 });
