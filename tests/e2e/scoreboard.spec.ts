@@ -171,6 +171,45 @@ test("compact row keeps the cover at the top on a phone when played-by is long",
   expect(playedBy.top).toBeGreaterThanOrEqual(actions.bottom - 1);
 });
 
+test("phone rows keep 44px tap targets and fit the viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+
+  const buttons = page.locator(".tray-row__actions button");
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    const box = await buttons.nth(i).boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+  }
+  const scores = page.locator(".tray-row__score");
+  for (let i = 0; i < (await scores.count()); i++) {
+    const box = await scores.nth(i).boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+  }
+  expect(
+    await page.evaluate("document.documentElement.scrollWidth"),
+  ).toBeLessThanOrEqual(375);
+});
+
+test("desktop row buttons stay compact", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+  const box = await page
+    .locator(".tray-row__actions button")
+    .first()
+    .boundingBox();
+  expect(box!.height).toBeLessThan(44);
+});
+
 test("a long played-by list collapses and expands in place", async ({
   page,
 }) => {
