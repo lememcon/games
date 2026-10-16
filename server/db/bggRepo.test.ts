@@ -131,3 +131,61 @@ describe("metadata", () => {
     await expect(repo.upsertMetadata([], new Date())).resolves.toBeUndefined();
   });
 });
+
+describe("covers", () => {
+  const row = (id: number) =>
+    client
+      .query<{ image_key: string | null; image_source: string | null }>(
+        "select image_key, image_source from game_metadata where bgg_id = $1",
+        [id],
+      )
+      .then((r) => r.rows[0]);
+  const url = (n: number) => `https://cf.geekdo-images.com/c/${n}.jpg`;
+
+  it("adds nullable columns that upsertMetadata never touches", async () => {
+    await repo.upsertMetadata([game(9001, { imageUrl: url(1) })], new Date());
+    expect(await row(9001)).toEqual({ image_key: null, image_source: null });
+    expect(await repo.setCover(9001, "covers/9001.jpg", url(1))).toBe(true);
+    await repo.upsertMetadata([game(9001, { imageUrl: url(1) })], new Date());
+    expect(await row(9001)).toEqual({
+      image_key: "covers/9001.jpg",
+      image_source: url(1),
+    });
+  });
+
+  it("setCover is guarded by the current image_url", async () => {
+    await repo.upsertMetadata([game(9002, { imageUrl: url(2) })], new Date());
+    expect(await repo.setCover(9002, "k", url(99))).toBe(false);
+    expect(await repo.setCover(404404, "k", url(2))).toBe(false);
+    expect(await row(9002)).toEqual({ image_key: null, image_source: null });
+  });
+
+  it("lists https rows that are unmirrored or whose source differs", async () => {
+    await repo.upsertMetadata(
+      [
+        game(9101, { imageUrl: url(11) }),
+        game(9102, { imageUrl: url(12) }),
+        game(9103, { imageUrl: url(13) }),
+        game(9104, { imageUrl: "http://insecure/x.jpg" }),
+        game(9105, { imageUrl: null, ext: null }),
+      ],
+      new Date(),
+    );
+    await repo.setCover(9102, "k2", url(12));
+    await repo.setCover(9103, "k3", url(13));
+    // The image changes after mirroring: the stored source is now stale.
+    await repo.upsertMetadata([game(9103, { imageUrl: url(14) })], new Date());
+    // A custom cover is never re-mirrored, even with an https image_url.
+    await repo.upsertMetadata([game(9106, { imageUrl: url(16) })], new Date());
+    await client.query(
+      "update game_metadata set image_key = 'c', image_source = 'custom' where bgg_id = 9106",
+    );
+    const ids = (await repo.listCoverNeeds())
+      .map((n) => n.bggId)
+      .filter((id) => id >= 9000 && id < 10000);
+    expect(ids).toEqual([9002, 9101, 9103]);
+    expect((await repo.listCoverNeeds()).find((n) => n.bggId === 9103)).toEqual(
+      { bggId: 9103, imageUrl: url(14) },
+    );
+  });
+});

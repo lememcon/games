@@ -93,6 +93,7 @@ export function fakeBggRepo() {
   const settings = new Map<string, SettingRow & { updatedBy: string }>();
   const rows = new Map<number, GameMetadataRow>();
   const writes: BggGame[][] = [];
+  const covers = new Map<number, { key: string; source: string }>();
   const repo: BggRepo = {
     getSetting: async (key) => settings.get(key) ?? null,
     setSetting: async (key, value, updatedBy) => {
@@ -121,8 +122,26 @@ export function fakeBggRepo() {
         });
       }
     },
+    setCover: async (bggId, key, source) => {
+      const row = rows.get(bggId);
+      if (!row || row.imageUrl !== source) return false;
+      covers.set(bggId, { key, source });
+      return true;
+    },
+    listCoverNeeds: async () =>
+      [...rows.values()]
+        .filter((r) => {
+          const c = covers.get(r.bggId);
+          return (
+            r.imageUrl?.startsWith("https://") &&
+            c?.source !== "custom" &&
+            (!c || c.source !== r.imageUrl)
+          );
+        })
+        .map((r) => ({ bggId: r.bggId, imageUrl: r.imageUrl! }))
+        .sort((a, b) => a.bggId - b.bggId),
   };
-  return { repo, settings, rows, writes };
+  return { repo, settings, rows, writes, covers };
 }
 
 /** In-memory CoverStorage for tests; records puts, optionally failing every one. */

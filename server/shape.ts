@@ -181,9 +181,17 @@ export function toProfileStats(
 }
 
 /** The games.json shape. Null columns are omitted so gameBounds sees undefined. */
-export function toGamesMap(rows: readonly GameRow[]): GamesMap {
+export function toGamesMap(
+  rows: readonly GameRow[],
+  coverBaseUrl?: string,
+): GamesMap {
   const map: GamesMap = {};
+  const base = coverBaseUrl?.replace(/\/+$/, "");
   for (const r of rows) {
+    const mirrored =
+      r.imageKey != null &&
+      (r.imageSource === "custom" ||
+        (r.imageSource != null && r.imageSource === r.imageUrl));
     map[String(r.bggId)] = {
       ...(r.name !== null ? { name: r.name } : {}),
       ...(r.minPlayers !== null && r.maxPlayers !== null
@@ -191,6 +199,7 @@ export function toGamesMap(rows: readonly GameRow[]): GamesMap {
         : {}),
       ...(r.imageUrl !== null ? { image: r.imageUrl } : {}),
       ...(r.imageExt !== null ? { ext: r.imageExt } : {}),
+      ...(base && mirrored ? { cover: `${base}/${r.imageKey}` } : {}),
     };
   }
   return map;

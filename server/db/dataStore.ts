@@ -10,10 +10,13 @@ import {
 } from "./read";
 import type { StoreDb } from "./userStore";
 
-export const createDataStore = (db: StoreDb): DataStore => ({
+export const createDataStore = (
+  db: StoreDb,
+  coverBaseUrl?: string,
+): DataStore => ({
   listYears: () => listYears(db),
   getScores: (year, resolveNames) => getScores(db, year, resolveNames),
-  getGames: () => getGames(db),
+  getGames: () => getGames(db, coverBaseUrl),
   getTopGames: (year, discordId) => getTopGames(db, year, discordId),
   getYearTotals: () => getYearTotals(db),
   listUnplayedGames: () => listUnplayedGames(db),
