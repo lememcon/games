@@ -14,7 +14,6 @@ import SplitSuggestions from "@/components/SplitSuggestions";
 import TopPicks from "@/components/TopPicks";
 import UnplayedShelf from "@/components/UnplayedShelf";
 import VetoDialog from "@/components/VetoDialog";
-import YearTrends from "@/components/YearTrends";
 import { useMarkPlayed } from "@/hooks/useAllPlayed";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
@@ -23,7 +22,6 @@ import usePageMeta from "@/hooks/usePageMeta";
 import usePlayed from "@/hooks/usePlayed";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import useVetoes from "@/hooks/useVetoes";
-import useYearTotals from "@/hooks/useYearTotals";
 import useYearVetoes from "@/hooks/useYearVetoes";
 import useYears from "@/hooks/useYears";
 import { buildPlayerColors, pickedColors } from "@/lib/colors";
@@ -75,7 +73,6 @@ const Notice = ({
 
 function Scoreboard({ user }: ScoreboardProps) {
   const { years, loading: yearsLoading, error: yearsError } = useYears();
-  const { totals: yearTotals } = useYearTotals();
   const {
     games: game_data,
     loading: gamesLoading,
@@ -724,11 +721,6 @@ function Scoreboard({ user }: ScoreboardProps) {
                       }}
                     />
                   )}
-                  <YearTrends
-                    totals={yearTotals}
-                    year={Number(year)}
-                    names={gameNames}
-                  />
                   <UnplayedShelf />
                 </>
               )}
