@@ -4,6 +4,7 @@
 //   /                  home (redirects to the default year)
 //   /:year             a year's scoreboard
 //   /:year/games/:id   a game's scores in that year
+//   /:year/top-picks   games in a member's top 10 that member has not played
 //   /games/:id         legacy game URL (redirects into the default year)
 //
 // A year's page may also carry its filters in the query, so a link can be
@@ -14,7 +15,7 @@ import type { SortMode } from "@/types";
 
 export type ScoreboardRoute =
   | { kind: "home" }
-  | { kind: "year"; year: string; gameId?: string }
+  | { kind: "year"; year: string; gameId?: string; page?: "topPicks" }
   | { kind: "legacyGame"; id: string }
   | { kind: "unknown" };
 
@@ -24,6 +25,9 @@ export const yearPath = (year: string | number): string => `/${year}`;
 
 export const gamePath = (year: string | number, id: string | number): string =>
   `/${year}/games/${id}`;
+
+export const topPicksPath = (year: string | number): string =>
+  `/${year}/top-picks`;
 
 export const parseScoreboardPath = (pathname: string): ScoreboardRoute => {
   const parts = pathname.split("/").filter((part) => part !== "");
@@ -37,6 +41,9 @@ export const parseScoreboardPath = (pathname: string): ScoreboardRoute => {
   if (parts.length === 1) return { kind: "year", year: first };
   if (second === "games" && third !== undefined && parts.length === 3) {
     return { kind: "year", year: first, gameId: third };
+  }
+  if (second === "top-picks" && parts.length === 2) {
+    return { kind: "year", year: first, page: "topPicks" };
   }
   return { kind: "unknown" };
 };

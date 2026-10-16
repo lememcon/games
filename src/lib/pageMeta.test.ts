@@ -8,6 +8,7 @@ import {
   playerMeta,
   recapMeta,
   scoreboardMeta,
+  topPicksMeta,
   yearMeta,
 } from "@/lib/pageMeta";
 import html from "../../index.html?raw";
@@ -116,5 +117,15 @@ describe("scoreboardMeta", () => {
     expect(
       scoreboardMeta({ ...base, gameId: "11", gameName: "Belfort" }),
     ).toEqual(gameMeta("2025", "11", "Belfort"));
+  });
+
+  it("uses the top picks page", () => {
+    expect(scoreboardMeta({ ...base, page: "topPicks" })).toEqual(
+      topPicksMeta("2025"),
+    );
+    expect(topPicksMeta("2025")).toMatchObject({
+      title: "2025 top picks | Lememcon Games",
+      path: "/2025/top-picks",
+    });
   });
 });

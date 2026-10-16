@@ -369,3 +369,28 @@ export interface Recap {
   newPicks: RecapGame[] | null;
   facts: RecapFacts;
 }
+
+// A member who has a game in their top picks, with their own rank for it.
+export interface UnplayedPickOwner {
+  name: string;
+  discordId: string;
+  discordImage?: string;
+  rank: number;
+  score: number;
+  // The member has already played the game.
+  played: boolean;
+}
+
+// A game in some member's top picks that the member has not played.
+export interface UnplayedPick {
+  bggId: number;
+  game: string;
+  // Every member with the game in their top picks, best rank first.
+  owners: UnplayedPickOwner[];
+}
+
+// Games grouped by the best rank any unplayed owner gives them.
+export interface UnplayedPickTier {
+  rank: number;
+  games: UnplayedPick[];
+}
