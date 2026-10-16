@@ -432,6 +432,19 @@ export interface MyVetoRow {
   name: string | null;
 }
 
+/** One member's veto of a game in one year, with the game name when known. */
+export interface MyYearVetoRow {
+  year: number;
+  bggId: number;
+  name: string | null;
+}
+
+/** A profile with the member's permanent and year vetoes, as GET /api/profiles/:id returns it. */
+export type ProfileResponse = Profile & {
+  vetoes: MyVetoRow[];
+  yearVetoes: MyYearVetoRow[];
+};
+
 /** All SQL for member game vetoes lives behind this interface (server/db/memberVetoStore.ts). */
 export interface MemberVetoStore {
   /** Every member's vetoes; they apply to every year. */
@@ -448,6 +461,8 @@ export interface MemberVetoStore {
 export interface MemberYearVetoStore {
   /** Every member's vetoes for the year, or null when the year is unknown. */
   getAll(year: number): Promise<{ discordId: string; bggId: number }[] | null>;
+  /** The member's vetoes, newest year first, then by name (unnamed last) and bgg id. */
+  listMine(discordId: string): Promise<MyYearVetoRow[]>;
   /** Idempotent. Refuses with 404 `unknown_year` or `unknown_game`. */
   set(
     discordId: string,

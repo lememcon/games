@@ -11,7 +11,12 @@ import {
   fakeProfiles,
   fakeStore,
 } from "../testing";
-import type { AppUser, Profile } from "../types";
+import type {
+  AppUser,
+  MemberVetoStore,
+  MemberYearVetoStore,
+  Profile,
+} from "../types";
 
 const WEB = "https://games.lememcon.com";
 const KEL = "222222222222222222";
@@ -49,7 +54,17 @@ const profile: Profile = {
   gamesPlayed: 12,
 };
 
-function makeApp(members: string[] = [KEL]) {
+const explode = () => {
+  throw new Error("listMine must not be called");
+};
+
+function makeApp(
+  members: string[] = [KEL],
+  seed: {
+    vetoes?: ReturnType<typeof fakeMemberVetoes>["memberVetoes"];
+    yearVetoes?: ReturnType<typeof fakeMemberYearVetoes>["memberYearVetoes"];
+  } = {},
+) {
   const fake = fakeProfiles({
     profiles: [profile],
     names: { [PAT]: "Pat" },
@@ -63,8 +78,9 @@ function makeApp(members: string[] = [KEL]) {
     data: fakeData().data,
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
-    memberVetoes: fakeMemberVetoes().memberVetoes,
-    memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
+    memberVetoes: seed.vetoes ?? fakeMemberVetoes().memberVetoes,
+    memberYearVetoes:
+      seed.yearVetoes ?? fakeMemberYearVetoes().memberYearVetoes,
     profiles: fake.profiles,
     played: fakePlayed().played,
     resolveSession: async (headers) => {
@@ -238,8 +254,25 @@ describe("GET /api/profiles/:discordId", () => {
     expect((await get(PAT, "pending")).status).toBe(403);
   });
 
-  it("returns exactly the public fields, uncached", async () => {
-    const res = await get(PAT, "member");
+  it("returns exactly the public fields plus the target's vetoes, uncached", async () => {
+    const vetoes = fakeMemberVetoes({
+      games: { 1: "Root", 2: "Azul" },
+      vetoes: [
+        { discordId: PAT, bggId: 1 },
+        { discordId: KEL, bggId: 2 },
+      ],
+    }).memberVetoes;
+    const yearVetoes = fakeMemberYearVetoes({
+      games: { 1: "Root", 2: "Azul" },
+      vetoes: [
+        { discordId: PAT, year: 2026, bggId: 2 },
+        { discordId: KEL, year: 2026, bggId: 1 },
+      ],
+    }).memberYearVetoes;
+    const res = await makeApp([KEL], { vetoes, yearVetoes }).app.request(
+      `/api/profiles/${PAT}`,
+      { headers: as("member") },
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
     const body = (await res.json()) as Record<string, unknown>;
@@ -250,8 +283,14 @@ describe("GET /api/profiles/:discordId", () => {
       "linkedPlayers",
       "name",
       "stats",
+      "vetoes",
+      "yearVetoes",
     ]);
-    expect(body).toEqual(profile);
+    expect(body).toEqual({
+      ...profile,
+      vetoes: [{ bggId: 1, name: "Root" }],
+      yearVetoes: [{ year: 2026, bggId: 2, name: "Azul" }],
+    });
   });
 
   it.each(["abc", "1234567890", "1".repeat(26), "12345678901234x"])(
@@ -264,7 +303,12 @@ describe("GET /api/profiles/:discordId", () => {
   );
 
   it("404s an unknown or unapproved member", async () => {
-    const res = await get("444444444444444444", "member");
+    const res = await makeApp([KEL], {
+      vetoes: { listMine: explode } as unknown as MemberVetoStore,
+      yearVetoes: { listMine: explode } as unknown as MemberYearVetoStore,
+    }).app.request("/api/profiles/444444444444444444", {
+      headers: as("member"),
+    });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
   });

@@ -49,6 +49,12 @@ export function memberVetoRoutes(
     return c.json({ vetoes: all });
   });
 
+  routes.get("/me/year-vetoes", async (c) => {
+    const mine = await yearVetoes.listMine(c.get("user")!.discordId);
+    privateNoCache(c);
+    return c.json({ vetoes: mine });
+  });
+
   routes.put("/me/year-vetoes/:year/:bggId", async (c) => {
     const year = parseYear(c.req.param("year"));
     if (year === null) return c.json({ error: "invalid_year" }, 400);

@@ -41,7 +41,7 @@ function makeApp() {
   });
   const year = fakeMemberYearVetoes({
     years: [2025, 2026],
-    games: [1, 2],
+    games: { 1: "Root", 2: null },
     vetoes: [
       { discordId: PAT, year: 2026, bggId: 1 },
       { discordId: KEL, year: 2025, bggId: 2 },
@@ -247,6 +247,26 @@ describe("GET /api/year-vetoes/:year", () => {
     const res = await send(makeApp().app, "GET", path);
     expect(res.status).toBe(status);
     expect(await res.json()).toEqual({ error });
+  });
+});
+
+describe("GET /api/me/year-vetoes", () => {
+  it.each([
+    ["nobody", 401],
+    ["pending", 403],
+    ["member", 200],
+  ])("answers %s with %i", async (who, status) => {
+    expect(
+      (await send(makeApp().app, "GET", "/me/year-vetoes", who)).status,
+    ).toBe(status);
+  });
+
+  it("lists only the session member's vetoes, uncached", async () => {
+    const res = await send(makeApp().app, "GET", "/me/year-vetoes");
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(await res.json()).toEqual({
+      vetoes: [{ year: 2025, bggId: 2, name: null }],
+    });
   });
 });
 

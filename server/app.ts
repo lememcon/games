@@ -102,7 +102,10 @@ export function createApp(deps: AppDeps) {
   if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
   api.route("/admin", importRoutes(deps.data));
   api.route("/admin", linkRoutes(deps.links));
-  api.route("/", profileRoutes(deps.profiles));
+  api.route(
+    "/",
+    profileRoutes(deps.profiles, deps.memberVetoes, deps.memberYearVetoes),
+  );
   api.route("/", playedRoutes(deps.played));
   api.route("/", memberOverrideRoutes(deps.memberOverrides));
   api.route("/", memberVetoRoutes(deps.memberVetoes, deps.memberYearVetoes));
