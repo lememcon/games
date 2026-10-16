@@ -21,7 +21,8 @@ const parseYears = (body: unknown): string[] => {
 const loadingState: YearsState = { years: [], loading: true, error: false };
 
 // The years that have scores. Loaded on mount, and again after an import in
-// this or another tab; until then it reports loading, never the old list.
+// this or another tab. While refetching it keeps the last list, since callers
+// treat an empty list as "unknown" and would tear down per-year state.
 const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
   const version = useImportVersion();
   const [state, setState] = useState<{
@@ -46,7 +47,7 @@ const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
     };
   }, [version, fetchImpl]);
 
-  return state?.version === version ? state.value : loadingState;
+  return state?.value ?? loadingState;
 };
 
 export default useYears;

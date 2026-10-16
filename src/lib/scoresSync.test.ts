@@ -7,15 +7,9 @@ import {
   resetScoresSync,
   useImportVersion,
 } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
 
-type Fake = {
-  posted: unknown[];
-  closed: boolean;
-  onmessage: ((e: MessageEvent) => void) | null;
-  postMessage: (m: unknown) => void;
-};
-const channels = () =>
-  (globalThis.BroadcastChannel as unknown as { instances: Fake[] }).instances;
+const channels = () => FakeBroadcastChannel.instances;
 const message = () => channels()[0].onmessage!({} as MessageEvent);
 
 describe("scoresSync", () => {
@@ -44,14 +38,11 @@ describe("scoresSync", () => {
 
   it("clears every year before subscribers run on a message", () => {
     const invalidate = vi.spyOn(cache, "invalidateScores");
-    let seen = -1;
-    renderHook(() => useImportVersion());
     const spyOrder: string[] = [];
     invalidate.mockImplementation(() => void spyOrder.push("invalidate"));
     const { result } = renderHook(() => {
       const v = useImportVersion();
       spyOrder.push(`render${v}`);
-      seen = v;
       return v;
     });
     act(() => message());
@@ -59,7 +50,6 @@ describe("scoresSync", () => {
     expect(spyOrder.indexOf("invalidate")).toBeLessThan(
       spyOrder.indexOf("render1"),
     );
-    expect(seen).toBe(1);
     expect(result.current).toBe(1);
   });
 

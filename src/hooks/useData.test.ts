@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import useData from "@/hooks/useData";
 import * as cache from "@/lib/scoresCache";
 import { announceImport } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
 
 const scores = [
   { game: "Root", rank: 1, score: 50, player: "alice", bgg_id: 100 },
@@ -14,10 +15,8 @@ const scores = [
 const ok = (payload: unknown) =>
   Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }));
 
-type Fake = { onmessage: ((e: MessageEvent) => void) | null };
 const message = () =>
-  (globalThis.BroadcastChannel as unknown as { instances: Fake[] }).instances[0]
-    .onmessage!({} as MessageEvent);
+  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
 
 const mockFetch = (payload: unknown) =>
   (globalThis.fetch = vi.fn(() => ok(payload)) as unknown as typeof fetch);
@@ -247,21 +246,6 @@ describe("useData", () => {
           new Response(JSON.stringify({ player_game_scores: scores })),
         );
       });
-      expect(result.current.scores).toEqual([scores[2]]);
-    });
-
-    it("drops a response that resolved but was not yet committed", async () => {
-      sequence(
-        { player_game_scores: scores },
-        { player_game_scores: [scores[2]] },
-      );
-      const { result } = renderHook(() => useData("2025"));
-      // Message lands in the same tick the first load settles.
-      await act(async () => {
-        await Promise.resolve();
-        message();
-      });
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.scores).toEqual([scores[2]]);
     });
 

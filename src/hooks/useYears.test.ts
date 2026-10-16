@@ -68,10 +68,10 @@ describe("useYears", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => announceImport());
-    expect(result.current.loading).toBe(true);
-    expect(result.current.years).toEqual([]);
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.years).toEqual(["2025", "2026"]);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.years).toEqual(["2025"]);
+    await waitFor(() => expect(result.current.years).toEqual(["2025", "2026"]));
+    expect(result.current.loading).toBe(false);
   });
 
   it("drops a response from before an import", async () => {
