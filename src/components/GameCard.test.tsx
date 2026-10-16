@@ -52,11 +52,17 @@ describe("GameCard", () => {
     expect(queryByLabelText("Played by")).toBeNull();
   });
 
-  it("reserves an empty played-by slot when nobody has played", () => {
+  it("renders an empty played-by wrapper when nobody has played", () => {
     const { container } = renderCard();
     const slot = container.querySelector(".tray-card__played-by");
     expect(slot).not.toBeNull();
     expect(slot).toBeEmptyDOMElement();
+  });
+
+  it("keeps the foot as the last child of the body", () => {
+    const { container } = renderCard();
+    const body = container.querySelector(".tray-card__body");
+    expect(body?.lastElementChild).toHaveClass("tray-card__foot");
   });
 
   it("puts the played-by list inside the reserved slot", () => {

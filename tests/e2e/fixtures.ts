@@ -61,6 +61,21 @@ export const scores: PlayerGameScore[] = [
   row(104, "Delta", "Bob", 3, 2),
 ];
 
+// N members with long names and distinct Discord ids, each scoring on game 101.
+export const longNamedMembers = (count: number) => {
+  const members = Array.from({ length: count }, (_, i) => ({
+    name: `Bartholomew Featherstonehaugh ${i + 1}`,
+    discordId: `2000000000000000${String(i).padStart(2, "0")}`,
+  }));
+  const rows: PlayerGameScore[] = members.map((m, i) =>
+    row(101, "Alpha", m.name, 10 - i, i + 1),
+  );
+  return {
+    members,
+    rows: rows.map((r, i) => ({ ...r, discord_id: members[i].discordId })),
+  };
+};
+
 export const gameOrder = ["Alpha", "Beta", "Gamma", "Delta"];
 
 export const games: GamesData = {
