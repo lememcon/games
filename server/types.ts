@@ -229,6 +229,12 @@ export interface YearTotal {
   total: number;
 }
 
+/** One game in a member's top list: their best score in it that year. */
+export interface MemberTopGame {
+  bgg_id: number;
+  score: number;
+}
+
 /** All SQL for years, games and scores lives behind this interface (server/db/dataStore.ts). */
 export interface DataStore {
   /** Newest first. */
@@ -240,6 +246,8 @@ export interface DataStore {
     resolveNames?: boolean,
   ): Promise<LegacyScoreRow[] | null>;
   getGames(): Promise<GamesMap>;
+  /** A member's ten highest scores in a year, best first (ties by lower bgg id); null when the year is unknown. */
+  getTopGames(year: number, discordId: string): Promise<MemberTopGame[] | null>;
   /** Summed scores per game and year, collapsed per approved member for every viewer; ordered by year then game. */
   getYearTotals(): Promise<YearTotal[]>;
   /** Named games with no score row in any year, by name. */

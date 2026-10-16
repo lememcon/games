@@ -579,3 +579,74 @@ describe("display names", () => {
     expect(result).toMatchObject({ ok: true, value: { players: { new: 0 } } });
   });
 });
+
+describe("top games", () => {
+  const ME = "710000000000000001";
+  const OTHER = "710000000000000002";
+  const PENDING_ID = "710000000000000003";
+  const approve = (id: string, status = "approved") =>
+    client.query(`INSERT INTO app_user (discord_id, status) VALUES ($1, $2)`, [
+      id,
+      status,
+    ]);
+  const link = (id: string, pattern: string) =>
+    client.query(`UPDATE player SET discord_id = $1 WHERE name LIKE $2`, [
+      id,
+      pattern,
+    ]);
+
+  it("returns the linked member's games collapsed, best first, capped at 10", async () => {
+    await approve(ME);
+    await approve(OTHER);
+    const mine = Array.from({ length: 12 }, (_, i) =>
+      row({
+        bgg_id: 100 + i,
+        game: `G${i}`,
+        player: "top1a",
+        score: i === 3 ? 50 : 10 + i,
+        rank: 1,
+      }),
+    );
+    await store.importData(
+      upload(2070, [
+        ...mine,
+        // Second name of the same member: G0 wins on score at equal rank, G1 loses on rank.
+        row({ bgg_id: 100, game: "G0", player: "top1b", score: 99, rank: 1 }),
+        row({ bgg_id: 101, game: "G1", player: "top1b", score: 500, rank: 2 }),
+        // Another member and an unlinked player never show up.
+        row({ bgg_id: 200, game: "Z", player: "top2", score: 1000 }),
+        row({ bgg_id: 201, game: "Y", player: "toploose", score: 1000 }),
+      ]),
+      context,
+    );
+    await link(ME, "top1%");
+    await link(OTHER, "top2%");
+
+    const top = (await store.getTopGames(2070, ME))!;
+    expect(top).toHaveLength(10);
+    expect(top[0]).toEqual({ bgg_id: 100, score: 99 });
+    expect(top[1]).toEqual({ bgg_id: 103, score: 50 });
+    expect(top.map((t) => t.score)).toEqual(
+      [...top.map((t) => t.score)].sort((a, b) => b - a),
+    );
+    expect(top.some((t) => t.bgg_id >= 200)).toBe(false);
+    expect(await store.getTopGames(2070, OTHER)).toEqual([
+      { bgg_id: 200, score: 1000 },
+    ]);
+  });
+
+  it("is empty for a member with no scores and null for an unknown year", async () => {
+    expect(await store.getTopGames(2070, "710000000000000099")).toEqual([]);
+    expect(await store.getTopGames(1901, ME)).toBeNull();
+  });
+
+  it("returns nothing for a linked member who is not approved", async () => {
+    await approve(PENDING_ID, "pending");
+    await store.importData(
+      upload(2071, [row({ player: "top3", score: 5 })]),
+      context,
+    );
+    await link(PENDING_ID, "top3%");
+    expect(await store.getTopGames(2071, PENDING_ID)).toEqual([]);
+  });
+});

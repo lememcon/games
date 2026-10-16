@@ -5,10 +5,12 @@ import {
   createNameResolver,
   toGamesMap,
   toLegacyRow,
+  topGames,
 } from "../shape";
 import type {
   GamesMap,
   LegacyScoreRow,
+  MemberTopGame,
   MutationResult,
   UnplayedGame,
   YearTotal,
@@ -116,6 +118,37 @@ export async function getScores(
   return collapseMemberScores(
     rows.map((r) => ({ ...r, year: value, owner: r.discordId })),
   ).map((r) => toLegacyRow({ ...r, playerName: resolve(r) }));
+}
+
+/**
+ * A member's ten highest scores in a year, collapsed across their linked
+ * names; approved members only. Null when the year is unknown.
+ */
+export async function getTopGames(
+  db: StoreDb,
+  value: number,
+  discordId: string,
+): Promise<MemberTopGame[] | null> {
+  const [found] = await db.select().from(year).where(eq(year.year, value));
+  if (!found) return null;
+  const rows = await db
+    .select({
+      id: score.id,
+      bggId: score.bggId,
+      score: score.score,
+      rank: score.rank,
+    })
+    .from(score)
+    .innerJoin(player, eq(player.id, score.playerId))
+    .innerJoin(
+      appUser,
+      and(
+        eq(appUser.discordId, player.discordId),
+        eq(appUser.status, "approved"),
+      ),
+    )
+    .where(and(eq(score.year, value), eq(appUser.discordId, discordId)));
+  return topGames(rows.map((r) => ({ ...r, year: value, owner: discordId })));
 }
 
 /** Every game with metadata or a name, including those with no scores. */

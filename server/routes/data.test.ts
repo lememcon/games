@@ -261,3 +261,103 @@ describe("public reads", () => {
     expect((await app.request("/api/gamesx")).status).toBe(401);
   });
 });
+
+describe("GET /api/me/top-games", () => {
+  const OTHER: AppUser = { ...MEMBER, discordId: "333333333333333333" };
+  const mine = (over: Partial<LegacyScoreRow>): LegacyScoreRow => ({
+    bgg_id: 1,
+    game: "Root",
+    player: "pat",
+    score: 5,
+    rank: 1,
+    discord_id: MEMBER.discordId,
+    ...over,
+  });
+  const seed = () =>
+    fakeData({
+      years: {
+        2025: [
+          mine({ bgg_id: 1, score: 5 }),
+          mine({ bgg_id: 2, score: 9 }),
+          // A second name of the same member: only the better rank counts.
+          mine({ bgg_id: 2, player: "pat2", score: 99, rank: 2 }),
+          mine({ bgg_id: 3, score: 9 }),
+          mine({ bgg_id: 4, score: 1, discord_id: OTHER.discordId }),
+        ],
+        2026: [],
+      },
+    });
+  const appFor = (user: AppUser | null, data = seed().data) =>
+    createApp({
+      baseUrl: "https://api.lememcon.com",
+      authHandler: async () => new Response("auth"),
+      store: fakeStore().store,
+      data,
+      links: fakeLinks().links,
+      memberOverrides: fakeMemberOverrides().memberOverrides,
+      memberVetoes: fakeMemberVetoes().memberVetoes,
+      memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
+      profiles: fakeProfiles().profiles,
+      played: fakePlayed().played,
+      resolveSession: async () => ({ user }),
+    });
+
+  it.each([
+    ["anonymous", null, 401],
+    ["pending", PENDING, 403],
+  ])("rejects %s callers", async (_label, user, status) => {
+    const res = await appFor(user).request("/api/me/top-games?year=2025");
+    expect(res.status).toBe(status);
+  });
+
+  it("returns the member's games, collapsed across names, best first", async () => {
+    const res = await appFor(MEMBER).request("/api/me/top-games?year=2025");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      games: [
+        { bgg_id: 2, score: 9 },
+        { bgg_id: 3, score: 9 },
+        { bgg_id: 1, score: 5 },
+      ],
+    });
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(res.headers.get("vary")).toContain("Cookie");
+  });
+
+  it("returns an empty list when the member has no scores that year", async () => {
+    const res = await appFor(MEMBER).request("/api/me/top-games?year=2026");
+    expect(await res.json()).toEqual({ games: [] });
+  });
+
+  it.each(["", "?year=abc", "?year=20255"])(
+    "rejects a bad or missing year (%s)",
+    async (query) => {
+      const res = await appFor(MEMBER).request(`/api/me/top-games${query}`);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "invalid_year" });
+    },
+  );
+
+  it("404s an unknown year", async () => {
+    const res = await appFor(MEMBER).request("/api/me/top-games?year=1999");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "unknown_year" });
+  });
+
+  it("does not answer another member's ETag with 304", async () => {
+    const { data } = seed();
+    const first = await appFor(MEMBER, data).request(
+      "/api/me/top-games?year=2025",
+    );
+    const etag = first.headers.get("etag")!;
+    expect(etag).toBeTruthy();
+    const second = await appFor(OTHER, data).request(
+      "/api/me/top-games?year=2025",
+      { headers: { "if-none-match": etag } },
+    );
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual({
+      games: [{ bgg_id: 4, score: 1 }],
+    });
+  });
+});

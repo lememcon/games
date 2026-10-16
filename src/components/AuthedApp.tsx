@@ -41,7 +41,7 @@ function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
 
   return (
     <>
-      <PageBackdrop user={user} />
+      <PageBackdrop />
       <Switch>
         <Route path="/admin">
           {isAdmin ? (
