@@ -15,6 +15,7 @@ import {
 import useLocalState from "@/hooks/useLocalState";
 import usePageMeta from "@/hooks/usePageMeta";
 import { ApiError, apiFetch } from "@/lib/api";
+import { invalidateGlobalData } from "@/lib/globalDataCache";
 import {
   fileYear,
   parseFile,
@@ -98,6 +99,7 @@ const AdminImport = () => {
         body: prepared.body,
       });
       invalidateScores(result.year ?? undefined);
+      invalidateGlobalData();
       setOutcome({ kind: "success", result });
     } catch (e) {
       setOutcome(failure(e, prepared.year));

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { loadGlobal } from "@/lib/globalDataCache";
 
 interface YearsState {
   // Ascending, as strings: the year picker and localStorage both use strings.
@@ -17,8 +18,8 @@ const parseYears = (body: unknown): string[] => {
   return [...(years as number[])].sort((a, b) => a - b).map(String);
 };
 
-// The years that have scores. Loaded on mount, so leaving and re-entering the
-// scoreboard (e.g. after importing a year) fetches a fresh list.
+// The years that have scores. Shared across hooks via the global data cache; an
+// import or BGG job invalidates it, so the next mount fetches a fresh list.
 const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
   const [state, setState] = useState<YearsState>({
     years: [],
@@ -28,12 +29,10 @@ const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch<unknown>("/years", {}, fetchImpl)
-      .then((body) => ({
-        years: parseYears(body),
-        loading: false,
-        error: false,
-      }))
+    loadGlobal("years", fetchImpl, async (f) =>
+      parseYears(await apiFetch<unknown>("/years", {}, f)),
+    )
+      .then((years) => ({ years, loading: false, error: false }))
       .catch(() => ({ years: [], loading: false, error: true }))
       .then((next) => {
         if (!cancelled) setState(next);

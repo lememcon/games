@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useBggStatus from "@/hooks/useBggStatus";
+import * as globalCache from "@/lib/globalDataCache";
 import type { BggJob, BggStatus } from "@/types";
 
 const res = (body: unknown, status = 200) =>
@@ -33,7 +34,10 @@ const running = (done = 0) => job({ state: "running", total: 4, done });
 const urls = (fetchImpl: ReturnType<typeof vi.fn>) =>
   fetchImpl.mock.calls.map((c) => String(c[0]).replace("/api/admin/bgg", ""));
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("useBggStatus", () => {
   it("loads status", async () => {
@@ -62,10 +66,12 @@ describe("useBggStatus", () => {
       .fn()
       .mockResolvedValueOnce(res(status()))
       .mockResolvedValueOnce(res(running(), 202));
+    const spy = vi.spyOn(globalCache, "invalidateGlobalData");
     const { result } = renderHook(() => useBggStatus(fetchImpl));
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(() => result.current.download({ mode: "missing" }));
     expect(result.current.status?.job.state).toBe("running");
+    expect(spy).not.toHaveBeenCalled();
     expect(fetchImpl).toHaveBeenLastCalledWith(
       "/api/admin/bgg/download",
       expect.objectContaining({ body: '{"mode":"missing"}' }),
@@ -83,6 +89,7 @@ describe("useBggStatus", () => {
       .mockResolvedValueOnce(
         res(status({ job: job({ state: "done", done: 4, total: 4 }) })),
       );
+    const spy = vi.spyOn(globalCache, "invalidateGlobalData");
     const { result } = renderHook(() => useBggStatus(fetchImpl));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(urls(fetchImpl)).toEqual(["/status"]);
@@ -91,6 +98,7 @@ describe("useBggStatus", () => {
     expect(result.current.status?.job.done).toBe(2);
     await act(() => vi.advanceTimersByTimeAsync(2000));
     expect(result.current.status?.job.done).toBe(3);
+    expect(spy).not.toHaveBeenCalled();
     expect(urls(fetchImpl)).toEqual(["/status", "/job", "/job"]);
 
     await act(() => vi.advanceTimersByTimeAsync(2000));
@@ -102,6 +110,7 @@ describe("useBggStatus", () => {
       "/status",
     ]);
     expect(result.current.status?.job.state).toBe("done");
+    expect(spy).toHaveBeenCalledWith("games");
 
     await act(() => vi.advanceTimersByTimeAsync(10_000));
     expect(fetchImpl).toHaveBeenCalledTimes(5);
@@ -138,10 +147,12 @@ describe("useBggStatus", () => {
       .mockResolvedValueOnce(res(status()))
       .mockResolvedValueOnce(res(job({ state: "done" }), 202))
       .mockResolvedValueOnce(res(status()));
+    const spy = vi.spyOn(globalCache, "invalidateGlobalData");
     const { result } = renderHook(() => useBggStatus(fetchImpl));
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(() => result.current.download({ mode: "ids", ids: [1] }));
     expect(urls(fetchImpl)).toEqual(["/status", "/download", "/status"]);
+    expect(spy).toHaveBeenCalledWith("games");
   });
 
   it("explains a refused download", async () => {
@@ -163,10 +174,12 @@ describe("useBggStatus", () => {
       .mockResolvedValueOnce(res(status({ job: running() })))
       .mockResolvedValueOnce(res(job({ state: "cancelled" })))
       .mockResolvedValueOnce(res(status({ job: job({ state: "cancelled" }) })));
+    const spy = vi.spyOn(globalCache, "invalidateGlobalData");
     const { result } = renderHook(() => useBggStatus(fetchImpl));
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(() => result.current.cancel());
     expect(result.current.status?.job.state).toBe("cancelled");
+    expect(spy).toHaveBeenCalledWith("games");
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,

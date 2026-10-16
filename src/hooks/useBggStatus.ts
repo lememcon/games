@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { bggApi } from "@/lib/adminApi";
 import { describeBggError, isRunning } from "@/lib/bgg";
+import { invalidateGlobalData } from "@/lib/globalDataCache";
 import type { BggDownloadRequest, BggStatus } from "@/types";
 
 const POLL_MS = 2000;
@@ -45,6 +46,7 @@ const useBggStatus = (fetchImpl: typeof fetch = fetch) => {
           setStatus((s) => (s ? { ...s, job } : s));
         } else {
           // Ended: the counts changed, so refetch /status once.
+          invalidateGlobalData("games");
           await refresh();
           return;
         }
@@ -67,7 +69,10 @@ const useBggStatus = (fetchImpl: typeof fetch = fetch) => {
         const job = await api.download(req);
         setStatus((s) => (s ? { ...s, job } : s));
         // An empty job ends before the first poll, so check once right away.
-        if (!isRunning(job)) await refresh();
+        if (!isRunning(job)) {
+          invalidateGlobalData("games");
+          await refresh();
+        }
       } catch (e) {
         setActionError(describeBggError(e));
       }
@@ -80,6 +85,7 @@ const useBggStatus = (fetchImpl: typeof fetch = fetch) => {
     try {
       const job = await api.cancelJob();
       setStatus((s) => (s ? { ...s, job } : s));
+      invalidateGlobalData("games");
       await refresh();
     } catch (e) {
       setActionError(describeBggError(e));
