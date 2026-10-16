@@ -28,7 +28,9 @@ interface MemberProps {
 const MemberCard = ({ member, unlinked, onLink, onUnlink }: MemberProps) => (
   <Stack gap="xs">
     <Group gap="xs">
-      <Text fw={600}>{member.label}</Text>
+      <Text fw={600} style={{ overflowWrap: "anywhere" }}>
+        {member.label}
+      </Text>
       <Badge variant="light">
         {member.players.length} {member.players.length === 1 ? "name" : "names"}
       </Badge>
@@ -51,7 +53,7 @@ const MemberCard = ({ member, unlinked, onLink, onUnlink }: MemberProps) => (
       <Select
         aria-label={`Add a name for ${member.label}`}
         size="xs"
-        w={200}
+        w={{ base: "100%", sm: 200 }}
         searchable
         placeholder="Add a name"
         data={unlinked.map((p) => ({ value: String(p.id), label: p.name }))}

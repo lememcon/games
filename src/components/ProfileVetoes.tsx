@@ -53,10 +53,13 @@ const ProfileVetoes = ({ games }: ProfileVetoesProps) => {
         <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
           {myVetoes.vetoes.map((v) => (
             <Group key={v.bggId} justify="space-between" wrap="nowrap">
-              <Text>{v.name ?? `Game ${v.bggId}`}</Text>
+              <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
+                {v.name ?? `Game ${v.bggId}`}
+              </Text>
               <Button
                 size="xs"
                 variant="default"
+                style={{ flex: "none" }}
                 aria-label={`Undo veto of ${v.name ?? `Game ${v.bggId}`}`}
                 disabled={myVetoes.saving}
                 onClick={() => myVetoes.clear(v.bggId)}

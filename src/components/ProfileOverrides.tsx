@@ -28,6 +28,8 @@ interface ProfileOverridesProps {
   games: GamesState;
 }
 
+const WRAP = { overflowWrap: "anywhere" } as const;
+
 // The member's own player count overrides, with edit, reset and add.
 const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
   const overrides = usePlayerOverrides();
@@ -83,7 +85,9 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
             const bounds = realBounds(games.games[id]);
             return (
               <Group key={id} justify="space-between">
-                <Text>{name}</Text>
+                <Text flex="1 1 160px" miw={0} style={WRAP}>
+                  {name}
+                </Text>
                 {bounds ? (
                   <MyPlayerRange
                     // Remount after a save or reset so the inputs show server state.
@@ -114,9 +118,9 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
               </Group>
             );
           })}
-          <Group gap="xs" align="flex-start" wrap="nowrap">
+          <Group gap="xs" align="flex-start">
             <Select
-              flex={1}
+              flex="1 1 12rem"
               miw={0}
               aria-label="Game to override"
               placeholder="Search games..."

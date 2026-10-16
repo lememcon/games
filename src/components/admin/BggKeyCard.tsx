@@ -67,7 +67,9 @@ const BggKeyCard = ({
           </Alert>
         )}
         {info.configured && !editing && (
-          <Text ff="monospace">{info.masked}</Text>
+          <Text ff="monospace" style={{ overflowWrap: "anywhere" }}>
+            {info.masked}
+          </Text>
         )}
         {error && (
           <Alert color="red" role="alert">

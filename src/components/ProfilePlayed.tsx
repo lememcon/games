@@ -82,10 +82,13 @@ const ProfilePlayed = () => {
             <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
               {playedGames(played, names).map((g) => (
                 <Group key={g.id} justify="space-between" wrap="nowrap">
-                  <Text>{g.name}</Text>
+                  <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
+                    {g.name}
+                  </Text>
                   <Button
                     size="xs"
                     variant="default"
+                    style={{ flex: "none" }}
                     aria-label={`Remove ${g.name}`}
                     onClick={() => toggle(g.id)}
                   >
