@@ -7,6 +7,10 @@ import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { Profile } from "@/types";
 
+vi.mock("@/lib/images", () => ({
+  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
+}));
+
 const hook = vi.hoisted(() => ({
   state: { status: "loading" } as unknown,
   useProfile: vi.fn(),
@@ -200,6 +204,92 @@ describe("PublicProfile", () => {
       "href",
       "/2025/games/2",
     );
+  });
+
+  describe("veto covers", () => {
+    const section = (name: string) =>
+      screen.getByRole("heading", { name }).parentElement as HTMLElement;
+    const show = (extra: Partial<Profile>) => {
+      set({ status: "ready", profile: { ...base, ...extra } });
+      renderWithMantine(<PublicProfile discordId="5" />);
+    };
+
+    it("prefers the bundled cover for a permanent veto with an ext", () => {
+      show({
+        vetoes: [
+          {
+            bggId: 7,
+            name: "Azul",
+            image: "https://example.com/a.jpg",
+            ext: ".jpg",
+          },
+        ],
+      });
+      const s = section("Vetoed games");
+      expect(s.querySelectorAll("img")).toHaveLength(1);
+      expect(s.querySelector("img")).toHaveAttribute("src", "/bundled/7.jpg");
+    });
+
+    it("prefers the bundled cover for a year veto with an ext", () => {
+      show({
+        yearVetoes: [
+          {
+            year: 2026,
+            bggId: 7,
+            name: "Brass",
+            image: "https://example.com/b.jpg",
+            ext: ".jpg",
+          },
+        ],
+      });
+      expect(section("Vetoed in 2026").querySelector("img")).toHaveAttribute(
+        "src",
+        "/bundled/7.jpg",
+      );
+    });
+
+    it("falls back to the https image for a year veto without an ext", () => {
+      show({
+        yearVetoes: [
+          {
+            year: 2025,
+            bggId: 2,
+            name: "Wingspan",
+            image: "https://example.com/w.jpg",
+          },
+        ],
+      });
+      expect(section("Vetoed in 2025").querySelector("img")).toHaveAttribute(
+        "src",
+        "https://example.com/w.jpg",
+      );
+    });
+
+    it("shows a blank square for a year veto with no cover", () => {
+      show({
+        yearVetoes: [{ year: 2024, bggId: 4, name: "Root" }],
+      });
+      const el = section("Vetoed in 2024");
+      expect(el.querySelector("img")).toBeNull();
+      expect(el.querySelectorAll(".tray-cover__blank")).toHaveLength(1);
+    });
+
+    it("shows a blank square for an unmatched ext and non-https image", () => {
+      show({
+        yearVetoes: [
+          {
+            year: 2023,
+            bggId: 5,
+            name: "Catan",
+            image: "http://example.com/c.jpg",
+            ext: ".png",
+          },
+        ],
+      });
+      const el = section("Vetoed in 2023");
+      expect(el.querySelector("img")).toBeNull();
+      expect(el.querySelectorAll(".tray-cover__blank")).toHaveLength(1);
+    });
   });
 
   it("hides empty veto sections", () => {
