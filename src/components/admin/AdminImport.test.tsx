@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminImport from "@/components/admin/AdminImport";
 import * as cache from "@/lib/scoresCache";
+import * as sync from "@/lib/scoresSync";
 import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
@@ -143,8 +144,9 @@ describe("AdminImport", () => {
     });
   });
 
-  it("invalidates the imported year's cached scores", async () => {
+  it("invalidates the imported year's cached scores and announces it", async () => {
     const spy = vi.spyOn(cache, "invalidateScores");
+    const announce = vi.spyOn(sync, "announceImport");
     fetchMock.mockResolvedValue(
       res(
         {
@@ -164,10 +166,12 @@ describe("AdminImport", () => {
     );
     await screen.findByRole("link", { name: "View 2027" });
     expect(spy).toHaveBeenCalledWith();
+    expect(announce).toHaveBeenCalledTimes(1);
   });
 
-  it("invalidates every year after a games-only import", async () => {
+  it("invalidates every year and announces after a games-only import", async () => {
     const spy = vi.spyOn(cache, "invalidateScores");
+    const announce = vi.spyOn(sync, "announceImport");
     fetchMock.mockResolvedValue(
       res(
         {
@@ -187,10 +191,12 @@ describe("AdminImport", () => {
     );
     await screen.findByRole("alert");
     expect(spy).toHaveBeenCalledWith();
+    expect(announce).toHaveBeenCalledTimes(1);
   });
 
-  it("does not invalidate on a 422 or other failure", async () => {
+  it("does not invalidate or announce on a 422 or other failure", async () => {
     const spy = vi.spyOn(cache, "invalidateScores");
+    const announce = vi.spyOn(sync, "announceImport");
     fetchMock.mockResolvedValueOnce(
       res({ errors: [{ path: "a", message: "bad" }] }, 422),
     );
@@ -204,6 +210,7 @@ describe("AdminImport", () => {
     await userEvent.click(screen.getByRole("button", { name: "Import 2027" }));
     await screen.findByText("Something went wrong. Try again.");
     expect(spy).not.toHaveBeenCalled();
+    expect(announce).not.toHaveBeenCalled();
   });
 
   it("links to the imported year and clears the players when viewing it", async () => {

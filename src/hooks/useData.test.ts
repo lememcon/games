@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useData from "@/hooks/useData";
 import * as cache from "@/lib/scoresCache";
+import { announceImport } from "@/lib/scoresSync";
 
 const scores = [
   { game: "Root", rank: 1, score: 50, player: "alice", bgg_id: 100 },
@@ -12,6 +13,11 @@ const scores = [
 
 const ok = (payload: unknown) =>
   Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }));
+
+type Fake = { onmessage: ((e: MessageEvent) => void) | null };
+const message = () =>
+  (globalThis.BroadcastChannel as unknown as { instances: Fake[] }).instances[0]
+    .onmessage!({} as MessageEvent);
 
 const mockFetch = (payload: unknown) =>
   (globalThis.fetch = vi.fn(() => ok(payload)) as unknown as typeof fetch);
@@ -196,5 +202,142 @@ describe("useData", () => {
     await act(async () => {});
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(result.current.loading).toBe(false);
+  });
+
+  describe("after an import in another tab", () => {
+    const sequence = (...bodies: unknown[]) => {
+      const fn = vi.fn();
+      bodies.forEach((b) => fn.mockImplementationOnce(() => ok(b)));
+      globalThis.fetch = fn as unknown as typeof fetch;
+      return fn;
+    };
+
+    it("refetches and shows pending, never old data", async () => {
+      const fn = sequence(
+        { player_game_scores: scores },
+        { player_game_scores: [scores[2]] },
+      );
+      const { result } = renderHook(() => useData("2025"));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.scores).toEqual(scores);
+
+      act(() => message());
+      expect(result.current.loading).toBe(true);
+      expect(result.current.scores).toEqual([]);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.scores).toEqual([scores[2]]);
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("drops an in-flight response that resolves last", async () => {
+      let resolveOld!: (res: Response) => void;
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<Response>((r) => (resolveOld = r)),
+        )
+        .mockImplementationOnce(() =>
+          ok({ player_game_scores: [scores[2]] }),
+        ) as unknown as typeof fetch;
+      const { result } = renderHook(() => useData("2025"));
+      act(() => message());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await act(async () => {
+        resolveOld(
+          new Response(JSON.stringify({ player_game_scores: scores })),
+        );
+      });
+      expect(result.current.scores).toEqual([scores[2]]);
+    });
+
+    it("drops a response that resolved but was not yet committed", async () => {
+      sequence(
+        { player_game_scores: scores },
+        { player_game_scores: [scores[2]] },
+      );
+      const { result } = renderHook(() => useData("2025"));
+      // Message lands in the same tick the first load settles.
+      await act(async () => {
+        await Promise.resolve();
+        message();
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.scores).toEqual([scores[2]]);
+    });
+
+    it("never shows the old year when the year changes mid-refetch", async () => {
+      sequence(
+        { player_game_scores: scores },
+        { player_game_scores: [scores[2]] },
+        { player_game_scores: [scores[1]] },
+      );
+      const { result, rerender } = renderHook(({ y }) => useData(y), {
+        initialProps: { y: "2025" },
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      act(() => message());
+      rerender({ y: "2026" });
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.scores).toEqual([scores[1]]);
+    });
+
+    it("shows the error state when the refetch fails", async () => {
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementationOnce(() => ok({ player_game_scores: scores }))
+        .mockImplementationOnce(() =>
+          Promise.reject(new Error("down")),
+        ) as unknown as typeof fetch;
+      const { result } = renderHook(() => useData("2025"));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      act(() => message());
+      await waitFor(() => expect(result.current.error).toBe(true));
+      expect(result.current.scores).toEqual([]);
+    });
+
+    it("shares one refetch between two hooks on a year", async () => {
+      const fn = sequence(
+        { player_game_scores: scores },
+        { player_game_scores: [scores[2]] },
+      );
+      const a = renderHook(() => useData("2025"));
+      const b = renderHook(() => useData("2025"));
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      act(() => message());
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      await waitFor(() => expect(b.result.current.loading).toBe(false));
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(a.result.current).toBe(b.result.current);
+    });
+
+    it("refetches for an injected fetch", async () => {
+      const injected = vi
+        .fn()
+        .mockImplementationOnce(() => ok({ player_game_scores: scores }))
+        .mockImplementationOnce(() => ok({ player_game_scores: [scores[2]] }));
+      const { result } = renderHook(() =>
+        useData("2025", injected as unknown as typeof fetch),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      act(() => announceImport());
+      await waitFor(() => expect(result.current.scores).toEqual([scores[2]]));
+      expect(injected).toHaveBeenCalledTimes(2);
+    });
+
+    it("fetches fresh for a hook mounted after the message", async () => {
+      const fn = sequence(
+        { player_game_scores: scores },
+        { player_game_scores: [scores[2]] },
+      );
+      const first = renderHook(() => useData("2025"));
+      await waitFor(() => expect(first.result.current.loading).toBe(false));
+      act(() => message());
+      first.unmount();
+      const later = renderHook(() => useData("2025"));
+      await waitFor(() => expect(later.result.current.loading).toBe(false));
+      expect(later.result.current.scores).toEqual([scores[2]]);
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
   });
 });

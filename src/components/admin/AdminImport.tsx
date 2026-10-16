@@ -24,6 +24,7 @@ import {
 import { pageMeta } from "@/lib/pageMeta";
 import { yearPath } from "@/lib/routes";
 import { invalidateScores } from "@/lib/scoresCache";
+import { announceImport } from "@/lib/scoresSync";
 import type { ImportProblem, ImportResult } from "@/types";
 
 const MAX_SHOWN = 10;
@@ -98,6 +99,7 @@ const AdminImport = () => {
         body: prepared.body,
       });
       invalidateScores();
+      announceImport();
       setOutcome({ kind: "success", result });
     } catch (e) {
       setOutcome(failure(e, prepared.year));

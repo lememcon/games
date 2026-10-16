@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { useImportVersion } from "@/lib/scoresSync";
 
 interface YearsState {
   // Ascending, as strings: the year picker and localStorage both use strings.
@@ -17,14 +18,16 @@ const parseYears = (body: unknown): string[] => {
   return [...(years as number[])].sort((a, b) => a - b).map(String);
 };
 
-// The years that have scores. Loaded on mount, so leaving and re-entering the
-// scoreboard (e.g. after importing a year) fetches a fresh list.
+const loadingState: YearsState = { years: [], loading: true, error: false };
+
+// The years that have scores. Loaded on mount, and again after an import in
+// this or another tab; until then it reports loading, never the old list.
 const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
-  const [state, setState] = useState<YearsState>({
-    years: [],
-    loading: true,
-    error: false,
-  });
+  const version = useImportVersion();
+  const [state, setState] = useState<{
+    version: number;
+    value: YearsState;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,14 +39,14 @@ const useYears = (fetchImpl: typeof fetch = fetch): YearsState => {
       }))
       .catch(() => ({ years: [], loading: false, error: true }))
       .then((next) => {
-        if (!cancelled) setState(next);
+        if (!cancelled) setState({ version, value: next });
       });
     return () => {
       cancelled = true;
     };
-  }, [fetchImpl]);
+  }, [version, fetchImpl]);
 
-  return state;
+  return state?.version === version ? state.value : loadingState;
 };
 
 export default useYears;
