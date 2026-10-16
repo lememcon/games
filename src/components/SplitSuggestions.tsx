@@ -7,6 +7,7 @@ import { useDisclosure } from "@mantine/hooks";
 import GroupRank from "@/components/GroupRank";
 import LeastHappy from "@/components/LeastHappy";
 import PlayerName from "@/components/PlayerName";
+import Score from "@/components/Score";
 import ScorePopover from "@/components/ScorePopover";
 import { leastHappyPlayer, splitLeastHappy } from "@/lib/games";
 import { gamePath } from "@/lib/routes";
@@ -39,7 +40,7 @@ const Players = ({ players }: { players: string[] }) => (
   </>
 );
 
-// One suggested split. Collapsed it shows the headline, the per-player score, the
+// One suggested split. Collapsed it shows the headline, the per-player score bar, the
 // player least happy across the whole split and, for each group, its players and picked game; expanding the header reveals every
 // group's full list of top games.
 const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
@@ -63,9 +64,8 @@ const SplitCard = ({ split, year, individualMax }: SplitCardProps) => {
             {split.groups.map((g) => g.players.length).join(" + ")} ·{" "}
             {split.groups.map((g) => g.picked).join(" + ")}
           </strong>
-          <span>
-            {normalized_score(split.perPlayer, individualMax).toFixed(1)} per
-            player{" "}
+          <span className="splits__score">
+            <Score score={split.perPlayer} max={individualMax} />
             {split.delta !== null && (
               <span
                 className={
