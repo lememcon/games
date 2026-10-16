@@ -43,9 +43,9 @@ A separate `commitlint` job runs on pull requests only.
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
   react-refresh).
 - `src/lib/floaters.ts` — drifting-cover math (`pickFloaters` with preferred ids,
-  `coverId`, `buildCoverPool`, `topScoreIds`); `useBackdropCovers` feeds `PageBackdrop`,
+  `coverId`, `buildCoverPool`); `useBackdropCovers` (with `useTopGames` and `useYearTotals`) feeds `PageBackdrop`,
   the cover layer behind every signed-in page (year pages only show games scored that
-  year, the player's top 10 first).
+  year, the player's top 10 first, from `GET /api/me/top-games`).
 - `src/lib/routes.ts` — scoreboard URL scheme (also `routeYear`, `defaultYear`); also owns the shareable filter query
   (`?players=A,B&hidePlayed=1`: `buildFilterSearch`, `parseFilterSearch`, `sharePath`).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
@@ -66,7 +66,8 @@ A separate `commitlint` job runs on pull requests only.
   - Game data: `import.ts` (pure upload validation, `parseImport`, year and games-only
     shapes), `shape.ts` (pure shaping: legacy row shape, games map, chunking, rename
     detection, counts), `routes/data.ts` (public `GET /api/years`,
-    `/api/years/:year/scores`, `/api/games`), `routes/import.ts`
+    `/api/years/:year/scores`, `/api/games`, plus the approved-only
+    `GET /api/me/top-games?year=` behind `useTopGames`, via `shape.ts` `topGames`), `routes/import.ts`
     (`POST /api/admin/import`, admin only, 5 MB limit). SQL is thin and lives in
     `db/import.ts`, `db/read.ts` and `db/dataStore.ts` (the `DataStore` behind `deps.data`);
     `testing.ts` has `fakeData()` for route tests. Game metadata (players, image) lives only in

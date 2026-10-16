@@ -2,6 +2,7 @@ import type { BggGame } from "./bgg/client";
 import type { NormalizedImport } from "./import";
 import { refuse } from "./result";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
+import { topGames } from "./shape";
 import type {
   AllPlayedGames,
   BggRepo,
@@ -141,6 +142,7 @@ export function fakeData(
   const games: GamesMap = { ...initial.games };
   const imports: { input: NormalizedImport; context: ImportContext }[] = [];
   const scoreCalls: { year: number; resolveNames: boolean }[] = [];
+  const topCalls: { year: number; discordId: string }[] = [];
 
   const data: DataStore = {
     listYears: async () => [...years.keys()].sort((a, b) => b - a),
@@ -163,6 +165,23 @@ export function fakeData(
         : null;
     },
     getGames: async () => games,
+    getTopGames: async (year, discordId) => {
+      topCalls.push({ year, discordId });
+      const rows = years.get(year);
+      if (!rows) return null;
+      return topGames(
+        rows
+          .filter((r) => r.discord_id === discordId)
+          .map((r, id) => ({
+            id,
+            owner: discordId,
+            bggId: r.bgg_id,
+            year,
+            score: r.score,
+            rank: r.rank,
+          })),
+      );
+    },
     getYearTotals: async () => {
       const sums = new Map<string, YearTotal>();
       for (const [year, rows] of years)
@@ -216,7 +235,7 @@ export function fakeData(
       };
     },
   };
-  return { data, years, games, imports, scoreCalls };
+  return { data, years, games, imports, scoreCalls, topCalls };
 }
 
 /** In-memory LinkStore for tests; refuses unknown players and members like the SQL store. */

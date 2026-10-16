@@ -132,6 +132,20 @@ export function collapseMemberScores<T extends MemberScore>(
   return [...out, ...best.values()].sort((a, b) => a.id - b.id);
 }
 
+/**
+ * A member's highest scores: one row per game (see `collapseMemberScores`),
+ * score descending, ties by the lower bgg id.
+ */
+export function topGames<T extends MemberScore>(
+  rows: readonly T[],
+  limit = 10,
+): { bgg_id: number; score: number }[] {
+  return collapseMemberScores(rows)
+    .sort((a, b) => b.score - a.score || a.bggId - b.bggId)
+    .slice(0, limit)
+    .map((r) => ({ bgg_id: r.bggId, score: r.score }));
+}
+
 const TOP_PER_YEAR = 10;
 
 /** Each year's best finishes: rank, then score (high first), game name, bgg id. */

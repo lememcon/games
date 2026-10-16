@@ -15,6 +15,7 @@ import {
   toLegacyRow,
   toMetadata,
   toProfileStats,
+  topGames,
 } from "./shape";
 import type { MemberScore } from "./shape";
 import type { GameRow, ProfileScore, ScoreRow } from "./types";
@@ -563,5 +564,52 @@ describe("toProfileStats", () => {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
       ]);
     });
+  });
+});
+
+describe("topGames", () => {
+  const m = (
+    id: number,
+    bggId: number,
+    score: number,
+    over: Partial<MemberScore> = {},
+  ): MemberScore => ({
+    id,
+    owner: "1",
+    bggId,
+    year: 2025,
+    rank: 1,
+    score,
+    ...over,
+  });
+
+  it("sorts by score descending, then lower bgg id", () => {
+    expect(topGames([m(1, 5, 10), m(2, 3, 20), m(3, 2, 10)])).toEqual([
+      { bgg_id: 3, score: 20 },
+      { bgg_id: 2, score: 10 },
+      { bgg_id: 5, score: 10 },
+    ]);
+  });
+
+  it("keeps one row per game across a member's several names", () => {
+    expect(
+      topGames([m(1, 5, 99, { rank: 2 }), m(2, 5, 10), m(3, 6, 20)]),
+    ).toEqual([
+      { bgg_id: 6, score: 20 },
+      { bgg_id: 5, score: 10 },
+    ]);
+  });
+
+  it("limits to ten by default and honors a custom limit", () => {
+    const rows = Array.from({ length: 12 }, (_, i) => m(i, i + 1, 100 - i));
+    expect(topGames(rows)).toHaveLength(10);
+    expect(topGames(rows, 2)).toEqual([
+      { bgg_id: 1, score: 100 },
+      { bgg_id: 2, score: 99 },
+    ]);
+  });
+
+  it("is empty for no rows", () => {
+    expect(topGames([])).toEqual([]);
   });
 });

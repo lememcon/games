@@ -1,5 +1,3 @@
-import type { PlayerGameScore } from "@/types";
-
 export interface Floater {
   id: string;
   /** Horizontal position, percent of the viewport width. */
@@ -29,23 +27,6 @@ export const buildCoverPool = (
     const id = coverId(key);
     return id !== null && allowedIds.has(id);
   });
-};
-
-/**
- * A player's highest raw scores: unique game ids (as strings), best first,
- * ties broken by the lower game id.
- */
-export const topScoreIds = (
-  rows: readonly PlayerGameScore[],
-  discordId: string,
-  limit = 10,
-): string[] => {
-  const ids = new Set<string>();
-  rows
-    .filter((row) => row.discord_id === discordId)
-    .sort((a, b) => b.score - a.score || a.bgg_id - b.bgg_id)
-    .forEach((row) => ids.add(`${row.bgg_id}`));
-  return [...ids].slice(0, limit);
 };
 
 const motion = (

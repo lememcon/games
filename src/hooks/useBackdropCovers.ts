@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 
-import useData from "@/hooks/useData";
+import useTopGames from "@/hooks/useTopGames";
+import useYearTotals from "@/hooks/useYearTotals";
 import useYears from "@/hooks/useYears";
-import { buildCoverPool, coverId, topScoreIds } from "@/lib/floaters";
+import { buildCoverPool, coverId } from "@/lib/floaters";
 import images from "@/lib/images";
 import { defaultYear, routeYear } from "@/lib/routes";
 
@@ -34,25 +35,31 @@ export interface BackdropCovers {
  */
 const useBackdropCovers = (
   pathname: string,
-  discordId: string,
   fetchImpl: typeof fetch = fetch,
 ): BackdropCovers => {
   const { years } = useYears(fetchImpl);
   const pathYear = routeYear(pathname);
   const year = defaultYear(years, readStoredYear(), pathYear);
-  const data = useData(year, fetchImpl);
+  const top = useTopGames(year, fetchImpl);
+  const totals = useYearTotals(fetchImpl);
 
-  const ready = !data.loading && !data.error;
+  const ready = !top.loading && !top.error && !totals.loading && !totals.error;
   // Until a year page's scores arrive, which games it has is unknown.
   const unknown = pathYear !== null && !ready;
   // Keys, not the data object, so a refetch with the same games changes nothing.
   const allowedKey =
     ready && pathYear !== null
-      ? [...new Set(data.scores.map((row) => `${row.bgg_id}`))].sort().join(",")
+      ? [
+          ...new Set(
+            totals.totals
+              .filter((t) => `${t.year}` === pathYear)
+              .map((t) => `${t.bgg_id}`),
+          ),
+        ]
+          .sort()
+          .join(",")
       : null;
-  const preferredKey = ready
-    ? topScoreIds(data.scores, discordId).join(",")
-    : "";
+  const preferredKey = ready ? top.ids.join(",") : "";
 
   return useMemo(() => {
     if (unknown) return { pool: [], preferred: [] };

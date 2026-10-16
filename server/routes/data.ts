@@ -2,10 +2,14 @@ import { Hono } from "hono";
 import { etag } from "hono/etag";
 import { createMiddleware } from "hono/factory";
 
+import { parseYear } from "../played";
 import { privateNoCache } from "../result";
 import type { AppEnv, DataStore } from "../types";
 
-/** Public reads: years, one year's scores, and all games. */
+/**
+ * Reads of years, one year's scores and all games (public), plus the signed-in
+ * member's own top games (`/me/top-games`, approved members only).
+ */
 export function dataRoutes(data: DataStore) {
   const routes = new Hono<AppEnv>();
 
@@ -47,6 +51,16 @@ export function dataRoutes(data: DataStore) {
   routes.get("/games/unplayed", ...read, async (c) =>
     c.json({ games: await data.listUnplayedGames() }),
   );
+
+  // Approved members only (not in app.ts isPublic). Varies by caller.
+  routes.get("/me/top-games", ...read, async (c) => {
+    const year = parseYear(c.req.query("year"));
+    if (year === null) return c.json({ error: "invalid_year" }, 400);
+    const games = await data.getTopGames(year, c.get("user")!.discordId);
+    c.header("Vary", "Cookie", { append: true });
+    if (!games) return c.json({ error: "unknown_year" }, 404);
+    return c.json({ games });
+  });
 
   routes.get("/games", ...read, async (c) => c.json(await data.getGames()));
 

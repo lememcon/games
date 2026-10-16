@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildCoverPool,
-  coverId,
-  pickFloaters,
-  topScoreIds,
-} from "@/lib/floaters";
-import type { PlayerGameScore } from "@/types";
+import { buildCoverPool, coverId, pickFloaters } from "@/lib/floaters";
 
 const seeded = (seed: number) => () => {
   seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -114,37 +108,5 @@ describe("buildCoverPool", () => {
   it("keeps only allowed ids", () => {
     expect(buildCoverPool(keys, new Set(["2"]))).toEqual(["/g/2.png"]);
     expect(buildCoverPool(keys, new Set())).toEqual([]);
-  });
-});
-
-describe("topScoreIds", () => {
-  const row = (
-    bgg_id: number,
-    score: number,
-    discord_id?: string,
-  ): PlayerGameScore => ({
-    bgg_id,
-    score,
-    discord_id,
-    game: `g${bgg_id}`,
-    player: "p",
-    rank: 1,
-  });
-
-  it("returns the player's best games, highest score first", () => {
-    const rows = [row(1, 5, "me"), row(2, 50, "me"), row(3, 99, "you")];
-    expect(topScoreIds(rows, "me")).toEqual(["2", "1"]);
-  });
-
-  it("breaks ties by game id and dedupes games", () => {
-    const rows = [row(9, 10, "me"), row(4, 10, "me"), row(9, 3, "me")];
-    expect(topScoreIds(rows, "me")).toEqual(["4", "9"]);
-  });
-
-  it("limits the result and is empty for an unlinked player", () => {
-    const rows = Array.from({ length: 15 }, (_, i) => row(i + 1, i, "me"));
-    expect(topScoreIds(rows, "me")).toHaveLength(10);
-    expect(topScoreIds(rows, "me", 3)).toEqual(["15", "14", "13"]);
-    expect(topScoreIds(rows, "nobody")).toEqual([]);
   });
 });
