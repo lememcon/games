@@ -262,3 +262,22 @@ export const memberVeto = pgTable(
   },
   (table) => [primaryKey({ columns: [table.discordId, table.bggId] })],
 );
+
+/** A member's veto of a game for one year only: the game drops out of that year's suggestions for groups including them. */
+export const memberYearVeto = pgTable(
+  "member_year_veto",
+  {
+    discordId: text("discord_id")
+      .notNull()
+      .references(() => appUser.discordId, { onDelete: "cascade" }),
+    year: integer("year")
+      .notNull()
+      .references(() => year.year, { onDelete: "cascade" }),
+    bggId: integer("bgg_id")
+      .notNull()
+      .references(() => game.bggId, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.discordId, table.year, table.bggId] }),
+  ],
+);

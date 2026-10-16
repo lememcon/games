@@ -70,6 +70,8 @@ export interface AppDeps {
   memberOverrides: MemberOverrideStore;
   /** Each member's game vetoes, shared by every year. */
   memberVetoes: MemberVetoStore;
+  /** Each member's game vetoes for a single year. */
+  memberYearVetoes: MemberYearVetoStore;
 }
 
 export type AppEnv = { Variables: { user: AppUser | null } };
@@ -440,4 +442,18 @@ export interface MemberVetoStore {
   set(discordId: string, bggId: number): Promise<MutationResult<null>>;
   /** Removes the member's veto; no error when absent. */
   clear(discordId: string, bggId: number): Promise<void>;
+}
+
+/** All SQL for year-only game vetoes lives behind this interface (server/db/memberYearVetoStore.ts). */
+export interface MemberYearVetoStore {
+  /** Every member's vetoes for the year, or null when the year is unknown. */
+  getAll(year: number): Promise<{ discordId: string; bggId: number }[] | null>;
+  /** Idempotent. Refuses with 404 `unknown_year` or `unknown_game`. */
+  set(
+    discordId: string,
+    year: number,
+    bggId: number,
+  ): Promise<MutationResult<null>>;
+  /** Removes the member's veto for the year; no error when absent. */
+  clear(discordId: string, year: number, bggId: number): Promise<void>;
 }

@@ -14,6 +14,7 @@ import type {
   LinkableUser,
   MemberOverrideStore,
   MemberVetoStore,
+  MemberYearVetoStore,
   MyVetoRow,
   PlayedGames,
   PlayedStore,
@@ -464,4 +465,53 @@ export function fakeMemberVetoes(
     },
   };
   return { memberVetoes, rows, calls };
+}
+
+/**
+ * In-memory MemberYearVetoStore for tests. `years` are the known years and
+ * `games` the known bgg ids; it applies the same refusals as the SQL store.
+ */
+export function fakeMemberYearVetoes(
+  initial: {
+    years?: number[];
+    games?: number[];
+    vetoes?: { discordId: string; year: number; bggId: number }[];
+  } = {},
+) {
+  const years = new Set(initial.years ?? [2025, 2026]);
+  const games = new Set(initial.games ?? [1]);
+  const rows = [...(initial.vetoes ?? [])];
+  const calls: {
+    discordId: string;
+    year: number;
+    bggId: number;
+  }[] = [];
+  const same = (
+    r: { discordId: string; year: number; bggId: number },
+    discordId: string,
+    year: number,
+    bggId: number,
+  ) => r.discordId === discordId && r.year === year && r.bggId === bggId;
+  const memberYearVetoes: MemberYearVetoStore = {
+    getAll: async (year) =>
+      years.has(year)
+        ? rows
+            .filter((r) => r.year === year)
+            .map(({ discordId, bggId }) => ({ discordId, bggId }))
+        : null,
+    set: async (discordId, year, bggId) => {
+      calls.push({ discordId, year, bggId });
+      if (!years.has(year)) return refuse(404, "unknown_year");
+      if (!games.has(bggId)) return refuse(404, "unknown_game");
+      if (!rows.some((r) => same(r, discordId, year, bggId)))
+        rows.push({ discordId, year, bggId });
+      return { ok: true, value: null };
+    },
+    clear: async (discordId, year, bggId) => {
+      calls.push({ discordId, year, bggId });
+      const i = rows.findIndex((r) => same(r, discordId, year, bggId));
+      if (i >= 0) rows.splice(i, 1);
+    },
+  };
+  return { memberYearVetoes, rows, calls };
 }

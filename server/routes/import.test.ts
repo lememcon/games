@@ -6,6 +6,7 @@ import {
   fakeLinks,
   fakeMemberOverrides,
   fakeMemberVetoes,
+  fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
   fakeStore,
@@ -43,6 +44,7 @@ function makeApp() {
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
     memberVetoes: fakeMemberVetoes().memberVetoes,
+    memberYearVetoes: fakeMemberYearVetoes().memberYearVetoes,
     profiles: fakeProfiles().profiles,
     played: fakePlayed().played,
     resolveSession: async (headers) => {
