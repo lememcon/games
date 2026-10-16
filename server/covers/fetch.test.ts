@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { IMAGE_HOST } from "../bgg/client";
-import { CoverFetchError, createCoverFetcher } from "./fetch";
+import { CoverFetchError, createCoverFetcher, sniff } from "./fetch";
 
 const URL_OK = `https://${IMAGE_HOST}/pic/cover.jpg?secret=1`;
 
@@ -135,6 +135,13 @@ describe("createCoverFetcher", () => {
     expect(await kindOf(f(URL_OK))).toBe("upstream");
   });
 
+  it("carries the upstream status on a non-2xx", async () => {
+    const f = make(respond("slow down", { status: 429 }));
+    const err = await f(URL_OK).catch((e: unknown) => e);
+    expect((err as CoverFetchError).status).toBe(429);
+    expect((err as CoverFetchError).message).not.toContain("slow down");
+  });
+
   it("rejects a missing body", async () => {
     const f = make(respond(null, { status: 200 }));
     expect(await kindOf(f(URL_OK))).toBe("upstream");
@@ -235,5 +242,16 @@ describe("createCoverFetcher", () => {
       URL_OK,
     ).catch((e: Error) => e);
     expect((err as Error).message).not.toMatch(/secret|SECRETBODY/i);
+  });
+});
+
+describe("sniff", () => {
+  it("reads the type from magic bytes", () => {
+    expect(sniff(new Uint8Array(PNG))).toEqual({
+      contentType: "image/png",
+      ext: "png",
+    });
+    expect(sniff(new TextEncoder().encode('{"a":1}'))).toBeNull();
+    expect(sniff(new Uint8Array(0))).toBeNull();
   });
 });

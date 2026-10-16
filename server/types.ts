@@ -153,6 +153,12 @@ export interface BggRepo {
   setCover(bggId: number, key: string, source: string): Promise<boolean>;
   /** Games whose cover still needs mirroring (https image, not custom). */
   listCoverNeeds(): Promise<CoverNeed[]>;
+  /**
+   * Records an admin-uploaded cover: `image_url` and `image_source` become
+   * "custom", so neither the mirror nor an upsert replaces it. Returns whether
+   * the game has a metadata row.
+   */
+  setCustomCover(bggId: number, key: string): Promise<boolean>;
 }
 
 export interface CoverNeed {

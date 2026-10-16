@@ -128,6 +128,13 @@ export function fakeBggRepo() {
       covers.set(bggId, { key, source });
       return true;
     },
+    setCustomCover: async (bggId, key) => {
+      const row = rows.get(bggId);
+      if (!row) return false;
+      row.imageUrl = "custom";
+      covers.set(bggId, { key, source: "custom" });
+      return true;
+    },
     listCoverNeeds: async () =>
       [...rows.values()]
         .filter((r) => {

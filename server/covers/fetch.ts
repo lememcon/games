@@ -18,11 +18,14 @@ const MESSAGES: Record<CoverFetchErrorKind, string> = {
 /** Carries a fixed message only; upstream bodies and the URL never reach it. */
 export class CoverFetchError extends Error {
   readonly kind: CoverFetchErrorKind;
+  /** HTTP status of a non-2xx upstream answer. */
+  readonly status?: number;
 
-  constructor(kind: CoverFetchErrorKind) {
+  constructor(kind: CoverFetchErrorKind, status?: number) {
     super(MESSAGES[kind]);
     this.name = "CoverFetchError";
     this.kind = kind;
+    this.status = status;
   }
 }
 
@@ -44,8 +47,10 @@ export interface CoverFetcherOptions {
 const startsWith = (b: Uint8Array, sig: number[], at = 0) =>
   b.length >= at + sig.length && sig.every((v, i) => b[at + i] === v);
 
-/** Type and extension from magic bytes only; the upstream header is never trusted. */
-function sniff(b: Uint8Array): { contentType: string; ext: string } | null {
+/** Type and extension from magic bytes only; a declared type is never trusted. */
+export function sniff(
+  b: Uint8Array,
+): { contentType: string; ext: string } | null {
   if (startsWith(b, [0xff, 0xd8, 0xff]))
     return { contentType: "image/jpeg", ext: "jpg" };
   if (startsWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
@@ -144,7 +149,7 @@ export function createCoverFetcher(opts: CoverFetcherOptions = {}) {
       }
       if (!res.ok) {
         await res.body?.cancel().catch(() => {});
-        throw new CoverFetchError("upstream");
+        throw new CoverFetchError("upstream", res.status);
       }
       const length = Number(res.headers.get("content-length"));
       if (Number.isFinite(length) && length > maxBytes) {
