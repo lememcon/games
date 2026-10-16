@@ -23,6 +23,7 @@ import {
 } from "@/lib/importFile";
 import { pageMeta } from "@/lib/pageMeta";
 import { yearPath } from "@/lib/routes";
+import { invalidateScores } from "@/lib/scoresCache";
 import type { ImportProblem, ImportResult } from "@/types";
 
 const MAX_SHOWN = 10;
@@ -96,6 +97,7 @@ const AdminImport = () => {
         method: "POST",
         body: prepared.body,
       });
+      invalidateScores(result.year ?? undefined);
       setOutcome({ kind: "success", result });
     } catch (e) {
       setOutcome(failure(e, prepared.year));

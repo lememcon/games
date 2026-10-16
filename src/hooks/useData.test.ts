@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useData from "@/hooks/useData";
+import * as cache from "@/lib/scoresCache";
 
 const scores = [
   { game: "Root", rank: 1, score: 50, player: "alice", bgg_id: 100 },
@@ -129,5 +130,37 @@ describe("useData", () => {
     rerender({ y: "2026" });
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
+  it("yields failed for a rejected load", async () => {
+    vi.spyOn(cache, "load").mockRejectedValue(new Error("nope"));
+    const { result } = renderHook(() => useData("2025"));
+    await waitFor(() => expect(result.current.error).toBe(true));
+  });
+
+  it("shares one fetch between two hooks on the same year", async () => {
+    mockFetch({ player_game_scores: scores });
+    const a = renderHook(() => useData("2025"));
+    const b = renderHook(() => useData("2025"));
+    await waitFor(() => expect(a.result.current.loading).toBe(false));
+    await waitFor(() => expect(b.result.current.loading).toBe(false));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(a.result.current).toBe(b.result.current);
+  });
+
+  it("unmounting before resolve sets no state and keeps the cached load", async () => {
+    let resolve!: (res: Response) => void;
+    globalThis.fetch = vi.fn(
+      () => new Promise<Response>((r) => (resolve = r)),
+    ) as unknown as typeof fetch;
+    const first = renderHook(() => useData("2025"));
+    first.unmount();
+    await act(async () => {
+      resolve(new Response(JSON.stringify({ player_game_scores: scores })));
+    });
+
+    const second = renderHook(() => useData("2025"));
+    await waitFor(() => expect(second.result.current.loading).toBe(false));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });
