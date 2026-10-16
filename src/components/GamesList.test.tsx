@@ -180,6 +180,7 @@ describe("GamesList", () => {
       error: {},
       isSaving: () => false,
       errorFor: () => null,
+      clearError: vi.fn(),
       veto: vi.fn(async () => true),
       unveto: vi.fn(async () => true),
       ...over,
