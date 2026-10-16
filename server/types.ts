@@ -484,3 +484,8 @@ export interface MemberYearVetoStore {
   /** Removes the member's veto for the year; no error when absent. */
   clear(discordId: string, year: number, bggId: number): Promise<void>;
 }
+
+/** Writes mirrored cover images to object storage (server/covers/storage.ts). */
+export interface CoverStorage {
+  put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
+}

@@ -78,6 +78,7 @@
     "@hono/node-server": "^2.1.4",
     "@mantine/core": "^9.7.1",
     "@mantine/hooks": "^9.7.1",
+    "aws4fetch": "1.0.20",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.4",
     "fast-xml-parser": "^5.11.2",
