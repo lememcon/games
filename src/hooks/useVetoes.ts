@@ -29,6 +29,8 @@ interface VetoSetOptions {
 // the list is refetched after each one. Saving and errors are tracked per
 // game, so one save locks only its own game and a failure shows on that game.
 // A new action on a game clears that game's error; errors persist until then.
+// A newer action on a game, or clearError, supersedes older in-flight saves'
+// errors.
 // Only the newest list response is applied, so a slow earlier fetch can never
 // overwrite a fresher one. The list is refetched when the key changes.
 export const useVetoSet = (
@@ -41,6 +43,7 @@ export const useVetoSet = (
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [bulkError, setBulkError] = useState<string | null>(null);
   const latest = useRef(0);
+  const gens = useRef<Record<number, number>>({});
   const apiRef = useRef(api);
   const keyRef = useRef(key);
   useEffect(() => {
@@ -76,6 +79,9 @@ export const useVetoSet = (
     };
   }, [key, hasApi]);
 
+  const bump = (bggId: number) =>
+    (gens.current[bggId] = (gens.current[bggId] ?? 0) + 1);
+
   // Resolves true when the change itself saved, false when it threw or the key
   // changed meanwhile.
   const mutate = async (
@@ -85,6 +91,7 @@ export const useVetoSet = (
     const scope = apiRef.current;
     const startKey = keyRef.current;
     if (!scope) return false;
+    const gen = bump(bggId);
     const stale = () => resetOnKeyChange && keyRef.current !== startKey;
     setSaving((prev) => new Set(prev).add(bggId));
     setErrors(({ [bggId]: _dropped, ...rest }) => rest);
@@ -113,7 +120,8 @@ export const useVetoSet = (
       next.delete(bggId);
       return next;
     });
-    if (message) setErrors((prev) => ({ ...prev, [bggId]: message }));
+    if (message && gens.current[bggId] === gen)
+      setErrors((prev) => ({ ...prev, [bggId]: message }));
     return ok;
   };
 
@@ -158,8 +166,10 @@ export const useVetoSet = (
     error: errors,
     isSaving: (bggId: number) => saving.has(bggId),
     errorFor: (bggId: number): string | null => errors[bggId] ?? null,
-    clearError: (bggId: number) =>
-      setErrors(({ [bggId]: _dropped, ...rest }) => rest),
+    clearError: (bggId: number) => {
+      bump(bggId);
+      setErrors(({ [bggId]: _dropped, ...rest }) => rest);
+    },
     veto: (bggId: number) => mutate(bggId, (a) => a.set(bggId)),
     unveto: (bggId: number) => mutate(bggId, (a) => a.clear(bggId)),
   };
