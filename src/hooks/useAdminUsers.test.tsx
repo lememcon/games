@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import useAdminUsers from "@/hooks/useAdminUsers";
+import * as cache from "@/lib/scoresCache";
 import type { AdminUser } from "@/types";
 
 const user = (discordId: string, over: Partial<AdminUser> = {}): AdminUser => ({
@@ -31,6 +32,27 @@ const setupAs = async (meId: string | undefined, ...next: Response[]) => {
 };
 
 describe("useAdminUsers", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("drops cached scores after removing a member", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const { hook } = await setup(new Response(null, { status: 204 }));
+    await act(() => hook.result.current.remove("a"));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith();
+  });
+
+  it("keeps cached scores after a failed removal or a role change", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const { hook } = await setup(
+      res({ error: "x" }, 500),
+      res(user("b", { role: "admin" })),
+    );
+    await act(() => hook.result.current.remove("a"));
+    await act(() => hook.result.current.setRole("b", "admin"));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("loads the list", async () => {
     const { hook } = await setup();
     expect(hook.result.current.users.map((u) => u.discordId)).toEqual([

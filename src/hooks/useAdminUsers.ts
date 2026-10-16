@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { ADMIN_LOST, GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
+import { invalidateScores } from "@/lib/scoresCache";
 import type { AdminUser, Role } from "@/types";
 
 const describe = (e: unknown): string =>
@@ -73,6 +74,7 @@ const useAdminUsers = (fetchImpl: typeof fetch = fetch, meId?: string) => {
         { method: "DELETE" },
         fetchImpl,
       );
+      invalidateScores();
       setUsers((list) => list.filter((u) => u.discordId !== discordId));
       reloadIfSelf(discordId);
     } catch (e) {

@@ -1,12 +1,36 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useColor from "@/hooks/useColor";
+import * as cache from "@/lib/scoresCache";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
 describe("useColor", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("drops cached scores after a successful save", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const fetchImpl = vi.fn().mockResolvedValue(json({ color: "#2F6BB8" }));
+    const { result: hook } = renderHook(() => useColor(vi.fn(), fetchImpl));
+    await act(async () => {
+      await hook.current.save("#2F6BB8");
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith();
+  });
+
+  it("keeps cached scores when the save fails", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const fetchImpl = vi.fn().mockResolvedValue(json({ error: "boom" }, 500));
+    const { result: hook } = renderHook(() => useColor(vi.fn(), fetchImpl));
+    await act(async () => {
+      await hook.current.save("#2F6BB8");
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("PUTs the color, returns the result and calls onSaved", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(json({ color: "#2F6BB8" }));
     const onSaved = vi.fn();

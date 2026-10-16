@@ -17,7 +17,10 @@ const mockFetch = (payload: unknown) =>
   (globalThis.fetch = vi.fn(() => ok(payload)) as unknown as typeof fetch);
 
 describe("useData", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
   it("starts in a loading state", () => {
     mockFetch({ player_game_scores: [] });
@@ -162,5 +165,36 @@ describe("useData", () => {
     const second = renderHook(() => useData("2025"));
     await waitFor(() => expect(second.result.current.loading).toBe(false));
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches on remount after the TTL and reuses within it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    mockFetch({ player_game_scores: scores });
+    const first = renderHook(() => useData("2025"));
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    first.unmount();
+
+    vi.setSystemTime(Date.now() + cache.SCORES_TTL_MS - 1);
+    const within = renderHook(() => useData("2025"));
+    await waitFor(() => expect(within.result.current.loading).toBe(false));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    within.unmount();
+
+    vi.setSystemTime(Date.now() + 1);
+    const after = renderHook(() => useData("2025"));
+    await waitFor(() => expect(after.result.current.loading).toBe(false));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not refetch by itself while mounted", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    mockFetch({ player_game_scores: scores });
+    const { result } = renderHook(() => useData("2025"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    vi.setSystemTime(Date.now() + cache.SCORES_TTL_MS * 2);
+    await act(async () => {});
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(result.current.loading).toBe(false);
   });
 });

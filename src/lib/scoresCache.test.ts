@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { invalidateScores, load, resetScoresCache } from "@/lib/scoresCache";
+import {
+  SCORES_TTL_MS,
+  invalidateScores,
+  load,
+  resetScoresCache,
+} from "@/lib/scoresCache";
 
 const rows = [
   { game: "Root", rank: 1, score: 50, player: "alice", bgg_id: 100 },
@@ -19,6 +24,8 @@ describe("scoresCache", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it("shares one fetch between concurrent loads of a year", async () => {
     mockFetch();
@@ -132,5 +139,90 @@ describe("scoresCache", () => {
     resetScoresCache();
     await load("2025", globalThis.fetch);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  describe("expiry", () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ["Date"] }));
+
+    it("serves a hit just before the TTL and refetches at it", async () => {
+      mockFetch();
+      await load("2025", globalThis.fetch);
+      vi.setSystemTime(Date.now() + SCORES_TTL_MS - 1);
+      await load("2025", globalThis.fetch);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(Date.now() + 1);
+      await load("2025", globalThis.fetch);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("starts the clock when the load resolves, not when it starts", async () => {
+      let resolve!: (res: Response) => void;
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<Response>((r) => (resolve = r)),
+        )
+        .mockImplementation(ok) as unknown as typeof fetch;
+      const pending = load("2025", globalThis.fetch);
+      vi.setSystemTime(Date.now() + SCORES_TTL_MS - 1);
+      resolve(await ok());
+      await pending;
+      vi.setSystemTime(Date.now() + SCORES_TTL_MS - 1);
+      await load("2025", globalThis.fetch);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("shares an in-flight load even past the TTL", async () => {
+      let resolve!: (res: Response) => void;
+      globalThis.fetch = vi.fn(
+        () => new Promise<Response>((r) => (resolve = r)),
+      ) as unknown as typeof fetch;
+      const a = load("2025", globalThis.fetch);
+      vi.setSystemTime(Date.now() + SCORES_TTL_MS * 2);
+      const b = load("2025", globalThis.fetch);
+      resolve(await ok());
+      expect(await a).toBe(await b);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not cache a failed load", async () => {
+      globalThis.fetch = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("down"))
+        .mockImplementation(ok) as unknown as typeof fetch;
+      await expect(load("2025", globalThis.fetch)).rejects.toThrow("down");
+      await load("2025", globalThis.fetch);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not stick a failing refetch after expiry", async () => {
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementationOnce(ok)
+        .mockRejectedValueOnce(new Error("down"))
+        .mockImplementation(ok) as unknown as typeof fetch;
+      await load("2025", globalThis.fetch);
+      vi.setSystemTime(Date.now() + SCORES_TTL_MS);
+      await expect(load("2025", globalThis.fetch)).rejects.toThrow("down");
+      await load("2025", globalThis.fetch);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("keeps a newer entry when an older load fails late", async () => {
+      let rejectFirst!: (e: Error) => void;
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<Response>((_, rej) => (rejectFirst = rej)),
+        )
+        .mockImplementation(ok) as unknown as typeof fetch;
+      const first = load("2025", globalThis.fetch).catch(() => undefined);
+      invalidateScores("2025");
+      const second = await load("2025", globalThis.fetch);
+      rejectFirst(new Error("late"));
+      await first;
+      expect(await load("2025", globalThis.fetch)).toBe(second);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
   });
 });

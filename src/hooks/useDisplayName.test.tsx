@@ -1,12 +1,42 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useDisplayName from "@/hooks/useDisplayName";
+import * as cache from "@/lib/scoresCache";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
 describe("useDisplayName", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("drops cached scores after a successful save", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(json({ name: "Kel", displayName: "Kel" }));
+    const { result: hook } = renderHook(() =>
+      useDisplayName(vi.fn(), fetchImpl),
+    );
+    await act(async () => {
+      await hook.current.save("Kel");
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith();
+  });
+
+  it("keeps cached scores when the save fails", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    const fetchImpl = vi.fn().mockResolvedValue(json({ error: "boom" }, 500));
+    const { result: hook } = renderHook(() =>
+      useDisplayName(vi.fn(), fetchImpl),
+    );
+    await act(async () => {
+      await hook.current.save("Kel");
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("PUTs the name, returns the result and calls onSaved", async () => {
     const result = { name: "Kel", displayName: "Kel" };
     const fetchImpl = vi.fn().mockResolvedValue(json(result));

@@ -80,7 +80,14 @@ const fetchScores = async (
 // One load per year, shared by every hook that asks for it. Keyed by year only:
 // the cache serves the global fetch, so a different global fetch for the same
 // year still gets the cached data. Consumers must treat the Data as read-only.
-const cache = new Map<string, Promise<Data>>();
+// A settled entry expires SCORES_TTL_MS after it resolved, so scores changed
+// elsewhere show up on the next load. A pending fetch never expires, so
+// concurrent callers share one promise.
+export const SCORES_TTL_MS = 5 * 60_000;
+
+type Entry = { promise: Promise<Data>; expires: number };
+
+const cache = new Map<string, Entry>();
 
 export const resetScoresCache = (): void => cache.clear();
 
@@ -96,12 +103,24 @@ export const load = (year: string, fetchImpl: typeof fetch): Promise<Data> => {
   if (fetchImpl !== globalThis.fetch) return fetchScores(year, fetchImpl);
 
   const hit = cache.get(year);
-  if (hit) return hit;
+  if (hit) {
+    if (Date.now() < hit.expires) return hit.promise;
+    cache.delete(year);
+  }
 
-  const promise = fetchScores(year, fetchImpl).catch((e: unknown) => {
-    if (cache.get(year) === promise) cache.delete(year);
-    throw e;
-  });
-  cache.set(year, promise);
-  return promise;
+  const entry: Entry = {
+    promise: fetchScores(year, fetchImpl).then(
+      (data) => {
+        entry.expires = Date.now() + SCORES_TTL_MS;
+        return data;
+      },
+      (e: unknown) => {
+        if (cache.get(year) === entry) cache.delete(year);
+        throw e;
+      },
+    ),
+    expires: Infinity,
+  };
+  cache.set(year, entry);
+  return entry.promise;
 };

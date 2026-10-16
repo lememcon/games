@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { ADMIN_LOST, GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
 import { groupByMember } from "@/lib/playerLinks";
+import { invalidateScores } from "@/lib/scoresCache";
 import type { PlayerLinks } from "@/types";
 
 const describe = (e: unknown): string => {
@@ -47,6 +48,8 @@ const usePlayerLinks = (fetchImpl: typeof fetch = fetch) => {
       } catch (e) {
         setActionError(describe(e));
       }
+      // Links change the scores' discord_id, so drop cached scores either way.
+      invalidateScores();
       // Refetch either way so a stale row (e.g. a deleted member) resyncs.
       try {
         setData(

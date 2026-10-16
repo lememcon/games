@@ -163,7 +163,7 @@ describe("AdminImport", () => {
       await screen.findByRole("button", { name: "Import 2027" }),
     );
     await screen.findByRole("link", { name: "View 2027" });
-    expect(spy).toHaveBeenCalledWith(2027);
+    expect(spy).toHaveBeenCalledWith();
   });
 
   it("invalidates every year after a games-only import", async () => {
@@ -186,7 +186,7 @@ describe("AdminImport", () => {
       await screen.findByRole("button", { name: "Import" }),
     );
     await screen.findByRole("alert");
-    expect(spy).toHaveBeenCalledWith(undefined);
+    expect(spy).toHaveBeenCalledWith();
   });
 
   it("does not invalidate on a 422 or other failure", async () => {
