@@ -227,6 +227,7 @@ const Loaded = ({
                     bggId={g.bggId}
                     image={games[String(g.bggId)]?.image}
                     ext={games[String(g.bggId)]?.ext}
+                    cover={games[String(g.bggId)]?.cover}
                   />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
@@ -254,6 +255,7 @@ const Loaded = ({
                     bggId={g.bggId}
                     image={games[String(g.bggId)]?.image}
                     ext={games[String(g.bggId)]?.ext}
+                    cover={games[String(g.bggId)]?.cover}
                   />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>

@@ -214,6 +214,30 @@ describe("player count bounds", () => {
 describe("resolveImage", () => {
   const images = { "/src/assets/games/7.png": "bundled.png" };
 
+  it("prefers a valid https cover over bundled and remote images", () => {
+    expect(
+      resolveImage(
+        "7",
+        {
+          cover: "https://cdn.example.com/c.jpg",
+          image: "https://example.com/a.png",
+          ext: ".png",
+        },
+        images,
+      ),
+    ).toBe("https://cdn.example.com/c.jpg");
+  });
+
+  it("ignores a non-https cover", () => {
+    expect(
+      resolveImage(
+        "7",
+        { cover: "http://cdn.example.com/c.jpg", ext: ".png" },
+        images,
+      ),
+    ).toBe("bundled.png");
+  });
+
   it("prefers the bundled file for the id and ext", () => {
     expect(
       resolveImage(

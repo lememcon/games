@@ -88,6 +88,7 @@ const ProfilePlayed = ({ games }: { games: GamesState }) => {
                     bggId={g.id}
                     image={games.games[g.id]?.image}
                     ext={games.games[g.id]?.ext}
+                    cover={games.games[g.id]?.cover}
                   />
                   <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
                     {g.name}

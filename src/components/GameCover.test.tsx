@@ -29,6 +29,21 @@ describe("GameCover", () => {
     expect(cover(container)).toHaveAttribute("src", "/bundled/7.jpg");
   });
 
+  it("prefers the server cover over the bundled image", () => {
+    const { container } = renderWithMantine(
+      <GameCover
+        bggId="7"
+        image="https://example.com/a.jpg"
+        ext=".jpg"
+        cover="https://cdn.example.com/7.jpg"
+      />,
+    );
+    expect(cover(container)).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/7.jpg",
+    );
+  });
+
   it("shows a blank box without a cover", () => {
     const { container } = renderWithMantine(<GameCover bggId={1} />);
     expect(cover(container)).toBeNull();

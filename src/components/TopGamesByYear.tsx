@@ -51,6 +51,7 @@ const TopGamesByYear = ({
                     bggId={g.bggId}
                     image={gamesData[String(g.bggId)]?.image}
                     ext={gamesData[String(g.bggId)]?.ext}
+                    cover={gamesData[String(g.bggId)]?.cover}
                   />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
