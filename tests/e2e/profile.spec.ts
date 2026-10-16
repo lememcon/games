@@ -23,6 +23,14 @@ const profileFor = (name: string): Profile => ({
   image: null,
   linkedPlayers: ["Alice"],
   gamesPlayed: 12,
+  vetoes: [
+    { bggId: 101, name: longTitle },
+    { bggId: 103, name: unbreakable },
+  ],
+  yearVetoes: [
+    { year: 2024, bggId: 102, name: longTitle },
+    { year: 2023, bggId: 104, name: "Delta" },
+  ],
   stats: {
     years: 2,
     topByYear: years.map((year) => ({
@@ -73,6 +81,11 @@ const setup = (page: Page, name = longName, unbreakableGame = false) =>
       { bggId: 101, name: longTitle },
       { bggId: 103, name: unbreakable },
     ],
+    yearVetoes: [
+      { year: 2023, bggId: 104, name: "Delta" },
+      { year: 2024, bggId: 102, name: longTitle },
+      { year: 2024, bggId: 103, name: unbreakable },
+    ],
     played: ["101", "102", "103"],
     playedByYear: {
       "2024": { [aliceId]: ["101", "102"] },
@@ -120,11 +133,45 @@ test("own profile does not overflow horizontally", async ({ page }) => {
   await expectNoOverflow(page);
 });
 
+test("own profile lists year vetoes newest first and undoes one", async ({
+  page,
+}) => {
+  await setup(page, longName, true);
+  await page.goto("/profile");
+  await expect(page.getByRole("heading", { name: /^Vetoed in / })).toHaveText([
+    "Vetoed in 2024",
+    "Vetoed in 2023",
+  ]);
+  await expectNoOverflow(page);
+
+  const undo = page.getByRole("button", { name: "Undo 2023 veto of Delta" });
+  await undo.click();
+  await expect(undo).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /^Vetoed in / })).toHaveText([
+    "Vetoed in 2024",
+  ]);
+  await expectNoOverflow(page);
+});
+
 test("public profile does not overflow horizontally", async ({ page }) => {
   await setup(page);
   await page.goto(`/players/${aliceId}`);
   await expect(page.getByRole("heading", { name: longName })).toBeVisible();
   await expect(page.getByText("2024 in review")).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("public profile shows both veto lists read-only", async ({ page }) => {
+  await setup(page);
+  await page.goto(`/players/${aliceId}`);
+  await expect(
+    page.getByRole("heading", { name: "Vetoed games" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Vetoed in / })).toHaveText([
+    "Vetoed in 2024",
+    "Vetoed in 2023",
+  ]);
+  await expect(page.getByRole("button", { name: /Undo/ })).toHaveCount(0);
   await expectNoOverflow(page);
 });
 

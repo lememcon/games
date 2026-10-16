@@ -92,8 +92,9 @@ interface MockOptions {
   profile?: Profile;
   overrides?: PlayerOverride[];
   vetoes?: { bggId: number; name: string }[];
-  // Game ids Alice has vetoed for the year only; PUT and DELETE change them.
-  yearVetoes?: number[];
+  // Alice's single-year vetoes; PUT and DELETE change them. The name is only
+  // what /api/me/year-vetoes reports.
+  yearVetoes?: { year: number; bggId: number; name?: string }[];
   // Everyone's played games per year, for the recap.
   playedByYear?: Record<string, Record<string, string[]>>;
   scores?: PlayerGameScore[];
@@ -172,20 +173,43 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
       return route.fulfill({ status: 204 });
     },
   );
-  const yearVetoed = new Set(yearVetoes);
+  const yearVetoed = [...yearVetoes];
+  const yearVetoPath = (url: URL | string) =>
+    pathOf(url).split("/").map(Number).slice(-2);
   await page.route(
     (url) => /^\/api\/year-vetoes\/\d+$/.test(pathOf(url)),
+    (route) => {
+      const year = Number(pathOf(route.request().url()).split("/").pop());
+      return json(route, {
+        vetoes: yearVetoed
+          .filter((v) => v.year === year)
+          .map((v) => ({ discordId: aliceId, bggId: v.bggId })),
+      });
+    },
+  );
+  await page.route(
+    (url) => pathOf(url) === "/api/me/year-vetoes",
     (route) =>
       json(route, {
-        vetoes: [...yearVetoed].map((bggId) => ({ discordId: aliceId, bggId })),
+        vetoes: [...yearVetoed]
+          .sort((a, b) => b.year - a.year || a.bggId - b.bggId)
+          .map((v) => ({
+            year: v.year,
+            bggId: v.bggId,
+            name: v.name ?? null,
+          })),
       }),
   );
   await page.route(
     (url) => /^\/api\/me\/year-vetoes\/\d+\/\d+$/.test(pathOf(url)),
     (route) => {
-      const bggId = Number(pathOf(route.request().url()).split("/").pop());
-      if (route.request().method() === "PUT") yearVetoed.add(bggId);
-      else yearVetoed.delete(bggId);
+      const [year, bggId] = yearVetoPath(route.request().url());
+      const at = yearVetoed.findIndex(
+        (v) => v.year === year && v.bggId === bggId,
+      );
+      if (route.request().method() === "PUT") {
+        if (at < 0) yearVetoed.push({ year, bggId });
+      } else if (at >= 0) yearVetoed.splice(at, 1);
       return route.fulfill({ status: 204 });
     },
   );

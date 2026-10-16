@@ -14,9 +14,11 @@ import {
 
 import StatTile from "@/components/StatTile";
 import TopGamesByYear from "@/components/TopGamesByYear";
+import VetoRow from "@/components/VetoRow";
 import usePageMeta from "@/hooks/usePageMeta";
 import useProfile from "@/hooks/useProfile";
 import { pageMeta, playerMeta } from "@/lib/pageMeta";
+import { groupYearVetoes } from "@/lib/profile";
 import { recapPath } from "@/lib/routes";
 
 const PublicProfile = ({ discordId }: { discordId: string }) => {
@@ -45,7 +47,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
     );
   }
 
-  const { name, image, stats, gamesPlayed } = state.profile;
+  const { name, image, stats, gamesPlayed, vetoes, yearVetoes } = state.profile;
 
   return (
     <Stack mt="md">
@@ -82,6 +84,22 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
       ) : (
         <Text c="dimmed">No scores are linked to this member yet.</Text>
       )}
+      {vetoes.length > 0 && (
+        <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
+          <Title order={4}>Vetoed games</Title>
+          {vetoes.map((v) => (
+            <VetoRow key={v.bggId} bggId={v.bggId} name={v.name} />
+          ))}
+        </Stack>
+      )}
+      {groupYearVetoes(yearVetoes).map(({ year, vetoes: rows }) => (
+        <Stack key={year} gap="calc(var(--mantine-spacing-xs) / 2)">
+          <Title order={4}>Vetoed in {year}</Title>
+          {rows.map((v) => (
+            <VetoRow key={v.bggId} bggId={v.bggId} name={v.name} />
+          ))}
+        </Stack>
+      ))}
     </Stack>
   );
 };

@@ -169,6 +169,9 @@ export interface Profile {
   stats: ProfileStats | null;
   // The profile owner's distinct games played across all years.
   gamesPlayed: number;
+  // The profile owner's vetoes for every year, and for single years.
+  vetoes: MyVeto[];
+  yearVetoes: MyYearVeto[];
 }
 
 export interface ColorResult {
@@ -318,6 +321,13 @@ export interface Veto {
 // The signed-in member's own veto, from GET /api/me/vetoes; the name is null
 // when the game has none.
 export interface MyVeto {
+  bggId: number;
+  name: string | null;
+}
+
+// The signed-in member's own veto for one year, from GET /api/me/year-vetoes.
+export interface MyYearVeto {
+  year: number;
   bggId: number;
   name: string | null;
 }
