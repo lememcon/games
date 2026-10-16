@@ -1,20 +1,24 @@
 import { useState } from "react";
+import { Link } from "wouter";
 
 import { Button, Group, Text } from "@mantine/core";
 
 import { resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
+import { gamePath } from "@/lib/routes";
 
 interface VetoRowProps {
   bggId: number;
   name: string | null;
   image?: string | null;
   ext?: string | null;
+  // Year-scoped rows link to that year's game page; permanent vetoes use the legacy redirect.
+  year?: number | string;
   // Renders an Undo button when given; read-only rows omit it.
   undo?: { label: string; disabled: boolean; onClick: () => void };
 }
 
-const VetoRow = ({ bggId, name, image, ext, undo }: VetoRowProps) => {
+const VetoRow = ({ bggId, name, image, ext, year, undo }: VetoRowProps) => {
   const [failed, setFailed] = useState(false);
   const cover = resolveImage(String(bggId), { image, ext }, bundledImages);
   return (
@@ -33,7 +37,13 @@ const VetoRow = ({ bggId, name, image, ext, undo }: VetoRowProps) => {
           <div className="tray-cover__blank" aria-hidden />
         )}
       </div>
-      <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>
+      <Text
+        component={Link}
+        href={year !== undefined ? gamePath(year, bggId) : `/games/${bggId}`}
+        flex={1}
+        miw={0}
+        style={{ overflowWrap: "anywhere" }}
+      >
         {name ?? `Game ${bggId}`}
       </Text>
       {undo && (
