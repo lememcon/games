@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminImport from "@/components/admin/AdminImport";
+import * as cache from "@/lib/scoresCache";
 import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 
@@ -35,6 +36,7 @@ describe("AdminImport", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     window.history.pushState({}, "", "/");
   });
@@ -139,6 +141,69 @@ describe("AdminImport", () => {
       year: 2027,
       player_game_scores: rows,
     });
+  });
+
+  it("invalidates the imported year's cached scores", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    fetchMock.mockResolvedValue(
+      res(
+        {
+          year: 2027,
+          scores: 2,
+          games: { new: 0, updated: 0 },
+          players: { new: 2, total: 2 },
+          warnings: [],
+        },
+        201,
+      ),
+    );
+    renderWithMantine(<AdminImport />);
+    await upload({ year: 2027, player_game_scores: rows });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import 2027" }),
+    );
+    await screen.findByRole("link", { name: "View 2027" });
+    expect(spy).toHaveBeenCalledWith(2027);
+  });
+
+  it("invalidates every year after a games-only import", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    fetchMock.mockResolvedValue(
+      res(
+        {
+          year: null,
+          scores: 0,
+          games: { new: 1, updated: 0 },
+          players: { new: 0, total: 0 },
+          warnings: [],
+        },
+        201,
+      ),
+    );
+    renderWithMantine(<AdminImport />);
+    await upload({ games: { 11: {} } });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import" }),
+    );
+    await screen.findByRole("alert");
+    expect(spy).toHaveBeenCalledWith(undefined);
+  });
+
+  it("does not invalidate on a 422 or other failure", async () => {
+    const spy = vi.spyOn(cache, "invalidateScores");
+    fetchMock.mockResolvedValueOnce(
+      res({ errors: [{ path: "a", message: "bad" }] }, 422),
+    );
+    renderWithMantine(<AdminImport />);
+    await upload({ year: 2027, player_game_scores: rows });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import 2027" }),
+    );
+    await screen.findByRole("alert");
+    fetchMock.mockResolvedValueOnce(res({ error: "boom" }, 500));
+    await userEvent.click(screen.getByRole("button", { name: "Import 2027" }));
+    await screen.findByText("Something went wrong. Try again.");
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("links to the imported year and clears the players when viewing it", async () => {

@@ -1,4 +1,6 @@
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
+
+import { resetScoresCache } from "@/lib/scoresCache";
 
 import "@testing-library/jest-dom/vitest";
 
@@ -29,3 +31,6 @@ window.ResizeObserver = class {
 // Mantine's Combobox scrolls the active option into view; jsdom has no layout
 // so scrollIntoView is undefined.
 window.Element.prototype.scrollIntoView = vi.fn();
+
+// Scores are cached per year at module level; start every test clean.
+beforeEach(() => resetScoresCache());
