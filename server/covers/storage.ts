@@ -4,8 +4,8 @@ import { AwsClient } from "aws4fetch";
 
 import type { CoverStorage } from "../types";
 
-export type { CoverStorage };
-
+const DEFAULT_TIMEOUT_MS = 30_000;
+const FAILED = "Cover storage upload failed.";
 const CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export interface S3Options {
@@ -16,6 +16,8 @@ export interface S3Options {
   accessKeyId: string;
   secretAccessKey: string;
   fetch?: typeof fetch;
+  /** Cap on one upload request. */
+  timeoutMs?: number;
   /** Signing clock; tests inject a fixed date. */
   now?: () => Date;
 }
@@ -39,6 +41,7 @@ export function createS3Storage(opts: S3Options): CoverStorage {
     region: opts.region,
   });
   const send = opts.fetch ?? fetch;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const base = opts.endpoint ?? `https://s3.${opts.region}.amazonaws.com`;
 
   return {
@@ -51,12 +54,20 @@ export function createS3Storage(opts: S3Options): CoverStorage {
         headers: {
           "Content-Type": contentType,
           "Cache-Control": CACHE_CONTROL,
+          "X-Amz-Content-Sha256": createHash("sha256")
+            .update(bytes)
+            .digest("hex"),
         },
         aws: { datetime: amzDate(opts.now?.() ?? new Date()) },
       });
-      const res = await send(signed);
-      await res.body?.cancel();
-      if (!res.ok) throw new Error("Cover storage upload failed.");
+      let res: Response;
+      try {
+        res = await send(signed, { signal: AbortSignal.timeout(timeoutMs) });
+      } catch {
+        throw new Error(FAILED);
+      }
+      await res.body?.cancel().catch(() => {});
+      if (!res.ok) throw new Error(FAILED);
     },
   };
 }

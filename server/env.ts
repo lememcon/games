@@ -89,11 +89,19 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     if (!get(key)) return undefined;
     try {
       const url = new URL(get(key));
-      if (url.protocol === "https:") return url.origin;
+      if (
+        url.protocol === "https:" &&
+        url.pathname === "/" &&
+        !url.search &&
+        !url.hash &&
+        !url.username &&
+        !url.password
+      )
+        return url.origin;
     } catch {
       // falls through to the error below
     }
-    errors.push(`${key} must be an https URL`);
+    errors.push(`${key} must be an https origin`);
     return undefined;
   };
   const coverBaseUrl = httpsOrigin("COVER_BASE_URL");

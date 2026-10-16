@@ -183,7 +183,7 @@ With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com
 | `S3_ACCESS_KEY_ID`      | S3 access key id (part of the all-or-none group; never logged)                                                                      |
 | `S3_SECRET_ACCESS_KEY`  | S3 secret key (part of the all-or-none group; never logged)                                                                         |
 | `COVER_BASE_URL`        | https origin covers are served from, e.g. a CDN domain (part of the all-or-none group)                                              |
-| `S3_ENDPOINT`           | Optional https endpoint for an S3-compatible provider; unset means AWS                                                              |
+| `S3_ENDPOINT`           | Optional https origin (no path) of an S3-compatible provider; unset means AWS                                                       |
 | `VITE_API_URL`          | Netlify build variable (not read by the server): API origin the SPA calls; unset means relative `/api`. Changing it needs a rebuild |
 
 Cover mirror: `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and

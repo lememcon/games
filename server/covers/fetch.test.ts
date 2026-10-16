@@ -36,7 +36,7 @@ describe("createCoverFetcher", () => {
         headers: { "content-type": "text/plain" },
       }),
     );
-    const out = await f.call(null, URL_OK);
+    const out = await f(URL_OK);
     expect(out.contentType).toBe(contentType);
     expect(out.ext).toBe(ext);
     expect(Array.from(out.bytes)).toEqual(bytes);
@@ -103,6 +103,23 @@ describe("createCoverFetcher", () => {
       Object.defineProperty(res, "url", { value: URL_OK });
       return res;
     }) as unknown as typeof fetch);
+    expect(await kindOf(f(URL_OK))).toBe("ok");
+  });
+
+  it.each([
+    ["http", `http://${IMAGE_HOST}/x.jpg`],
+    ["a port", `https://${IMAGE_HOST}:8443/x.jpg`],
+  ])("rejects a response url with %s", async (_n, value) => {
+    const f = make((async () => {
+      const res = new Response(new Uint8Array(JPEG));
+      Object.defineProperty(res, "url", { value });
+      return res;
+    }) as unknown as typeof fetch);
+    expect(await kindOf(f(URL_OK))).toBe("host");
+  });
+
+  it("accepts a body of exactly maxBytes", async () => {
+    const f = make(respond(new Uint8Array(JPEG)), { maxBytes: JPEG.length });
     expect(await kindOf(f(URL_OK))).toBe("ok");
   });
 
@@ -185,6 +202,22 @@ describe("createCoverFetcher", () => {
     const p = f(URL_OK, ctl.signal);
     ctl.abort(new Error("stop"));
     await expect(p).rejects.toThrow("stop");
+  });
+
+  it("rejects an already-aborted signal without fetching", async () => {
+    const fetchMock = vi.fn();
+    const p = make(fetchMock)(URL_OK, AbortSignal.abort(new Error("stop")));
+    await expect(p).rejects.toThrow("stop");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not report a timeout for a body failure after headers", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      pull: () =>
+        new Promise((_res, rej) => setTimeout(() => rej(new Error("x")), 40)),
+    });
+    const f = make(respond(body), { headerTimeoutMs: 10, timeoutMs: 1000 });
+    expect(await kindOf(f(URL_OK))).toBe("upstream");
   });
 
   it("propagates a caller abort mid-body", async () => {

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { fakeStorage } from "../testing";
@@ -37,6 +39,11 @@ describe("createS3Storage", () => {
     expect(req.headers.get("cache-control")).toBe(
       "public, max-age=31536000, immutable",
     );
+    expect(req.headers.get("x-amz-content-sha256")).toBe(
+      createHash("sha256")
+        .update(new Uint8Array([1, 2, 3]))
+        .digest("hex"),
+    );
     expect(req.headers.get("x-amz-date")).toBe("20250102T030405Z");
     expect(req.headers.get("authorization")).toContain("AKIAEXAMPLE");
     expect(new Uint8Array(await req.arrayBuffer())).toEqual(
@@ -75,6 +82,31 @@ describe("createS3Storage", () => {
       .put("k", new Uint8Array(1), "image/png")
       .catch((e: Error) => e);
     expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe("Cover storage upload failed.");
+  });
+});
+
+describe("createS3Storage failures", () => {
+  it("wraps a rejecting fetch in the fixed message", async () => {
+    const fetch = (async () => {
+      throw new TypeError("connect ECONNREFUSED https://s3.example/covers");
+    }) as unknown as typeof globalThis.fetch;
+    const err = await createS3Storage({ ...base, fetch })
+      .put("k", new Uint8Array(1), "image/png")
+      .catch((e: Error) => e);
+    expect((err as Error).message).toBe("Cover storage upload failed.");
+  });
+
+  it("times out a stalled fetch with the fixed message", async () => {
+    const fetch = ((_req: Request, init?: RequestInit) =>
+      new Promise((_res, rej) =>
+        init?.signal?.addEventListener("abort", () =>
+          rej(new Error("aborted https://s3.example/covers")),
+        ),
+      )) as unknown as typeof globalThis.fetch;
+    const err = await createS3Storage({ ...base, fetch, timeoutMs: 10 })
+      .put("k", new Uint8Array(1), "image/png")
+      .catch((e: Error) => e);
     expect((err as Error).message).toBe("Cover storage upload failed.");
   });
 });

@@ -112,19 +112,30 @@ describe("loadEnv", () => {
           COVER_BASE_URL: "http://cdn.example.com",
           S3_ENDPOINT: "nope",
         });
-      expect(run).toThrow(/COVER_BASE_URL must be an https URL/);
-      expect(run).toThrow(/S3_ENDPOINT must be an https URL/);
+      expect(run).toThrow(/COVER_BASE_URL must be an https origin/);
+      expect(run).toThrow(/S3_ENDPOINT must be an https origin/);
     });
 
-    it("normalises URLs to an origin without a trailing slash", () => {
+    it("normalises an origin to lowercase without a trailing slash", () => {
       const env = loadEnv({
         ...valid,
         ...s3,
         COVER_BASE_URL: "https://CDN.example.com/",
-        S3_ENDPOINT: "https://s3.example.com/path/",
+        S3_ENDPOINT: "https://s3.example.com",
       });
       expect(env.COVER_BASE_URL).toBe("https://cdn.example.com");
       expect(env.S3_ENDPOINT).toBe("https://s3.example.com");
+    });
+
+    it.each([
+      "https://s3.example.com/path/",
+      "https://s3.example.com/?a=1",
+      "https://s3.example.com/#x",
+      "https://user:pw@s3.example.com",
+    ])("rejects %s instead of stripping it", (value) => {
+      const run = () => loadEnv({ ...valid, ...s3, S3_ENDPOINT: value });
+      expect(run).toThrow(/S3_ENDPOINT must be an https origin/);
+      expect(run).toThrow(/^(?![\s\S]*pw@)/);
     });
 
     it("never puts credentials in the error", () => {

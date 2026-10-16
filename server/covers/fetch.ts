@@ -90,6 +90,7 @@ export function createCoverFetcher(opts: CoverFetcherOptions = {}) {
     rawUrl: string,
     signal?: AbortSignal,
   ): Promise<CoverImage> {
+    signal?.throwIfAborted();
     const url = checkUrl(rawUrl);
     const total = AbortSignal.timeout(timeoutMs);
     const headers = AbortSignal.timeout(headerTimeoutMs);
@@ -100,7 +101,9 @@ export function createCoverFetcher(opts: CoverFetcherOptions = {}) {
     const sources = [base, headers];
     for (const s of sources) s.addEventListener("abort", onAbort);
     const unlink = (s: AbortSignal) => s.removeEventListener("abort", onAbort);
-    const timedOut = () => total.aborted || headers.aborted;
+    // Set once response headers arrive; a later header-timer expiry is not a timeout.
+    let headersDone = false;
+    const timedOut = () => total.aborted || (!headersDone && headers.aborted);
     const fail = (): never => {
       if (signal?.aborted && !timedOut()) throw signal.reason;
       throw new CoverFetchError(timedOut() ? "timeout" : "upstream");
@@ -120,6 +123,7 @@ export function createCoverFetcher(opts: CoverFetcherOptions = {}) {
         return fail();
       }
       unlink(headers);
+      headersDone = true;
 
       if (res.url) {
         let finalUrl: URL | null = null;
@@ -128,7 +132,12 @@ export function createCoverFetcher(opts: CoverFetcherOptions = {}) {
         } catch {
           // handled below
         }
-        if (!finalUrl || finalUrl.hostname !== IMAGE_HOST) {
+        if (
+          !finalUrl ||
+          finalUrl.protocol !== "https:" ||
+          finalUrl.hostname !== IMAGE_HOST ||
+          finalUrl.port !== ""
+        ) {
           await res.body?.cancel().catch(() => {});
           throw new CoverFetchError("host");
         }
