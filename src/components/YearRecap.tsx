@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "wouter";
 
 import {
@@ -29,13 +29,56 @@ import type { RecapFacts, RecapGame } from "@/types";
 const plural = (n: number, one: string, many = `${one}s`) =>
   `${n} ${n === 1 ? one : many}`;
 
-const names = (games: RecapGame[], total: number) =>
-  games.map((g) => g.game).join(", ") +
-  (total > games.length ? ` and ${total - games.length} more` : "");
+type GameMap = ReturnType<typeof useGames>["games"];
+
+// A game's cover beside its label, right-aligned like the other fact values.
+const FactGame = ({
+  bggId,
+  label,
+  games,
+}: {
+  bggId: number;
+  label: string;
+  games: GameMap;
+}) => (
+  <Group gap="xs" wrap="nowrap" justify="flex-end">
+    <GameCover
+      bggId={bggId}
+      image={games[String(bggId)]?.image}
+      ext={games[String(bggId)]?.ext}
+    />
+    <Text c="dimmed" miw={0} style={{ overflowWrap: "anywhere" }}>
+      {label}
+    </Text>
+  </Group>
+);
+
+const FactGames = ({
+  list,
+  total,
+  games,
+}: {
+  list: RecapGame[];
+  total: number;
+  games: GameMap;
+}) => (
+  <Stack gap={4} align="flex-end">
+    {list.map((g) => (
+      <FactGame key={g.bggId} bggId={g.bggId} label={g.game} games={games} />
+    ))}
+    {total > list.length && (
+      <Text c="dimmed">and {total - list.length} more</Text>
+    )}
+  </Stack>
+);
 
 // One line per fact; a fact without a value is left out.
-const factRows = (facts: RecapFacts, name: string): [string, string][] => {
-  const rows: [string, string | null][] = [
+const factRows = (
+  facts: RecapFacts,
+  name: string,
+  games: GameMap,
+): [string, ReactNode][] => {
+  const rows: [string, ReactNode | null][] = [
     [
       "Average games per member",
       facts.groupAvgGames === null
@@ -44,27 +87,43 @@ const factRows = (facts: RecapFacts, name: string): [string, string][] => {
     ],
     [
       "Your #1 picks",
-      facts.topPicks.total > 0
-        ? `${facts.topPicks.total} (${names(facts.topPicks.games, facts.topPicks.total)})`
-        : null,
+      facts.topPicks.total > 0 ? (
+        <FactGames
+          list={facts.topPicks.games}
+          total={facts.topPicks.total}
+          games={games}
+        />
+      ) : null,
     ],
     [
       "Highest rating",
-      facts.highestRating
-        ? `${facts.highestRating.score} for ${facts.highestRating.game}`
-        : null,
+      facts.highestRating ? (
+        <FactGame
+          bggId={facts.highestRating.bggId}
+          label={`${facts.highestRating.score} for ${facts.highestRating.game}`}
+          games={games}
+        />
+      ) : null,
     ],
     [
       "Group favourite",
-      facts.groupFavourite
-        ? `${facts.groupFavourite.game}, played by ${plural(facts.groupFavourite.members, "member")}`
-        : null,
+      facts.groupFavourite ? (
+        <FactGame
+          bggId={facts.groupFavourite.bggId}
+          label={`${facts.groupFavourite.game}, played by ${plural(facts.groupFavourite.members, "member")}`}
+          games={games}
+        />
+      ) : null,
     ],
     [
       `Only ${name} played`,
-      facts.onlyYou.total > 0
-        ? names(facts.onlyYou.games, facts.onlyYou.total)
-        : null,
+      facts.onlyYou.total > 0 ? (
+        <FactGames
+          list={facts.onlyYou.games}
+          total={facts.onlyYou.total}
+          games={games}
+        />
+      ) : null,
     ],
     [
       facts.versusPrevious ? `Versus ${facts.versusPrevious.year}` : "",
@@ -77,15 +136,17 @@ const factRows = (facts: RecapFacts, name: string): [string, string][] => {
         : null,
     ],
   ];
-  return rows.filter((r): r is [string, string] => r[1] !== null);
+  return rows.filter((r): r is [string, ReactNode] => r[1] !== null);
 };
 
-const Row = ({ label, children }: { label: string; children: string }) => (
+const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <Group justify="space-between" wrap="nowrap" align="flex-start">
     <Text fw={600} flex="1 1 auto" miw={0} style={{ overflowWrap: "anywhere" }}>
       {label}
     </Text>
-    <Text
+    <Stack
+      gap={0}
+      align="flex-end"
       c="dimmed"
       ta="right"
       flex="1 1 auto"
@@ -93,7 +154,7 @@ const Row = ({ label, children }: { label: string; children: string }) => (
       style={{ overflowWrap: "anywhere" }}
     >
       {children}
-    </Text>
+    </Stack>
   </Group>
 );
 
@@ -179,7 +240,7 @@ const Loaded = ({
   }
 
   const { name } = profile.profile;
-  const facts = factRows(recap.facts, name);
+  const facts = factRows(recap.facts, name, games);
 
   return (
     <Stack mt="md">

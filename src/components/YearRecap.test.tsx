@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import YearRecap from "@/components/YearRecap";
@@ -99,6 +99,9 @@ const profile = (stats: unknown = {}): ProfileState => ({
 
 const show = (year = "2025") =>
   renderWithMantine(<YearRecap discordId="me" year={year} />);
+
+// The row element (label plus value) of a Fun facts line.
+const factRow = (label: string) => screen.getByText(label).parentElement!;
 
 const recapImages = () => ({
   games: {
@@ -315,11 +318,12 @@ describe("YearRecap", () => {
     expect(screen.getByText("Fun facts")).toBeInTheDocument();
     expect(screen.getByText("Average games per member")).toBeInTheDocument();
     expect(screen.getByText("1.7")).toBeInTheDocument();
-    expect(screen.getByText("1 (Azul)")).toBeInTheDocument();
+    expect(factRow("Your #1 picks")).toHaveTextContent("Azul");
+    expect(factRow("Your #1 picks")).not.toHaveTextContent("1 (Azul)");
     expect(screen.getByText("96 for Azul")).toBeInTheDocument();
     expect(screen.getByText("Azul, played by 3 members")).toBeInTheDocument();
     expect(screen.getByText("Only Ana played")).toBeInTheDocument();
-    expect(screen.getAllByText("Wingspan")[0]).toBeInTheDocument();
+    expect(factRow("Only Ana played")).toHaveTextContent("Wingspan");
     expect(screen.getByText("Versus 2024")).toBeInTheDocument();
     expect(screen.getByText("2 games, up 1")).toBeInTheDocument();
     expect(screen.queryByText(/wins|first place/i)).toBeNull();
@@ -363,9 +367,13 @@ describe("YearRecap", () => {
     } as never);
     const { unmount } = show();
     expect(screen.getByText("7 games, down 2")).toBeInTheDocument();
-    expect(
-      screen.getByText("G0, G1, G2, G3, G4 and 2 more"),
-    ).toBeInTheDocument();
+    const only = factRow("Only Ana played");
+    for (const n of ["G0", "G1", "G2", "G3", "G4"]) {
+      expect(within(only).getByText(n)).toBeInTheDocument();
+    }
+    expect(within(only).queryByText("G5")).toBeNull();
+    expect(within(only).getByText("and 2 more")).toBeInTheDocument();
+    expect(only.querySelectorAll(".tray-cover__blank")).toHaveLength(5);
     unmount();
     h.played = ready({
       byYear: { "2025": mine, "2024": mine },
@@ -432,5 +440,37 @@ describe("YearRecap covers", () => {
     expect(srcs).toContain("https://example.com/1.jpg");
     expect(srcs).toContain("https://example.com/2.jpg");
     expect(container.querySelector(".tray-cover__blank")).not.toBeNull();
+  });
+
+  it("shows covers in the fun facts", () => {
+    h.data = dataFor([...scores, row(9, "Wingspan", "Bo", 10, 3)]);
+    h.played = ready({
+      byYear: { "2025": { "1": 2, "9": 1 }, "2024": { "1": 1 } },
+      allPlayed: { me: { "1": 2, "9": 1 }, bo: { "1": 1 } },
+    } as never);
+    h.games = recapImages();
+    show();
+    const srcs = (label: string) =>
+      [...factRow(label).querySelectorAll("img")].map((i) =>
+        i.getAttribute("src"),
+      );
+    expect(srcs("Highest rating")).toEqual(["https://example.com/1.jpg"]);
+    expect(srcs("Group favourite")).toEqual(["https://example.com/1.jpg"]);
+    // Wingspan has no image.
+    expect(
+      factRow("Only Ana played").querySelectorAll(".tray-cover__blank"),
+    ).toHaveLength(1);
+  });
+
+  it("caps #1 picks at three covers with an and-more note", () => {
+    const many = Array.from({ length: 5 }, (_, i) =>
+      row(30 + i, `T${i}`, "Ana", 90 - i, 1, "me"),
+    );
+    h.data = dataFor(many);
+    h.played = ready({ allPlayed: { me: {} } } as never);
+    show();
+    const picks = factRow("Your #1 picks");
+    expect(picks.querySelectorAll(".tray-cover__blank")).toHaveLength(3);
+    expect(within(picks).getByText("and 2 more")).toBeInTheDocument();
   });
 });
