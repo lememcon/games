@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { useImportVersion } from "@/lib/scoresSync";
 
 interface TopGamesState {
   /** Game ids (as strings) of the member's best scores, best first. */
@@ -26,13 +27,16 @@ const parseIds = (body: unknown): string[] => {
 
 // The signed-in member's ten highest scores in a year. A null or empty year (not
 // known yet) fetches nothing and stays loading. State is tagged with the year
-// it belongs to, so a response for a superseded year is dropped.
+// and import version it belongs to, so a response for a superseded year, or
+// from before an import, is dropped and old data is never shown.
 const useTopGames = (
   year: string | null,
   fetchImpl: typeof fetch = fetch,
 ): TopGamesState => {
+  const version = useImportVersion();
   const [result, setResult] = useState<{
     year: string;
+    version: number;
     state: TopGamesState;
   } | null>(null);
 
@@ -52,15 +56,17 @@ const useTopGames = (
       }))
       .catch(() => ({ ids: [], loading: false, error: true }))
       .then((state) => {
-        if (!cancelled) setResult({ year, state });
+        if (!cancelled) setResult({ year, version, state });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [year, fetchImpl]);
+  }, [year, version, fetchImpl]);
 
-  return year && result?.year === year ? result.state : pending;
+  return year && result?.year === year && result.version === version
+    ? result.state
+    : pending;
 };
 
 export default useTopGames;

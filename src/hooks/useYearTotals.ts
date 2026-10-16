@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { useImportVersion } from "@/lib/scoresSync";
 import type { YearTotal } from "@/types";
 
 interface YearTotalsState {
@@ -27,13 +28,21 @@ const parseTotals = (body: unknown): YearTotal[] => {
   return totals;
 };
 
+const loadingState: YearTotalsState = {
+  totals: [],
+  loading: true,
+  error: false,
+};
+
 // Every game's summed score per year, for the across-the-years sparkline.
+// State is tagged with the import version it belongs to, so after an import
+// (in any tab) it reads as loading until the refetch lands.
 const useYearTotals = (fetchImpl: typeof fetch = fetch): YearTotalsState => {
-  const [state, setState] = useState<YearTotalsState>({
-    totals: [],
-    loading: true,
-    error: false,
-  });
+  const version = useImportVersion();
+  const [state, setState] = useState<{
+    version: number;
+    value: YearTotalsState;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,14 +54,14 @@ const useYearTotals = (fetchImpl: typeof fetch = fetch): YearTotalsState => {
       }))
       .catch(() => ({ totals: [], loading: false, error: true }))
       .then((next) => {
-        if (!cancelled) setState(next);
+        if (!cancelled) setState({ version, value: next });
       });
     return () => {
       cancelled = true;
     };
-  }, [fetchImpl]);
+  }, [version, fetchImpl]);
 
-  return state;
+  return state?.version === version ? state.value : loadingState;
 };
 
 export default useYearTotals;

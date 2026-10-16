@@ -41,7 +41,8 @@ A separate `commitlint` job runs on pull requests only.
   `describeAuthError`, `stripAuthError`); allowlisted codes, fixed copy, never echoes input.
 - `src/lib/scoresSync.ts` — cross-tab import sync: `announceImport()` posts on a lazy
   `BroadcastChannel("scores-import")`; a message clears every cached year and bumps
-  `useImportVersion()`, which `useData` and `useYears` use to refetch (never showing old data).
+  `useImportVersion()`, which `useData`, `useYears`, `useGames`, `useYearTotals`,
+  `useUnplayedGames` and `useTopGames` use to refetch (never showing old data).
 - `src/lib/profile.ts` — pure display-name validation and profile stat formatters;
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
   react-refresh).

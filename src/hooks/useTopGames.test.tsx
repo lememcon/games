@@ -1,7 +1,12 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useTopGames from "@/hooks/useTopGames";
+import { announceImport } from "@/lib/scoresSync";
+import { FakeBroadcastChannel } from "@/test/setup";
+
+const message = () =>
+  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
 
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -82,4 +87,50 @@ describe("useTopGames", () => {
       expect(result.current.loading).toBe(true);
     },
   );
+
+  describe("after an import", () => {
+    const body = (id: number) => ({ games: [{ bgg_id: id, score: 1 }] });
+    const sequence = (...ids: number[]) => {
+      const fn = vi.fn();
+      ids.forEach((id) => fn.mockImplementationOnce(() => json(body(id))));
+      return fn as unknown as typeof fetch;
+    };
+
+    it("reloads on a message from another tab, never showing old data", async () => {
+      const fetchImpl = sequence(1, 2);
+      const { result } = renderHook(() => useTopGames("2025", fetchImpl));
+      await waitFor(() => expect(result.current.ids).toEqual(["1"]));
+
+      act(() => message());
+      expect(result.current).toEqual({ ids: [], loading: true, error: false });
+      await waitFor(() => expect(result.current.ids).toEqual(["2"]));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("reloads on an import announced in the same tab", async () => {
+      const fetchImpl = sequence(1, 2);
+      const { result } = renderHook(() => useTopGames("2025", fetchImpl));
+      await waitFor(() => expect(result.current.ids).toEqual(["1"]));
+
+      act(() => announceImport());
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.ids).toEqual(["2"]));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("never shows the old year when the year changes mid-refetch", async () => {
+      const fetchImpl = sequence(1, 2, 3);
+      const { result, rerender } = renderHook(
+        ({ year }) => useTopGames(year, fetchImpl),
+        { initialProps: { year: "2024" } },
+      );
+      await waitFor(() => expect(result.current.ids).toEqual(["1"]));
+
+      act(() => message());
+      rerender({ year: "2025" });
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.ids).toEqual(["3"]);
+    });
+  });
 });
