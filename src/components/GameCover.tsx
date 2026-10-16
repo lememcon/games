@@ -7,12 +7,17 @@ interface GameCoverProps {
   bggId: number | string;
   image?: string | null;
   ext?: string | null;
+  cover?: string | null;
 }
 
 // A 40px decorative cover, or a blank square when there is none or it fails.
-const GameCover = ({ bggId, image, ext }: GameCoverProps) => {
+const GameCover = ({ bggId, image, ext, cover: mirrored }: GameCoverProps) => {
   const [failed, setFailed] = useState(false);
-  const cover = resolveImage(String(bggId), { image, ext }, bundledImages);
+  const cover = resolveImage(
+    String(bggId),
+    { image, ext, cover: mirrored ?? undefined },
+    bundledImages,
+  );
   return (
     <div className="tray-cover tray-cover--xs">
       {cover && !failed ? (

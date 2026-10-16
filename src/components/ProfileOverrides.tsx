@@ -91,6 +91,7 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
                     bggId={id}
                     image={games.games[id]?.image}
                     ext={games.games[id]?.ext}
+                    cover={games.games[id]?.cover}
                   />
                   <Text flex={1} miw={0} style={WRAP}>
                     {name}

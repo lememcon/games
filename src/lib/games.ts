@@ -104,14 +104,16 @@ const isHttpsUrl = (value: string | null | undefined): value is string => {
 export const avatarUrl = (value: string | null | undefined) =>
   isHttpsUrl(value) ? value : undefined;
 
-// Cover image for a game: the bundled file for this id and ext, then the
-// game's image URL when it is a valid https URL, else none.
+// Cover image for a game: the server's mirrored cover URL, then the bundled
+// file for this id and ext, then the game's image URL, else none. URLs must be
+// valid https.
 export const resolveImage = (
   id: string,
   meta: GameMeta | undefined,
   images: Record<string, string>,
 ): string | undefined => {
   if (!meta) return undefined;
+  if (isHttpsUrl(meta.cover)) return meta.cover;
   const bundled = meta.ext ? images[`/src/assets/games/${id}${meta.ext}`] : "";
   if (bundled) return bundled;
   return isHttpsUrl(meta.image) ? meta.image : undefined;
