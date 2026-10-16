@@ -27,6 +27,11 @@ describe("ProfileYearVetoes", () => {
     hook.state.clear.mockReset();
   });
 
+  it("explains the scope of a year veto", () => {
+    renderWithMantine(<ProfileYearVetoes />);
+    expect(screen.getByText(/for that year only/)).toBeVisible();
+  });
+
   it("shows an empty state, but not while loading", () => {
     const { unmount } = renderWithMantine(<ProfileYearVetoes />);
     expect(

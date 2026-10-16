@@ -47,7 +47,14 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
     );
   }
 
-  const { name, image, stats, gamesPlayed, vetoes, yearVetoes } = state.profile;
+  const {
+    name,
+    image,
+    stats,
+    gamesPlayed,
+    vetoes = [],
+    yearVetoes = [],
+  } = state.profile;
 
   return (
     <Stack mt="md">

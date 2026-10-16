@@ -11,6 +11,10 @@ const ProfileYearVetoes = () => {
   return (
     <Stack gap="xs">
       <Title order={3}>Games you&apos;ve vetoed for one year</Title>
+      <Text c="dimmed" size="sm">
+        These are left out of suggestions for any group that includes you, for
+        that year only.
+      </Text>
       {mine.error && (
         <Alert color="red" role="alert">
           {mine.error}

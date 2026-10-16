@@ -66,6 +66,13 @@ describe("PublicProfile", () => {
     expect(screen.getByText("Couldn't load this profile")).toBeInTheDocument();
   });
 
+  it("tolerates a profile from an older API without veto lists", () => {
+    const { vetoes: _v, yearVetoes: _y, ...legacy } = base;
+    set({ status: "ready", profile: legacy as Profile });
+    renderWithMantine(<PublicProfile discordId="5" />);
+    expect(screen.getByRole("heading", { name: "Kel" })).toBeInTheDocument();
+  });
+
   it("shows the name and the years and games played tiles", () => {
     set({ status: "ready", profile: base });
     renderWithMantine(<PublicProfile discordId="5" />);
