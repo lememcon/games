@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
 import {
+  fakeCovers,
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
@@ -40,6 +41,7 @@ function makeApp() {
     webOrigin: "https://games.lememcon.com",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
+    covers: fakeCovers().covers,
     data: fake.data,
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,

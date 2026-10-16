@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
 import {
+  fakeCovers,
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
@@ -61,6 +62,7 @@ function makeApp(user: AppUser | null = null) {
     baseUrl: "https://api.lememcon.com",
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
+    covers: fakeCovers().covers,
     data,
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
@@ -204,6 +206,7 @@ describe("GET /api/games", () => {
       baseUrl: "https://api.lememcon.com",
       authHandler: async () => new Response("auth"),
       store: fakeStore().store,
+      covers: fakeCovers().covers,
       data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
@@ -292,6 +295,7 @@ describe("GET /api/me/top-games", () => {
       baseUrl: "https://api.lememcon.com",
       authHandler: async () => new Response("auth"),
       store: fakeStore().store,
+      covers: fakeCovers().covers,
       data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,

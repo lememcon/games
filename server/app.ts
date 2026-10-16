@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 
 import { bggRoutes } from "./bgg/routes";
+import { coverRoutes } from "./covers/routes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { dataRoutes } from "./routes/data";
 import { importRoutes } from "./routes/import";
@@ -28,8 +29,12 @@ const isPublic = (path: string, method: string) =>
       /^\/api\/years\/[^/]+\/scores$/.test(path)));
 
 const MAX_BODY_BYTES = 256 * 1024;
-/** The admin import route enforces its own, larger limit. */
+/** The admin import and cover upload routes enforce their own, larger limits. */
 const IMPORT_PATH = "/api/admin/import";
+const COVER_UPLOAD = /^\/api\/admin\/covers\/[^/]+$/;
+const ownLimit = (method: string, path: string) =>
+  (method === "POST" && path === IMPORT_PATH) ||
+  (method === "PUT" && COVER_UPLOAD.test(path));
 
 const smallBodies = bodyLimit({
   maxSize: MAX_BODY_BYTES,
@@ -67,9 +72,7 @@ export function createApp(deps: AppDeps) {
     }),
   );
   app.use("/api/*", (c, next) =>
-    c.req.method === "POST" && c.req.path === IMPORT_PATH
-      ? next()
-      : smallBodies(c, next),
+    ownLimit(c.req.method, c.req.path) ? next() : smallBodies(c, next),
   );
   app.use("/api/*", csrf(deps.baseUrl, deps.webOrigin));
   app.on(["GET", "POST"], "/api/auth/*", (c) => deps.authHandler(c.req.raw));
@@ -100,6 +103,7 @@ export function createApp(deps: AppDeps) {
   api.use("/admin/*", requireAdmin);
   api.route("/admin", adminRoutes(deps.store));
   if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
+  api.route("/admin/covers", coverRoutes(deps.covers));
   api.route("/admin", importRoutes(deps.data));
   api.route("/admin", linkRoutes(deps.links));
   api.route(

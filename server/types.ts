@@ -1,5 +1,6 @@
 import type { BggGame } from "./bgg/client";
 import type { BggService } from "./bgg/service";
+import type { CoverService } from "./covers/service";
 import type { NormalizedImport } from "./import";
 
 export type Role = "member" | "admin";
@@ -62,6 +63,8 @@ export interface AppDeps {
   played: PlayedStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
+  /** Cover mirror job and custom cover upload; built with null storage when S3 is unset. */
+  covers: CoverService;
   /** Years, games and scores: public reads and the admin import. */
   data: DataStore;
   /** Links between players and app members (admin only). */

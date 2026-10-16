@@ -5,6 +5,9 @@ import { createAuth, createSessionResolver } from "./auth";
 import { createBggClient } from "./bgg/client";
 import { createNeededIds } from "./bgg/needed";
 import { createBggService } from "./bgg/service";
+import { createCoverFetcher } from "./covers/fetch";
+import { createCoverService } from "./covers/service";
+import { createS3Storage } from "./covers/storage";
 import { createDb } from "./db";
 import { createBggRepo } from "./db/bggRepo";
 import { createDataStore } from "./db/dataStore";
@@ -21,12 +24,34 @@ const env = loadEnv();
 const { db, pool } = createDb(env.DATABASE_URL);
 const auth = createAuth(env, db);
 const store = createUserStore(db);
+const bggRepo = createBggRepo(db);
 // In-memory job state: assumes a single server instance.
 const bgg = createBggService({
-  repo: createBggRepo(db),
+  repo: bggRepo,
   client: createBggClient(),
   fetchNeededIds: createNeededIds(),
   secret: env.BETTER_AUTH_SECRET,
+});
+// loadEnv makes the S3 variables all-or-none, so one check covers them.
+const storage =
+  env.S3_BUCKET &&
+  env.S3_REGION &&
+  env.S3_ACCESS_KEY_ID &&
+  env.S3_SECRET_ACCESS_KEY &&
+  env.COVER_BASE_URL
+    ? createS3Storage({
+        endpoint: env.S3_ENDPOINT,
+        region: env.S3_REGION,
+        bucket: env.S3_BUCKET,
+        accessKeyId: env.S3_ACCESS_KEY_ID,
+        secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+      })
+    : null;
+const covers = createCoverService({
+  repo: bggRepo,
+  storage,
+  fetchCover: createCoverFetcher(),
+  coverBaseUrl: env.COVER_BASE_URL,
 });
 const data = createDataStore(db, env.COVER_BASE_URL);
 const links = createLinkStore(db);
@@ -43,6 +68,7 @@ const app = createApp({
   authHandler: auth.handler,
   store,
   bgg,
+  covers,
   data,
   links,
   profiles,
@@ -62,6 +88,7 @@ function shutdown(signal: string) {
   stopping = true;
   console.log(`${signal} received, shutting down`);
   bgg.shutdown();
+  covers.shutdown();
   // Hard stop if keep-alive connections never drain.
   setTimeout(() => process.exit(1), 10_000).unref();
   server.close(() => {
