@@ -8,7 +8,11 @@ import type { GamesData } from "@/types";
 
 const vetoes = vi.hoisted(() => ({
   state: {
-    vetoes: [] as { bggId: number; name: string | null }[],
+    vetoes: [] as {
+      bggId: number;
+      name: string | null;
+      image?: string | null;
+    }[],
     loading: false,
     saving: false,
     error: null as string | null,
@@ -52,6 +56,17 @@ describe("ProfileVetoes", () => {
     vetoes.state.loading = true;
     render();
     expect(screen.queryByText("You haven't vetoed any games.")).toBeNull();
+  });
+
+  it("shows a thumbnail for a veto with an image", () => {
+    vetoes.state.vetoes = [
+      { bggId: 2, name: "Azul", image: "https://example.com/azul.jpg" },
+    ];
+    const { container } = render();
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://example.com/azul.jpg",
+    );
   });
 
   it("lists vetoes as plain text and undoes one", async () => {

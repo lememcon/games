@@ -762,3 +762,14 @@ body {
     top: var(--top);
   }
 }
+
+/* ---- Veto row thumbnail (extends .tray-cover) ---- */
+.tray-cover--xs {
+  width: 40px;
+  height: 40px;
+}
+
+.tray-cover--xs img,
+.tray-cover--xs .tray-cover__blank {
+  border-radius: 7px;
+}

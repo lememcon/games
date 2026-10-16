@@ -145,7 +145,9 @@ describe("PublicProfile", () => {
       status: "ready",
       profile: {
         ...base,
-        vetoes: [{ bggId: 1, name: "Catan" }],
+        vetoes: [
+          { bggId: 1, name: "Catan", image: "https://example.com/c.jpg" },
+        ],
         yearVetoes: [
           { year: 2025, bggId: 2, name: "Wingspan" },
           { year: 2026, bggId: 3, name: "Brass" },
@@ -153,7 +155,10 @@ describe("PublicProfile", () => {
         ],
       },
     });
-    renderWithMantine(<PublicProfile discordId="5" />);
+    const { container } = renderWithMantine(<PublicProfile discordId="5" />);
+    expect(
+      container.querySelector("img[src='https://example.com/c.jpg']"),
+    ).not.toBeNull();
     expect(
       screen.getByRole("heading", { name: "Vetoed games" }),
     ).toBeInTheDocument();

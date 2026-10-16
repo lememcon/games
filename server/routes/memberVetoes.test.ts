@@ -34,6 +34,7 @@ const users: Record<string, AppUser> = {
 function makeApp() {
   const fake = fakeMemberVetoes({
     games: { 1: "Root", 2: null },
+    meta: { 2: { image: "https://example.com/2.jpg", ext: ".jpg" } },
     vetoes: [
       { discordId: PAT, bggId: 1 },
       { discordId: KEL, bggId: 2 },
@@ -42,6 +43,7 @@ function makeApp() {
   const year = fakeMemberYearVetoes({
     years: [2025, 2026],
     games: { 1: "Root", 2: null },
+    meta: { 2: { image: "https://example.com/2.jpg", ext: ".jpg" } },
     vetoes: [
       { discordId: PAT, year: 2026, bggId: 1 },
       { discordId: KEL, year: 2025, bggId: 2 },
@@ -129,7 +131,14 @@ describe("GET /api/me/vetoes", () => {
     const res = await send(makeApp().app, "GET", "/me/vetoes");
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
     expect(await res.json()).toEqual({
-      vetoes: [{ bggId: 2, name: null }],
+      vetoes: [
+        {
+          bggId: 2,
+          name: null,
+          image: "https://example.com/2.jpg",
+          ext: ".jpg",
+        },
+      ],
     });
   });
 });
@@ -265,7 +274,15 @@ describe("GET /api/me/year-vetoes", () => {
     const res = await send(makeApp().app, "GET", "/me/year-vetoes");
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
     expect(await res.json()).toEqual({
-      vetoes: [{ year: 2025, bggId: 2, name: null }],
+      vetoes: [
+        {
+          year: 2025,
+          bggId: 2,
+          name: null,
+          image: "https://example.com/2.jpg",
+          ext: ".jpg",
+        },
+      ],
     });
   });
 });

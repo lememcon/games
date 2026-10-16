@@ -257,6 +257,7 @@ describe("GET /api/profiles/:discordId", () => {
   it("returns exactly the public fields plus the target's vetoes, uncached", async () => {
     const vetoes = fakeMemberVetoes({
       games: { 1: "Root", 2: "Azul" },
+      meta: { 1: { image: "https://example.com/1.jpg", ext: ".jpg" } },
       vetoes: [
         { discordId: PAT, bggId: 1 },
         { discordId: KEL, bggId: 2 },
@@ -264,6 +265,7 @@ describe("GET /api/profiles/:discordId", () => {
     }).memberVetoes;
     const yearVetoes = fakeMemberYearVetoes({
       games: { 1: "Root", 2: "Azul" },
+      meta: { 2: { image: "https://example.com/2.jpg" } },
       vetoes: [
         { discordId: PAT, year: 2026, bggId: 2 },
         { discordId: KEL, year: 2026, bggId: 1 },
@@ -288,8 +290,23 @@ describe("GET /api/profiles/:discordId", () => {
     ]);
     expect(body).toEqual({
       ...profile,
-      vetoes: [{ bggId: 1, name: "Root" }],
-      yearVetoes: [{ year: 2026, bggId: 2, name: "Azul" }],
+      vetoes: [
+        {
+          bggId: 1,
+          name: "Root",
+          image: "https://example.com/1.jpg",
+          ext: ".jpg",
+        },
+      ],
+      yearVetoes: [
+        {
+          year: 2026,
+          bggId: 2,
+          name: "Azul",
+          image: "https://example.com/2.jpg",
+          ext: null,
+        },
+      ],
     });
   });
 

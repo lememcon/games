@@ -438,6 +438,8 @@ export interface MemberOverrideStore {
 export interface MyVetoRow {
   bggId: number;
   name: string | null;
+  image: string | null;
+  ext: string | null;
 }
 
 /** One member's veto of a game in one year, with the game name when known. */
@@ -445,6 +447,8 @@ export interface MyYearVetoRow {
   year: number;
   bggId: number;
   name: string | null;
+  image: string | null;
+  ext: string | null;
 }
 
 /** A profile with the member's permanent and year vetoes, as GET /api/profiles/:id returns it. */

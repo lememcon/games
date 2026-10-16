@@ -91,10 +91,21 @@ interface MockOptions {
   played?: string[];
   profile?: Profile;
   overrides?: PlayerOverride[];
-  vetoes?: { bggId: number; name: string }[];
+  vetoes?: {
+    bggId: number;
+    name: string;
+    image?: string | null;
+    ext?: string | null;
+  }[];
   // Alice's single-year vetoes; PUT and DELETE change them. The name is only
   // what /api/me/year-vetoes reports.
-  yearVetoes?: { year: number; bggId: number; name?: string }[];
+  yearVetoes?: {
+    year: number;
+    bggId: number;
+    name?: string;
+    image?: string | null;
+    ext?: string | null;
+  }[];
   // Everyone's played games per year, for the recap.
   playedByYear?: Record<string, Record<string, string[]>>;
   scores?: PlayerGameScore[];
@@ -197,6 +208,8 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
             year: v.year,
             bggId: v.bggId,
             name: v.name ?? null,
+            image: v.image ?? null,
+            ext: v.ext ?? null,
           })),
       }),
   );

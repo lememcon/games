@@ -27,7 +27,7 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec(
-    `DELETE FROM member_veto; DELETE FROM year; DELETE FROM game; DELETE FROM app_user;
+    `DELETE FROM member_veto; DELETE FROM game_metadata; DELETE FROM year; DELETE FROM game; DELETE FROM app_user;
      INSERT INTO year (year) VALUES (2025), (2026);
      INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul'), (3, NULL);`,
   );
@@ -79,9 +79,30 @@ describe("listMine", () => {
     await store.set(ALEX, 2);
     await store.set(JO, 2);
     expect(await store.listMine(ALEX)).toEqual([
-      { bggId: 2, name: "Azul" },
-      { bggId: 1, name: "Root" },
-      { bggId: 3, name: null },
+      { bggId: 2, name: "Azul", image: null, ext: null },
+      { bggId: 1, name: "Root", image: null, ext: null },
+      { bggId: 3, name: null, image: null, ext: null },
+    ]);
+  });
+
+  it("returns cover metadata when present, nulls when absent", async () => {
+    await client.exec(
+      `INSERT INTO game_metadata (bgg_id, image_url, ext) VALUES
+         (1, 'https://example.com/root.jpg', '.jpg'),
+         (3, 'http://example.com/x.png', NULL);`,
+    );
+    await store.set(ALEX, 3);
+    await store.set(ALEX, 1);
+    await store.set(ALEX, 2);
+    expect(await store.listMine(ALEX)).toEqual([
+      { bggId: 2, name: "Azul", image: null, ext: null },
+      {
+        bggId: 1,
+        name: "Root",
+        image: "https://example.com/root.jpg",
+        ext: ".jpg",
+      },
+      { bggId: 3, name: null, image: "http://example.com/x.png", ext: null },
     ]);
   });
 });

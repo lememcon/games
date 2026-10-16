@@ -1,11 +1,65 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import VetoRow from "@/components/VetoRow";
 import { renderWithMantine } from "@/test/utils";
 
+vi.mock("@/lib/images", () => ({
+  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
+}));
+
+const cover = (container: HTMLElement) => container.querySelector("img");
+const blank = (container: HTMLElement) =>
+  container.querySelector(".tray-cover__blank");
+
 describe("VetoRow", () => {
+  it("shows a lazy decorative image for an https cover", () => {
+    const { container } = renderWithMantine(
+      <VetoRow bggId={1} name="Root" image="https://example.com/r.jpg" />,
+    );
+    const img = cover(container)!;
+    expect(img).toHaveAttribute("src", "https://example.com/r.jpg");
+    expect(img).toHaveAttribute("alt", "");
+    expect(img).toHaveAttribute("loading", "lazy");
+    expect(img).toHaveAttribute("width", "40");
+  });
+
+  it("prefers the bundled image when the ext matches", () => {
+    const { container } = renderWithMantine(
+      <VetoRow
+        bggId={7}
+        name="Azul"
+        image="https://example.com/a.jpg"
+        ext=".jpg"
+      />,
+    );
+    expect(cover(container)).toHaveAttribute("src", "/bundled/7.jpg");
+  });
+
+  it("shows a blank box without a cover", () => {
+    const { container } = renderWithMantine(<VetoRow bggId={1} name="Root" />);
+    expect(cover(container)).toBeNull();
+    expect(blank(container)).not.toBeNull();
+  });
+
+  it("shows a blank box for a custom image with no bundled match", () => {
+    const { container } = renderWithMantine(
+      <VetoRow bggId={1} name="Root" image="custom" ext=".jpg" />,
+    );
+    expect(cover(container)).toBeNull();
+    expect(blank(container)).not.toBeNull();
+  });
+
+  it("falls back to the blank box when the image fails", () => {
+    const { container } = renderWithMantine(
+      <VetoRow bggId={1} name="Root" image="https://example.com/r.jpg" />,
+    );
+    fireEvent.error(cover(container)!);
+    expect(cover(container)).toBeNull();
+    expect(blank(container)).not.toBeNull();
+  });
+
   it("shows the name with no button when read-only", () => {
     renderWithMantine(<VetoRow bggId={1} name="Root" />);
     expect(screen.getByText("Root")).toBeInTheDocument();

@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { MemberVetoStore } from "../types";
-import { game, memberVeto } from "./schema";
+import { game, gameMetadata, memberVeto } from "./schema";
 import type { StoreDb } from "./userStore";
 
 export function createMemberVetoStore(db: StoreDb): MemberVetoStore {
@@ -15,9 +15,15 @@ export function createMemberVetoStore(db: StoreDb): MemberVetoStore {
 
     listMine(discordId) {
       return db
-        .select({ bggId: memberVeto.bggId, name: game.name })
+        .select({
+          bggId: memberVeto.bggId,
+          name: game.name,
+          image: gameMetadata.imageUrl,
+          ext: gameMetadata.ext,
+        })
         .from(memberVeto)
         .leftJoin(game, eq(game.bggId, memberVeto.bggId))
+        .leftJoin(gameMetadata, eq(gameMetadata.bggId, memberVeto.bggId))
         .where(eq(memberVeto.discordId, discordId))
         .orderBy(asc(game.name), asc(memberVeto.bggId));
     },
