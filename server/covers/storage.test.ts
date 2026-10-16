@@ -111,6 +111,25 @@ describe("createS3Storage failures", () => {
       .catch((e: Error) => e);
     expect((err as Error).message).toBe("Cover storage upload failed.");
   });
+
+  it("aborts the upload when the caller's signal aborts", async () => {
+    let started!: () => void;
+    const fetchCalled = new Promise<void>((r) => (started = r));
+    const fetch = ((_req: Request, init?: RequestInit) =>
+      new Promise((_res, rej) => {
+        started();
+        init?.signal?.addEventListener("abort", () =>
+          rej(new Error("aborted")),
+        );
+      })) as unknown as typeof globalThis.fetch;
+    const ac = new AbortController();
+    const pending = createS3Storage({ ...base, fetch })
+      .put("k", new Uint8Array(1), "image/png", ac.signal)
+      .catch((e: Error) => e);
+    await fetchCalled;
+    ac.abort();
+    expect(await pending).toBeInstanceOf(CoverStorageError);
+  });
 });
 
 describe("coverKey", () => {

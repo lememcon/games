@@ -129,7 +129,7 @@ export function createCoverService(deps: CoverServiceDeps) {
           const image = await fetchCover(need.imageUrl, signal);
           blocked = 0;
           const key = coverKey(need.bggId, image.bytes, image.ext);
-          await store.put(key, image.bytes, image.contentType);
+          await store.put(key, image.bytes, image.contentType, signal);
           storeFailed = 0;
           // False when the image changed meanwhile; the next run mirrors the new one.
           if (await repo.setCover(need.bggId, key, need.imageUrl))

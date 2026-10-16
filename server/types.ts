@@ -513,5 +513,10 @@ export interface MemberYearVetoStore {
 
 /** Writes mirrored cover images to object storage (server/covers/storage.ts). */
 export interface CoverStorage {
-  put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
+  put(
+    key: string,
+    bytes: Uint8Array,
+    contentType: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }

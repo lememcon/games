@@ -329,6 +329,26 @@ describe("mirror job", () => {
     });
   });
 
+  it("passes the job signal to the store and releases the lock on cancel", async () => {
+    const entered = deferred();
+    const put = vi.fn(
+      (_k: string, _b: Uint8Array, _c: string, signal?: AbortSignal) =>
+        new Promise<void>((_res, rej) => {
+          entered.resolve();
+          signal?.addEventListener("abort", () => rej(new CoverStorageError()));
+        }),
+    );
+    const s = setup({ storage: { put } });
+    await s.service.start({ mode: "missing" });
+    await entered.promise;
+    expect(s.service.cancel().state).toBe("cancelled");
+    expect(await s.finished()).toMatchObject({ state: "cancelled", done: 0 });
+    put.mockImplementation(async () => {});
+    expect(await s.service.start({ mode: "missing" })).toMatchObject({
+      ok: true,
+    });
+  });
+
   it("stops on an unexpected error without echoing it", async () => {
     const s = setup();
     s.repo.setCover = async () => {

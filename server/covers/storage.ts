@@ -56,7 +56,7 @@ export function createS3Storage(opts: S3Options): CoverStorage {
   const base = opts.endpoint ?? `https://s3.${opts.region}.amazonaws.com`;
 
   return {
-    async put(key, bytes, contentType) {
+    async put(key, bytes, contentType, signal) {
       const path = key.split("/").map(encodeURIComponent).join("/");
       const url = `${base.replace(/\/+$/, "")}/${encodeURIComponent(opts.bucket)}/${path}`;
       const signed = await client.sign(url, {
@@ -73,7 +73,10 @@ export function createS3Storage(opts: S3Options): CoverStorage {
       });
       let res: Response;
       try {
-        res = await send(signed, { signal: AbortSignal.timeout(timeoutMs) });
+        const timeout = AbortSignal.timeout(timeoutMs);
+        res = await send(signed, {
+          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+        });
       } catch {
         throw new CoverStorageError();
       }
