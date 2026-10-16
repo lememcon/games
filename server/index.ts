@@ -28,7 +28,7 @@ const bgg = createBggService({
   fetchNeededIds: createNeededIds(),
   secret: env.BETTER_AUTH_SECRET,
 });
-const data = createDataStore(db);
+const data = createDataStore(db, env.COVER_BASE_URL);
 const links = createLinkStore(db);
 const profiles = createProfileStore(db);
 const played = createPlayedStore(db);

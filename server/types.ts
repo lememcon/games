@@ -145,6 +145,19 @@ export interface BggRepo {
    * its image and extension; fields BGG omitted keep their stored value.
    */
   upsertMetadata(games: BggGame[], fetchedAt: Date): Promise<void>;
+  /**
+   * Records a mirrored cover. Applies only while `image_url` still equals
+   * `source`, so a concurrent re-import is never paired with stale bytes.
+   * Returns whether a row was updated.
+   */
+  setCover(bggId: number, key: string, source: string): Promise<boolean>;
+  /** Games whose cover still needs mirroring (https image, not custom). */
+  listCoverNeeds(): Promise<CoverNeed[]>;
+}
+
+export interface CoverNeed {
+  bggId: number;
+  imageUrl: string;
 }
 
 /** A score row in the shape the app has always consumed (`player_game_scores`). */
@@ -181,6 +194,8 @@ export interface GameRow {
   maxPlayers: number | null;
   imageUrl: string | null;
   imageExt: string | null;
+  imageKey?: string | null;
+  imageSource?: string | null;
 }
 
 /** An inclusive player count range. */
@@ -199,6 +214,8 @@ export type GamesMap = Record<
     players?: PlayerRange;
     image?: string;
     ext?: string;
+    /** Mirrored cover URL; present only when the stored cover matches `image`. */
+    cover?: string;
   }
 >;
 

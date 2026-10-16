@@ -152,7 +152,10 @@ export async function getTopGames(
 }
 
 /** Every game with metadata or a name, including those with no scores. */
-export async function getGames(db: StoreDb): Promise<GamesMap> {
+export async function getGames(
+  db: StoreDb,
+  coverBaseUrl?: string,
+): Promise<GamesMap> {
   const bggId = sql<number>`coalesce(${gameMetadata.bggId}, ${game.bggId})`;
   const rows = await db
     .select({
@@ -162,11 +165,13 @@ export async function getGames(db: StoreDb): Promise<GamesMap> {
       maxPlayers: gameMetadata.maxPlayers,
       imageUrl: gameMetadata.imageUrl,
       imageExt: gameMetadata.ext,
+      imageKey: gameMetadata.imageKey,
+      imageSource: gameMetadata.imageSource,
     })
     .from(gameMetadata)
     .fullJoin(game, eq(game.bggId, gameMetadata.bggId))
     .orderBy(asc(bggId));
-  return toGamesMap(rows);
+  return toGamesMap(rows, coverBaseUrl);
 }
 
 /**

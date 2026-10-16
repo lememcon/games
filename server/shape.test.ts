@@ -297,6 +297,53 @@ describe("toGamesMap", () => {
     });
   });
 
+  describe("cover", () => {
+    const img = "https://x/a.jpg";
+    const base = "https://cdn.example.com";
+    const cover = (over: Partial<GameRow>, b: string | undefined = base) =>
+      toGamesMap([row({ imageUrl: img, imageExt: ".jpg", ...over })], b)["1"]
+        .cover;
+
+    it("is emitted when the source equals the image", () => {
+      expect(cover({ imageKey: "covers/1.jpg", imageSource: img })).toBe(
+        `${base}/covers/1.jpg`,
+      );
+    });
+
+    it("is emitted for a custom source", () => {
+      expect(
+        cover({ imageUrl: "custom", imageKey: "k.png", imageSource: "custom" }),
+      ).toBe(`${base}/k.png`);
+    });
+
+    it("is omitted when the source differs, or the key or source is missing", () => {
+      expect(cover({ imageKey: "k", imageSource: "https://x/old.jpg" })).toBe(
+        undefined,
+      );
+      expect(cover({ imageKey: null, imageSource: img })).toBe(undefined);
+      expect(cover({ imageKey: "k", imageSource: null })).toBe(undefined);
+      expect(cover({ imageKey: "k" })).toBe(undefined);
+    });
+
+    it("tolerates trailing slashes on the base URL", () => {
+      expect(cover({ imageKey: "k", imageSource: img }, `${base}/`)).toBe(
+        `${base}/k`,
+      );
+    });
+
+    it("is omitted without a base URL, leaving image and ext", () => {
+      const row1 = toGamesMap([
+        row({
+          imageUrl: img,
+          imageExt: ".jpg",
+          imageKey: "k",
+          imageSource: img,
+        }),
+      ])["1"];
+      expect(row1).toEqual({ image: img, ext: ".jpg" });
+    });
+  });
+
   it("includes the name when known and omits the key when null", () => {
     const map = toGamesMap([
       row({ bggId: 1, name: "Root" }),

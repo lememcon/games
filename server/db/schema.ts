@@ -141,6 +141,10 @@ export const gameMetadata = pgTable("game_metadata", {
   maxPlayers: integer("max_players"),
   imageUrl: text("image_url"),
   ext: text("ext"),
+  /** Object key of the mirrored cover; the URL is built at read time. */
+  imageKey: text("image_key"),
+  /** The `image_url` that was mirrored under `image_key`, or "custom". */
+  imageSource: text("image_source"),
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
 

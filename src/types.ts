@@ -26,6 +26,7 @@ export interface GameMeta {
   players?: { min: number | null; max: number | null };
   image?: string | null;
   ext?: string | null;
+  cover?: string;
 }
 
 export type GamesData = Record<string, GameMeta>;

@@ -141,6 +141,13 @@
       "when": 1792164379200,
       "tag": "0019_left_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792189865824,
+      "tag": "0020_ancient_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

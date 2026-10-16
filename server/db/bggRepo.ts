@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, like, ne, or, sql } from "drizzle-orm";
 import type {
   AnyPgColumn,
   PgDatabase,
@@ -42,6 +42,39 @@ export function createBggRepo(db: BggDb): BggRepo {
     listMetadata: () => db.select().from(gameMetadata),
 
     upsertMetadata: (games, fetchedAt) => upsertMetadata(db, games, fetchedAt),
+
+    async setCover(bggId, key, source) {
+      const rows = await db
+        .update(gameMetadata)
+        .set({ imageKey: key, imageSource: source })
+        .where(
+          and(eq(gameMetadata.bggId, bggId), eq(gameMetadata.imageUrl, source)),
+        )
+        .returning({ bggId: gameMetadata.bggId });
+      return rows.length > 0;
+    },
+
+    async listCoverNeeds() {
+      const rows = await db
+        .select({ bggId: gameMetadata.bggId, imageUrl: gameMetadata.imageUrl })
+        .from(gameMetadata)
+        .where(
+          and(
+            like(gameMetadata.imageUrl, "https://%"),
+            or(
+              isNull(gameMetadata.imageSource),
+              ne(gameMetadata.imageSource, CUSTOM),
+            ),
+            or(
+              isNull(gameMetadata.imageKey),
+              isNull(gameMetadata.imageSource),
+              ne(gameMetadata.imageSource, gameMetadata.imageUrl),
+            ),
+          ),
+        )
+        .orderBy(asc(gameMetadata.bggId));
+      return rows.map((r) => ({ bggId: r.bggId, imageUrl: r.imageUrl! }));
+    },
   };
 }
 
