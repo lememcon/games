@@ -29,8 +29,8 @@ export interface BackdropCovers {
  * The covers for the backdrop behind signed-in pages. On a year page only
  * games scored that year are eligible; the player's ten highest raw scores that
  * year are preferred. Any other page draws from every cover, preferring the
- * saved (or latest) year's top scores. While loading, or on error, every cover
- * is eligible and none is preferred.
+ * saved (or latest) year's top scores. While loading, or on error, a year page
+ * has no covers; any other page keeps every cover and prefers none.
  */
 const useBackdropCovers = (
   pathname: string,
@@ -39,13 +39,12 @@ const useBackdropCovers = (
 ): BackdropCovers => {
   const { years } = useYears(fetchImpl);
   const pathYear = routeYear(pathname);
-  // pathname is the trigger: re-read the saved year on every navigation.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stored = useMemo(() => readStoredYear(), [pathname]);
-  const year = defaultYear(years, stored, pathYear);
+  const year = defaultYear(years, readStoredYear(), pathYear);
   const data = useData(year, fetchImpl);
 
   const ready = !data.loading && !data.error;
+  // Until a year page's scores arrive, which games it has is unknown.
+  const unknown = pathYear !== null && !ready;
   // Keys, not the data object, so a refetch with the same games changes nothing.
   const allowedKey =
     ready && pathYear !== null
@@ -56,6 +55,7 @@ const useBackdropCovers = (
     : "";
 
   return useMemo(() => {
+    if (unknown) return { pool: [], preferred: [] };
     const allowed =
       allowedKey === null
         ? null
@@ -68,7 +68,7 @@ const useBackdropCovers = (
       .filter(Boolean)
       .flatMap((id) => byId.get(id) ?? []);
     return { pool, preferred };
-  }, [allowedKey, preferredKey]);
+  }, [unknown, allowedKey, preferredKey]);
 };
 
 export default useBackdropCovers;
