@@ -72,7 +72,11 @@ describe("SplitSuggestions", () => {
 
     expect(getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "false");
     expect(getByText(/2 \+ 2 · Go \+ Netrunner/)).toBeVisible();
-    expect(getByText(/43\.8 per player/)).toBeVisible();
+    expect(
+      within(getAllByRole("button")[0]).getByLabelText(
+        "Even, 43.75 out of 100",
+      ),
+    ).toBeVisible();
     expect(getByText("+23.8")).toHaveClass("splits__delta--up");
     const summaries = getAllByTestId("split-summary");
     expect(summaries).toHaveLength(1);
@@ -125,15 +129,30 @@ describe("SplitSuggestions", () => {
   });
 
   it("normalizes the headline and difference against the individual max", () => {
-    const { getByText } = renderWithMantine(
+    const { getByText, getAllByRole } = renderWithMantine(
       <SplitSuggestions
         splits={[split(-5, 25)]}
         year="2024"
         individualMax={50}
       />,
     );
-    expect(getByText(/50\.0 per player/)).toBeVisible();
+    expect(
+      within(getAllByRole("button")[0]).getByLabelText("Even, 50 out of 100"),
+    ).toBeVisible();
     expect(getByText("-10.0")).toHaveClass("splits__delta--down");
+  });
+
+  it.each([
+    [90, "Great"],
+    [70, "Good"],
+    [10, "Poor"],
+  ])("shows the %i per-player score as %s", (perPlayer, label) => {
+    const { getAllByRole } = renderSplits([split(null, perPlayer)]);
+    expect(
+      within(getAllByRole("button")[0]).getByLabelText(
+        `${label}, ${perPlayer} out of 100`,
+      ),
+    ).toBeVisible();
   });
 
   it("marks a worse plan with a negative difference", () => {

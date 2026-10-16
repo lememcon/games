@@ -513,7 +513,7 @@ body {
 .splits__toggle {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: calc(var(--mantine-spacing-xs) / 2);
   width: 100%;
@@ -565,6 +565,13 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+.splits__score {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mantine-spacing-xs) / 2);
+  min-width: 180px;
 }
 
 .splits__delta--up {
