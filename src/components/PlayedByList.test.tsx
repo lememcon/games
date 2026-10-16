@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import PlayedByList from "@/components/PlayedByList";
@@ -55,5 +56,55 @@ describe("PlayedByList", () => {
       "https://cdn.example/a.png",
     );
     expect(getByText("Bo").closest("a")).toBeNull();
+  });
+
+  describe("long lists", () => {
+    const players = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ name: `P${i + 1}` }));
+
+    it("shows all seven players without a toggle", () => {
+      const { queryByRole, getByText } = renderWithMantine(
+        <PlayedByList playedBy={players(7)} />,
+      );
+      expect(getByText("P7")).toBeInTheDocument();
+      expect(queryByRole("button")).toBeNull();
+    });
+
+    it("collapses ten players and toggles on click", async () => {
+      const user = userEvent.setup();
+      const { getByRole, queryByText, getByText } = renderWithMantine(
+        <PlayedByList playedBy={players(10)} />,
+      );
+      const toggle = getByRole("button", { name: "+4 more" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(queryByText("P10")).toBeNull();
+      expect(queryByText("P6")).toBeInTheDocument();
+
+      await user.click(toggle);
+      expect(getByText("P10")).toBeInTheDocument();
+      const less = getByRole("button", { name: "Show less" });
+      expect(less).toHaveAttribute("aria-expanded", "true");
+      expect(less).toHaveAttribute("aria-controls", getByRole("list").id);
+
+      await user.click(less);
+      expect(queryByText("P10")).toBeNull();
+      expect(getByRole("button", { name: "+4 more" })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+    });
+
+    it("toggles from the keyboard", async () => {
+      const user = userEvent.setup();
+      const { getByRole, getByText } = renderWithMantine(
+        <PlayedByList playedBy={players(9)} />,
+      );
+      await user.tab();
+      expect(getByRole("button", { name: "+3 more" })).toHaveFocus();
+      await user.keyboard("{Enter}");
+      expect(getByText("P9")).toBeInTheDocument();
+      await user.keyboard(" ");
+      expect(getByRole("button", { name: "+3 more" })).toBeInTheDocument();
+    });
   });
 });

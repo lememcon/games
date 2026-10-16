@@ -1,4 +1,7 @@
+import { useId, useState } from "react";
+
 import PlayerName from "@/components/PlayerName";
+import { capPlayedBy } from "@/lib/playedBy";
 import type { PlayedByPlayer } from "@/types";
 
 interface PlayedByListProps {
@@ -8,15 +11,20 @@ interface PlayedByListProps {
 // A "Played by:" label and the players who played a game this year, each as
 // avatar and name. Renders nothing when nobody has.
 const PlayedByList = ({ playedBy }: PlayedByListProps) => {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   if (playedBy.length === 0) return null;
+
+  const { shown, hidden } = capPlayedBy(playedBy);
+  const visible = expanded ? playedBy : shown;
 
   return (
     <div className="tray-played-by">
       <span className="tray-played-by__label" aria-hidden="true">
         Played by:
       </span>
-      <ul className="tray-played-by__list" aria-label="Played by">
-        {playedBy.map(({ name, discordId, discordImage }) => (
+      <ul id={listId} className="tray-played-by__list" aria-label="Played by">
+        {visible.map(({ name, discordId, discordImage }) => (
           <li key={name}>
             <PlayerName
               name={name}
@@ -25,6 +33,19 @@ const PlayedByList = ({ playedBy }: PlayedByListProps) => {
             />
           </li>
         ))}
+        {hidden > 0 && (
+          <li key="toggle">
+            <button
+              type="button"
+              className="tray-played-by__toggle"
+              aria-expanded={expanded}
+              aria-controls={listId}
+              onClick={() => setExpanded((e) => !e)}
+            >
+              {expanded ? "Show less" : `+${hidden} more`}
+            </button>
+          </li>
+        )}
       </ul>
     </div>
   );

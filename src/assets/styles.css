@@ -165,6 +165,21 @@ body {
   white-space: nowrap;
 }
 
+.tray-played-by__toggle {
+  font: inherit;
+  font-size: 0.72rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--mantine-color-dimmed);
+  cursor: pointer;
+}
+
+.tray-played-by__toggle:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
 .tray-played-by__list {
   display: flex;
   flex-wrap: wrap;

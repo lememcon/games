@@ -170,3 +170,42 @@ test("compact row keeps the cover at the top on a phone when played-by is long",
   expect(Math.abs(cover.top - head.top)).toBeLessThanOrEqual(40);
   expect(playedBy.top).toBeGreaterThanOrEqual(actions.bottom - 1);
 });
+
+test("a long played-by list collapses and expands in place", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const { members, rows } = longNamedMembers(9);
+  await mockApi(page, {
+    scores: [
+      ...rows,
+      ...scores.filter((s) => s.bgg_id === 102 || s.bgg_id === 103),
+    ],
+    playedByYear: {
+      "2024": Object.fromEntries([
+        ...members.map((m) => [m.discordId, ["101"]]),
+        [aliceId, ["102"]],
+      ]),
+    },
+  });
+  await page.goto("/");
+  await expect(page.locator(".tray-card")).toHaveCount(3);
+
+  const list = page.locator(".tray-played-by__list");
+  const last = list.getByText("Featherstonehaugh 9");
+  const toggle = page.getByRole("button", { name: "+3 more" });
+  await expect(toggle).toBeVisible();
+  await expect(last).toHaveCount(0);
+
+  await toggle.click();
+  await expect(last).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show less" })).toBeVisible();
+
+  const bottoms = await page
+    .locator(".tray-card__foot")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().bottom));
+  expect(bottoms).toHaveLength(3);
+  for (const bottom of bottoms) {
+    expect(Math.abs(bottom - bottoms[0])).toBeLessThanOrEqual(1);
+  }
+});
