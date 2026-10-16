@@ -46,6 +46,7 @@ describe("MyVeto", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(opener()).toHaveFocus();
   });
 
   it("vetoes for every year through the dialog", async () => {

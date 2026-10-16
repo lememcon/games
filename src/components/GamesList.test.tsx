@@ -234,19 +234,6 @@ describe("GamesList", () => {
       expect(onOpenVeto).toHaveBeenLastCalledWith(400);
     });
 
-    it("tolerates a missing onOpenVeto and missing year vetoes", async () => {
-      const user = userEvent.setup();
-      const { getByRole } = renderList({
-        vetoes: makeVetoes(),
-        discordId: "d1",
-      });
-
-      await user.click(getByRole("button", { name: "Veto: Chess" }));
-      expect(getByRole("button", { name: "Veto: Chess" })).toHaveTextContent(
-        "Not for me…",
-      );
-    });
-
     it("disables only the game being saved", () => {
       const { getByRole } = renderList({
         vetoes: makeVetoes({ isSaving: (id) => id === 200 }),

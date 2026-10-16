@@ -85,7 +85,8 @@ export const useVetoSet = (
     };
   }, [key, hasApi]);
 
-  // Resolves true when the change itself saved, false when it threw.
+  // Resolves true when the change itself saved, false when it threw or the key
+  // changed meanwhile.
   const mutate = async (
     bggId: number,
     run: (api: VetoApi) => Promise<void>,
@@ -104,6 +105,9 @@ export const useVetoSet = (
       ok = false;
       message = describe(e);
     }
+    // A stale save must not touch the counter, or it would discard the new
+    // key's own list fetch.
+    if (stale()) return false;
     // Refetch either way so a stale view resyncs.
     const mine = ++latest.current;
     try {
@@ -112,7 +116,7 @@ export const useVetoSet = (
     } catch {
       if (mine === latest.current) message ??= GENERIC_ERROR;
     }
-    if (stale()) return ok;
+    if (stale()) return false;
     setSaving((prev) => {
       const next = new Set(prev);
       next.delete(bggId);

@@ -194,6 +194,10 @@ function Scoreboard({ user }: ScoreboardProps) {
     setBarScope(vetoScope);
     setLastVetoed(null);
   }
+  // A veto still saving for the previous scope must not bring the bar back.
+  useEffect(() => {
+    vetoSeq.current++;
+  }, [vetoScope]);
   useEffect(() => {
     if (!lastVetoed || barHeld) return;
     const timer = setTimeout(() => setLastVetoed(null), UNDO_MS);
@@ -424,13 +428,11 @@ function Scoreboard({ user }: ScoreboardProps) {
         })()
       : null;
 
-  const vetoingKey = vetoingId === null ? null : `${vetoingId}`;
+  const vetoingKey = `${vetoingId}`;
   const vetoingName =
-    vetoingKey === null
-      ? ""
-      : (games.find((g) => g.id === vetoingKey)?.name ??
-        gameNames[vetoingKey] ??
-        vetoingKey);
+    games.find((g) => g.id === vetoingKey)?.name ??
+    gameNames[vetoingKey] ??
+    vetoingKey;
 
   const handleYear = (year: string | null) => {
     if (year === null) return;
@@ -637,30 +639,27 @@ function Scoreboard({ user }: ScoreboardProps) {
                     />
                   </div>
                   {markingDialog}
-                  {vetoingId !== null &&
-                    vetoingKey !== null &&
-                    year !== null && (
-                      <VetoDialog
-                        game={vetoingName}
-                        year={year}
-                        vetoed={
-                          vetoes.all[user.discordId]?.has(vetoingKey) ?? false
-                        }
-                        yearVetoed={
-                          yearVetoes.all[user.discordId]?.has(vetoingKey) ??
-                          false
-                        }
-                        savingVeto={vetoes.isSaving(vetoingId)}
-                        savingYear={yearVetoes.isSaving(vetoingId)}
-                        onClose={() => setVetoingId(null)}
-                        onVeto={(on) =>
-                          pickVeto("all", vetoingId, vetoingName, on)
-                        }
-                        onYearVeto={(on) =>
-                          pickVeto("year", vetoingId, vetoingName, on)
-                        }
-                      />
-                    )}
+                  {vetoingId !== null && year !== null && (
+                    <VetoDialog
+                      game={vetoingName}
+                      year={year}
+                      vetoed={
+                        vetoes.all[user.discordId]?.has(vetoingKey) ?? false
+                      }
+                      yearVetoed={
+                        yearVetoes.all[user.discordId]?.has(vetoingKey) ?? false
+                      }
+                      savingVeto={vetoes.isSaving(vetoingId)}
+                      savingYear={yearVetoes.isSaving(vetoingId)}
+                      onClose={() => setVetoingId(null)}
+                      onVeto={(on) =>
+                        pickVeto("all", vetoingId, vetoingName, on)
+                      }
+                      onYearVeto={(on) =>
+                        pickVeto("year", vetoingId, vetoingName, on)
+                      }
+                    />
+                  )}
                   <YearTrends
                     totals={yearTotals}
                     year={Number(year)}

@@ -1257,6 +1257,7 @@ describe("Scoreboard", () => {
       expect(queryByRole("dialog")).toBeNull();
       expect(state.veto).not.toHaveBeenCalled();
       expect(state.yearVeto).not.toHaveBeenCalled();
+      expect(getByRole("button", { name: "Veto: Belfort" })).toHaveFocus();
     });
 
     it("closes the dialog when the year changes", async () => {
@@ -1630,6 +1631,22 @@ describe("Scoreboard", () => {
         });
 
         await waitFor(() => expect(path()).toBe("/2025"));
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
+      it("shows no bar for a year veto that finishes after the year changed", async () => {
+        at("/2026");
+        let finish!: (ok: boolean) => void;
+        state.yearVeto = vi.fn(() => new Promise<boolean>((r) => (finish = r)));
+        const { queryByRole } = await yearVeto("Belfort");
+
+        act(() => {
+          at("/2025");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+        await waitFor(() => expect(path()).toBe("/2025"));
+        await act(async () => finish(true));
+
         expect(queryByRole("button", { name: "Undo" })).toBeNull();
       });
 

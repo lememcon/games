@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import { Button, Group, Modal, Stack } from "@mantine/core";
 
 interface VetoDialogProps {
@@ -27,36 +29,48 @@ const VetoDialog = ({
   onVeto,
   onYearVeto,
   onClose,
-}: VetoDialogProps) => (
-  <Modal opened onClose={onClose} title={`Veto "${game}"`}>
-    <Stack gap="xs">
-      <Button
-        variant="default"
-        disabled={savingVeto}
-        onClick={() => {
-          onVeto(!vetoed);
-          onClose();
-        }}
-      >
-        {vetoed ? "Remove: not for me" : "Not for me · every year"}
-      </Button>
-      <Button
-        variant={yearVetoed ? "default" : "filled"}
-        disabled={savingYear}
-        onClick={() => {
-          onYearVeto(!yearVetoed);
-          onClose();
-        }}
-      >
-        {yearVetoed ? `Remove: not in ${year}` : `Not in ${year}`}
-      </Button>
-    </Stack>
-    <Group justify="flex-end" mt="md">
-      <Button variant="subtle" onClick={onClose}>
-        Cancel
-      </Button>
-    </Group>
-  </Modal>
-);
+}: VetoDialogProps) => {
+  // The dialog is mounted already open, so Mantine never sees it close; give
+  // focus back to whatever opened it when it unmounts.
+  const opener = useRef(document.activeElement);
+  useEffect(
+    () => () => {
+      if (opener.current instanceof HTMLElement && opener.current.isConnected)
+        opener.current.focus();
+    },
+    [],
+  );
+  return (
+    <Modal opened onClose={onClose} title={`Veto "${game}"`}>
+      <Stack gap="xs">
+        <Button
+          variant="default"
+          disabled={savingVeto}
+          onClick={() => {
+            onVeto(!vetoed);
+            onClose();
+          }}
+        >
+          {vetoed ? "Remove: not for me" : "Not for me · every year"}
+        </Button>
+        <Button
+          variant={yearVetoed ? "default" : "filled"}
+          disabled={savingYear}
+          onClick={() => {
+            onYearVeto(!yearVetoed);
+            onClose();
+          }}
+        >
+          {yearVetoed ? `Remove: not in ${year}` : `Not in ${year}`}
+        </Button>
+      </Stack>
+      <Group justify="flex-end" mt="md">
+        <Button variant="subtle" onClick={onClose}>
+          Cancel
+        </Button>
+      </Group>
+    </Modal>
+  );
+};
 
 export default VetoDialog;

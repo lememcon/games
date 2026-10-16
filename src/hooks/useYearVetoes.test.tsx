@@ -152,11 +152,40 @@ describe("useYearVetoes", () => {
     put.resolve(none());
     refetch.resolve(list(5));
     await act(async () => {
-      expect(await saved).toBe(true);
+      expect(await saved).toBe(false);
     });
     expect(result.current.all).toEqual({ d1: new Set(["9"]) });
     expect(result.current.isSaving(5)).toBe(false);
     expect(result.current.errorFor(5)).toBeNull();
+  });
+
+  it("keeps the new year's list when a stale save finishes first", async () => {
+    const put = deferred();
+    const next = deferred();
+    const fetchImpl = routed({
+      "GET /api/year-vetoes/2025": [list()],
+      "PUT /api/me/year-vetoes/2025/5": [put.promise],
+      "GET /api/year-vetoes/2026": [next.promise],
+    });
+    const { result, rerender } = renderHook(
+      ({ y }) => useYearVetoes(y, fetchImpl),
+      { initialProps: { y: "2025" } },
+    );
+    await flush();
+    let saved!: Promise<boolean>;
+    act(() => {
+      saved = result.current.veto(5);
+    });
+    rerender({ y: "2026" });
+    await flush();
+    put.resolve(none());
+    await act(async () => {
+      expect(await saved).toBe(false);
+    });
+    next.resolve(list(9));
+    await waitFor(() =>
+      expect(result.current.all).toEqual({ d1: new Set(["9"]) }),
+    );
   });
 
   it("does not leak a failed save's error into the next year", async () => {

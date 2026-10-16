@@ -103,3 +103,55 @@ describe("VetoDialog", () => {
     expect(onYearVeto).not.toHaveBeenCalled();
   });
 });
+
+describe("VetoDialog focus", () => {
+  it("returns focus to the opener when it unmounts", () => {
+    const opener = document.createElement("button");
+    document.body.append(opener);
+    opener.focus();
+    const { unmount } = renderWithMantine(
+      <VetoDialog
+        game="Wingspan"
+        year="2026"
+        vetoed={false}
+        yearVetoed={false}
+        savingVeto={false}
+        savingYear={false}
+        onVeto={vi.fn()}
+        onYearVeto={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    opener.blur();
+
+    unmount();
+
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+
+  it("does not focus an opener that has left the page", () => {
+    const opener = document.createElement("button");
+    document.body.append(opener);
+    opener.focus();
+    const { unmount } = renderWithMantine(
+      <VetoDialog
+        game="Wingspan"
+        year="2026"
+        vetoed={false}
+        yearVetoed={false}
+        savingVeto={false}
+        savingYear={false}
+        onVeto={vi.fn()}
+        onYearVeto={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const focus = vi.spyOn(opener, "focus");
+    opener.remove();
+
+    unmount();
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+});
