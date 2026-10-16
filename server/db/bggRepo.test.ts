@@ -188,4 +188,29 @@ describe("covers", () => {
       { bggId: 9103, imageUrl: url(14) },
     );
   });
+
+  it("setCustomCover marks the cover custom and an upsert keeps it", async () => {
+    await repo.upsertMetadata([game(9201, { imageUrl: url(21) })], new Date());
+    await repo.setCover(9201, "covers/9201/old.jpg", url(21));
+    expect(await repo.setCustomCover(9201, "covers/9201/new.png")).toBe(true);
+    expect(await row(9201)).toEqual({
+      image_key: "covers/9201/new.png",
+      image_source: "custom",
+    });
+    await repo.upsertMetadata([game(9201, { imageUrl: url(22) })], new Date());
+    const meta = (await repo.listMetadata()).find((r) => r.bggId === 9201)!;
+    expect(meta.imageUrl).toBe("custom");
+    expect(meta.ext).toBe(".jpg");
+    expect(await row(9201)).toEqual({
+      image_key: "covers/9201/new.png",
+      image_source: "custom",
+    });
+    expect((await repo.listCoverNeeds()).some((n) => n.bggId === 9201)).toBe(
+      false,
+    );
+  });
+
+  it("setCustomCover refuses an unknown game", async () => {
+    expect(await repo.setCustomCover(404405, "k")).toBe(false);
+  });
 });

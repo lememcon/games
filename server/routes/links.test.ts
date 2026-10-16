@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app";
 import {
+  fakeCovers,
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
@@ -58,6 +59,7 @@ function makeApp(names: Record<string, string> = {}) {
     webOrigin: WEB,
     authHandler: async () => new Response("auth"),
     store: fakeStore().store,
+    covers: fakeCovers().covers,
     data: fakeData().data,
     links: fake.links,
     memberOverrides: fakeMemberOverrides().memberOverrides,

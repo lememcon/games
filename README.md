@@ -271,6 +271,35 @@ rotating that secret means entering the key again. Download progress lives in me
 so this assumes a single server instance. `pnpm update` stays until the app reads
 metadata from the database.
 
+### Cover images (admin)
+
+Admins mirror BGG cover images into an S3-compatible bucket from `/api/admin/covers/*`:
+`GET status` (configured flag, cover base URL, pending count and the job), `POST mirror`
+(`{ "mode": "missing" }`, `202`; `409` `job_running` or `storage_not_configured`),
+`GET job`, `POST job/cancel`, and `PUT /api/admin/covers/:bggId` with a raw image body
+(JPEG, PNG, GIF or WebP, 10 MB at most) for a custom cover, which a later import or BGG
+download never replaces. The job mirrors one cover a second, skips covers already
+mirrored, and stops on repeated `403`/`429` answers from BGG, a `403` from the store, or
+three store failures in a row. After an import or BGG download, press Mirror covers. A
+custom upload replaces the game's BGG image URL (marked custom), so rolling back S3 leaves
+such games without a cover until they are re-uploaded or fixed in the database.
+
+Setup checklist:
+
+1. Create a private bucket.
+2. Put a CDN in front of it on the provider's default domain or a host outside
+   `lememcon.com`, with a response-header policy that sets
+   `Content-Security-Policy: default-src 'none'; sandbox`,
+   `X-Content-Type-Options: nosniff` and `Cross-Origin-Resource-Policy: cross-origin`.
+3. Create an IAM user with only `s3:PutObject` on `covers/*` in that bucket.
+4. Set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
+   `COVER_BASE_URL` (the CDN origin), plus `S3_ENDPOINT` for a non-AWS provider, and
+   restart.
+5. Press Mirror covers.
+
+Rollback: unset all of the `S3_*` and `COVER_*` variables together (a partial set refuses
+to boot); the API then stops returning mirrored `cover` URLs.
+
 ### Player links (admin)
 
 Admins link each score-sheet player to an app member in the "Player links" section of

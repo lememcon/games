@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { fakeStorage } from "../testing";
-import { coverKey, createS3Storage } from "./storage";
+import { CoverStorageError, coverKey, createS3Storage } from "./storage";
 
 const base = {
   region: "us-east-1",
@@ -81,7 +81,8 @@ describe("createS3Storage", () => {
     const err = await createS3Storage({ ...base, fetch })
       .put("k", new Uint8Array(1), "image/png")
       .catch((e: Error) => e);
-    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(CoverStorageError);
+    expect((err as CoverStorageError).status).toBe(403);
     expect((err as Error).message).toBe("Cover storage upload failed.");
   });
 });
@@ -94,6 +95,7 @@ describe("createS3Storage failures", () => {
     const err = await createS3Storage({ ...base, fetch })
       .put("k", new Uint8Array(1), "image/png")
       .catch((e: Error) => e);
+    expect((err as CoverStorageError).status).toBeUndefined();
     expect((err as Error).message).toBe("Cover storage upload failed.");
   });
 
@@ -108,6 +110,25 @@ describe("createS3Storage failures", () => {
       .put("k", new Uint8Array(1), "image/png")
       .catch((e: Error) => e);
     expect((err as Error).message).toBe("Cover storage upload failed.");
+  });
+
+  it("aborts the upload when the caller's signal aborts", async () => {
+    let started!: () => void;
+    const fetchCalled = new Promise<void>((r) => (started = r));
+    const fetch = ((_req: Request, init?: RequestInit) =>
+      new Promise((_res, rej) => {
+        started();
+        init?.signal?.addEventListener("abort", () =>
+          rej(new Error("aborted")),
+        );
+      })) as unknown as typeof globalThis.fetch;
+    const ac = new AbortController();
+    const pending = createS3Storage({ ...base, fetch })
+      .put("k", new Uint8Array(1), "image/png", ac.signal)
+      .catch((e: Error) => e);
+    await fetchCalled;
+    ac.abort();
+    expect(await pending).toBeInstanceOf(CoverStorageError);
   });
 });
 

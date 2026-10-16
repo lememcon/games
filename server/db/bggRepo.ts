@@ -54,6 +54,15 @@ export function createBggRepo(db: BggDb): BggRepo {
       return rows.length > 0;
     },
 
+    async setCustomCover(bggId, key) {
+      const rows = await db
+        .update(gameMetadata)
+        .set({ imageUrl: CUSTOM, imageKey: key, imageSource: CUSTOM })
+        .where(eq(gameMetadata.bggId, bggId))
+        .returning({ bggId: gameMetadata.bggId });
+      return rows.length > 0;
+    },
+
     async listCoverNeeds() {
       const rows = await db
         .select({ bggId: gameMetadata.bggId, imageUrl: gameMetadata.imageUrl })
