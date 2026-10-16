@@ -11,6 +11,7 @@ import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { realBounds, resolveImage } from "@/lib/games";
 import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
+import { switchVeto } from "@/lib/vetoSwitch";
 import { seriesFor } from "@/lib/yearTotals";
 import type { Data, GamesData } from "@/types";
 
@@ -91,6 +92,11 @@ const Game = ({
           onVeto={(on) => (on ? vetoes.veto(bggId) : vetoes.unveto(bggId))}
           onYearVeto={(on) =>
             on ? yearVetoes.veto(bggId) : yearVetoes.unveto(bggId)
+          }
+          onSwitch={(to) =>
+            void (to === "all"
+              ? switchVeto(yearVetoes, vetoes, bggId)
+              : switchVeto(vetoes, yearVetoes, bggId))
           }
         />
       )}

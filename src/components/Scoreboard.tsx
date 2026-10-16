@@ -48,6 +48,7 @@ import {
   topPicksPath,
   yearPath,
 } from "@/lib/routes";
+import { switchVeto } from "@/lib/vetoSwitch";
 import type { ApprovedUser } from "@/types";
 
 interface ScoreboardProps {
@@ -158,8 +159,12 @@ function Scoreboard({ user }: ScoreboardProps) {
   const [lastVetoed, setLastVetoed] = useState<{
     id: number;
     name: string;
+    // The scope the veto is in now; for a switch, the one it moved to.
     scope: "all" | "year";
+    switched?: boolean;
   } | null>(null);
+  // A game whose switch failed with no bar to show it on.
+  const [switchErrorId, setSwitchErrorId] = useState<number | null>(null);
   // Hover and focus hold the timer separately, so leaving with the mouse does
   // not resume it while focus is still inside the bar.
   const [hovered, setHovered] = useState(false);
@@ -193,6 +198,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   if (barScope !== vetoScope) {
     setBarScope(vetoScope);
     setLastVetoed(null);
+    setSwitchErrorId(null);
   }
   // A veto still saving for the previous scope must not bring the bar back.
   useEffect(() => {
@@ -225,12 +231,40 @@ function Scoreboard({ user }: ScoreboardProps) {
     if (on) addVeto(scope, id, name);
     else void (scope === "year" ? yearVetoes : vetoes).unveto(id);
   };
-  const barSet = lastVetoed?.scope === "year" ? yearVetoes : vetoes;
+  const setOf = (scope: "all" | "year") =>
+    scope === "year" ? yearVetoes : vetoes;
+  // Moves a veto to the other scope, adding there before removing here. The
+  // bar only offers Undo when both steps saved.
+  const doSwitch = (to: "all" | "year", id: number, name: string) => {
+    const seq = ++vetoSeq.current;
+    setLastVetoed(null);
+    setSwitchErrorId(null);
+    setHovered(false);
+    setFocused(false);
+    void switchVeto(setOf(to === "all" ? "year" : "all"), setOf(to), id).then(
+      (ok) => {
+        if (seq !== vetoSeq.current) return;
+        if (ok) setLastVetoed({ id, name, scope: to, switched: true });
+        else setSwitchErrorId(id);
+      },
+    );
+  };
+  const barSet = setOf(lastVetoed?.scope ?? "all");
+  // Either scope can hold the error, since a switch touches both.
+  const errorOf = (id: number) =>
+    vetoes.errorFor(id) ?? yearVetoes.errorFor(id);
   // A vetoed game is filtered out of the list, so a failed undo keeps the bar
   // to show its error there.
   const undo = async (id: number) => {
     vetoSeq.current++;
-    if (await barSet.unveto(id)) setLastVetoed(null);
+    const ok = lastVetoed?.switched
+      ? await switchVeto(
+          barSet,
+          setOf(lastVetoed.scope === "all" ? "year" : "all"),
+          id,
+        )
+      : await barSet.unveto(id);
+    if (ok) setLastVetoed(null);
   };
   const dismiss = () => {
     vetoSeq.current++;
@@ -573,14 +607,27 @@ function Scoreboard({ user }: ScoreboardProps) {
                 {lastVetoed && (
                   <div className="undo-bar">
                     <span>
-                      Vetoed {lastVetoed.name}
-                      {lastVetoed.scope === "year" && ` for ${year}`}.
+                      {lastVetoed.switched ? (
+                        lastVetoed.scope === "all" ? (
+                          "Veto changed to every year."
+                        ) : (
+                          `Veto changed to ${year} only.`
+                        )
+                      ) : (
+                        <>
+                          Vetoed {lastVetoed.name}
+                          {lastVetoed.scope === "year" && ` for ${year}`}.
+                        </>
+                      )}
                     </span>
                     <div className="undo-bar__actions">
                       <Button
                         ref={undoRef}
                         size="xs"
-                        disabled={barSet.isSaving(lastVetoed.id)}
+                        disabled={
+                          vetoes.isSaving(lastVetoed.id) ||
+                          yearVetoes.isSaving(lastVetoed.id)
+                        }
                         onClick={() => void undo(lastVetoed.id)}
                       >
                         Undo
@@ -589,13 +636,20 @@ function Scoreboard({ user }: ScoreboardProps) {
                         Dismiss
                       </Button>
                     </div>
-                    {barSet.errorFor(lastVetoed.id) && (
+                    {errorOf(lastVetoed.id) && (
                       <Text c="red" size="sm" role="alert">
-                        {barSet.errorFor(lastVetoed.id)}
+                        {errorOf(lastVetoed.id)}
                       </Text>
                     )}
                   </div>
                 )}
+                {!lastVetoed &&
+                  switchErrorId !== null &&
+                  errorOf(switchErrorId) && (
+                    <Text c="red" size="sm" role="alert">
+                      {errorOf(switchErrorId)}
+                    </Text>
+                  )}
               </div>
               {games.length === 0 ? (
                 <>
@@ -658,6 +712,10 @@ function Scoreboard({ user }: ScoreboardProps) {
                       onYearVeto={(on) =>
                         pickVeto("year", vetoingId, vetoingName, on)
                       }
+                      onSwitch={(to) => {
+                        setVetoingId(null);
+                        doSwitch(to, vetoingId, vetoingName);
+                      }}
                     />
                   )}
                   <YearTrends

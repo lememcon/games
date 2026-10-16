@@ -344,6 +344,68 @@ describe("Game", () => {
       expect(yearState.unveto).toHaveBeenCalledWith(11);
     });
 
+    it("makes a year veto permanent, adding before removing", async () => {
+      const state = vetoes({}, { veto: vi.fn(async () => true) });
+      const yearState = vetoes(
+        { d1: new Set(["11"]) },
+        { unveto: vi.fn(async () => true) },
+      );
+      view(state, yearState);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Make permanent" }),
+      );
+      expect(state.veto).toHaveBeenCalledWith(11);
+      expect(yearState.unveto).toHaveBeenCalledWith(11);
+      expect(state.veto.mock.invocationCallOrder[0]).toBeLessThan(
+        yearState.unveto.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("narrows a permanent veto to the year", async () => {
+      const state = vetoes(
+        { d1: new Set(["11"]) },
+        { unveto: vi.fn(async () => true) },
+      );
+      const yearState = vetoes({}, { veto: vi.fn(async () => true) });
+      view(state, yearState);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Only for 2024" }),
+      );
+      expect(yearState.veto).toHaveBeenCalledWith(11);
+      expect(state.unveto).toHaveBeenCalledWith(11);
+    });
+
+    it("leaves the source veto when the add fails", async () => {
+      const state = vetoes({}, { veto: vi.fn(async () => false) });
+      const yearState = vetoes({ d1: new Set(["11"]) });
+      view(state, yearState);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Make permanent" }),
+      );
+      expect(yearState.unveto).not.toHaveBeenCalled();
+    });
+
+    it("shows the error when the removal fails after the add", async () => {
+      const state = vetoes({}, { veto: vi.fn(async () => true) });
+      const yearState = vetoes(
+        { d1: new Set(["11"]) },
+        {
+          unveto: vi.fn(async () => false),
+          errorFor: vi.fn(() => "Remove nope"),
+        },
+      );
+      view(state, yearState);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Make permanent" }),
+      );
+      expect(state.veto).toHaveBeenCalledWith(11);
+      expect(screen.getByRole("alert")).toHaveTextContent("Remove nope");
+    });
+
     it("locks the button and shows either error for this game only", () => {
       const state = vetoes(
         {},

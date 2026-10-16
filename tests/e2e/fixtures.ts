@@ -151,9 +151,13 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (url) => pathOf(url) === "/api/player-overrides",
     (route) => json(route, { overrides }),
   );
+  const allVetoed = new Set(vetoes.map((v) => v.bggId));
   await page.route(
     (url) => pathOf(url) === "/api/vetoes",
-    (route) => json(route, { vetoes: [] }),
+    (route) =>
+      json(route, {
+        vetoes: [...allVetoed].map((bggId) => ({ discordId: aliceId, bggId })),
+      }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/me/vetoes",
@@ -161,7 +165,12 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => /^\/api\/me\/vetoes\/\d+$/.test(pathOf(url)),
-    (route) => route.fulfill({ status: 204 }),
+    (route) => {
+      const bggId = Number(pathOf(route.request().url()).split("/").pop());
+      if (route.request().method() === "PUT") allVetoed.add(bggId);
+      else allVetoed.delete(bggId);
+      return route.fulfill({ status: 204 });
+    },
   );
   const yearVetoed = new Set(yearVetoes);
   await page.route(

@@ -244,6 +244,31 @@ test("a year veto from the dialog hides the game for its vetoer, and Undo restor
   await expect(page.getByRole("link", { name: "Delta" })).toBeVisible();
 });
 
+test("a year veto can be made permanent from the dialog, and Undo reverses it", async ({
+  page,
+}) => {
+  await mockApi(page, { yearVetoes: [104] });
+  await page.goto("/");
+  await expect(page.getByText("4 of 4 games")).toBeVisible();
+  await page.getByRole("button", { name: "Veto: Delta" }).click();
+  await page.getByRole("button", { name: "Make permanent" }).click();
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("status")).toHaveText(
+    /Veto changed to every year\./,
+  );
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toBeEmpty();
+  await page.getByRole("button", { name: "Veto: Delta" }).click();
+  await expect(
+    page.getByRole("button", { name: "Make permanent" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Only for 2024" })).toHaveCount(
+    0,
+  );
+});
+
 test("desktop row buttons stay compact", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await mockApi(page);

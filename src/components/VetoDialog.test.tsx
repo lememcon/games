@@ -9,6 +9,7 @@ const setup = (over: Partial<Parameters<typeof VetoDialog>[0]> = {}) => {
   const fns = {
     onVeto: vi.fn(),
     onYearVeto: vi.fn(),
+    onSwitch: vi.fn(),
     onClose: vi.fn(),
   };
   renderWithMantine(
@@ -93,6 +94,61 @@ describe("VetoDialog", () => {
     expect(thisYear()).toBeDisabled();
   });
 
+  it("offers Make permanent for a year-only veto", async () => {
+    const { onSwitch, onVeto, onYearVeto, onClose } = setup({
+      yearVetoed: true,
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Only for 2026" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Make permanent" }),
+    );
+
+    expect(onSwitch).toHaveBeenCalledWith("all");
+    expect(onVeto).not.toHaveBeenCalled();
+    expect(onYearVeto).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("offers Only for the year for a permanent veto", async () => {
+    const { onSwitch, onClose } = setup({ vetoed: true });
+
+    expect(
+      screen.queryByRole("button", { name: "Make permanent" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Only for 2026" }),
+    );
+
+    expect(onSwitch).toHaveBeenCalledWith("year");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [false, false],
+    [true, true],
+  ])(
+    "offers no switch when vetoed=%s and yearVetoed=%s",
+    (vetoed, yearVetoed) => {
+      setup({ vetoed, yearVetoed });
+      expect(
+        screen.queryByRole("button", { name: /make permanent|only for/i }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([{ savingVeto: true }, { savingYear: true }])(
+    "disables the switch while a scope saves (%o)",
+    (over) => {
+      setup({ yearVetoed: true, ...over });
+      expect(
+        screen.getByRole("button", { name: "Make permanent" }),
+      ).toBeDisabled();
+    },
+  );
+
   it("only closes on Cancel", async () => {
     const { onVeto, onYearVeto, onClose } = setup();
 
@@ -119,6 +175,7 @@ describe("VetoDialog focus", () => {
         savingYear={false}
         onVeto={vi.fn()}
         onYearVeto={vi.fn()}
+        onSwitch={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -144,6 +201,7 @@ describe("VetoDialog focus", () => {
         savingYear={false}
         onVeto={vi.fn()}
         onYearVeto={vi.fn()}
+        onSwitch={vi.fn()}
         onClose={vi.fn()}
       />,
     );
