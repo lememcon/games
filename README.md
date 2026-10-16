@@ -178,7 +178,19 @@ With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com
 | `PORT`                  | Listen port (default `8080`)                                                                                                        |
 | `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                                                                          |
 | `COOKIE_DOMAIN`         | Session cookie parent domain, e.g. `.lememcon.com`; only for cross-origin login                                                     |
+| `S3_BUCKET`             | Cover mirror bucket. `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and `COVER_BASE_URL` are all-or-none      |
+| `S3_REGION`             | Bucket region, e.g. `us-east-1` (part of the all-or-none group)                                                                     |
+| `S3_ACCESS_KEY_ID`      | S3 access key id (part of the all-or-none group; never logged)                                                                      |
+| `S3_SECRET_ACCESS_KEY`  | S3 secret key (part of the all-or-none group; never logged)                                                                         |
+| `COVER_BASE_URL`        | https origin covers are served from, e.g. a CDN domain (part of the all-or-none group)                                              |
+| `S3_ENDPOINT`           | Optional https endpoint for an S3-compatible provider; unset means AWS                                                              |
 | `VITE_API_URL`          | Netlify build variable (not read by the server): API origin the SPA calls; unset means relative `/api`. Changing it needs a rebuild |
+
+Cover mirror: `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
+`COVER_BASE_URL` must be set together or not at all; a partial set refuses to boot and the
+error lists what is missing. Unsetting all of the `S3_*` and `COVER_*` variables together is
+the rollback. Serve `COVER_BASE_URL` from the provider's default CDN domain or a host outside
+`lememcon.com`, so the session cookie (`COOKIE_DOMAIN`) is never sent to the cover host.
 
 Two ways to run login in production; pick one and do not mix them:
 

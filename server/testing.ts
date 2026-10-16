@@ -6,6 +6,7 @@ import { topGames } from "./shape";
 import type {
   AllPlayedGames,
   BggRepo,
+  CoverStorage,
   DataStore,
   GameMetadataRow,
   GamesMap,
@@ -122,6 +123,18 @@ export function fakeBggRepo() {
     },
   };
   return { repo, settings, rows, writes };
+}
+
+/** In-memory CoverStorage for tests; records puts, optionally failing every one. */
+export function fakeStorage(opts: { fail?: boolean } = {}) {
+  const puts: { key: string; bytes: Uint8Array; contentType: string }[] = [];
+  const storage: CoverStorage = {
+    put: async (key, bytes, contentType) => {
+      if (opts.fail) throw new Error("storage failed");
+      puts.push({ key, bytes, contentType });
+    },
+  };
+  return { storage, puts };
 }
 
 /** Code-unit string comparison, matching the SQL collation. */

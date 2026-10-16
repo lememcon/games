@@ -3,7 +3,7 @@ import path from "node:path";
 import { XMLParser } from "fast-xml-parser";
 
 const BGG_URL = "https://boardgamegeek.com/xmlapi2/thing?type=boardgame&id=";
-const IMAGE_HOST = "cf.geekdo-images.com";
+export const IMAGE_HOST = "cf.geekdo-images.com";
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 /** A stable, long-lived game used to check a key with a single cheap request. */
 const PROBE_ID = 13;
