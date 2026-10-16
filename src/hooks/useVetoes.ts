@@ -161,7 +161,11 @@ export const useVetoSet = (
     acquire(counts, bggIds);
     setSaving((prev) => new Set([...prev, ...bggIds]));
     setBulkError(null);
-    const results = await Promise.allSettled(bggIds.map((id) => scope.set(id)));
+    // async so a synchronous throw from scope.set becomes a rejection that
+    // allSettled records; otherwise it would skip the unlock below.
+    const results = await Promise.allSettled(
+      bggIds.map(async (id) => scope.set(id)),
+    );
     // A stale run must not touch the counter, or it would discard the new
     // key's own list fetch.
     if (stale()) return [];

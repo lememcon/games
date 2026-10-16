@@ -271,6 +271,55 @@ describe("useVetoes", () => {
       });
       expect(hook.result.current.isSaving(2)).toBe(false);
     });
+
+    describe("when scope.set throws synchronously", () => {
+      const boom = () => {
+        throw new Error("boom");
+      };
+      const api = {
+        list: async () => ({ vetoes: [] }),
+        set: boom as (id: number) => Promise<void>,
+        clear: async () => {},
+      };
+
+      it("releases every id and reports the failure", async () => {
+        api.set = boom;
+        const { result } = renderHook(() => useVetoSet(api, "k"));
+        await flush();
+        let failed: number[] = [];
+        await act(async () => {
+          failed = await result.current.vetoMany([2, 3]);
+        });
+        expect(failed).toEqual([2, 3]);
+        expect(result.current.bulkError).not.toBeNull();
+        expect(result.current.saving.size).toBe(0);
+        api.set = async () => {};
+        await act(async () => {
+          failed = await result.current.vetoMany([2, 3]);
+        });
+        expect(failed).toEqual([]);
+        expect(result.current.saving.size).toBe(0);
+      });
+
+      it("reports a mixed result", async () => {
+        const set = vi.fn((id: number): Promise<void> => {
+          if (id === 2) throw new Error("boom");
+          return Promise.resolve();
+        });
+        api.set = set;
+        const { result } = renderHook(() => useVetoSet(api, "k"));
+        await flush();
+        let failed: number[] = [];
+        await act(async () => {
+          failed = await result.current.vetoMany([2, 3]);
+        });
+        expect(failed).toEqual([2]);
+        expect(result.current.bulkError).toBe("1 of 2 didn't save");
+        expect(set).toHaveBeenCalledWith(2);
+        expect(set).toHaveBeenCalledWith(3);
+        expect(result.current.saving.size).toBe(0);
+      });
+    });
   });
 
   describe("per game state", () => {
