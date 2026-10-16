@@ -10,10 +10,24 @@ import {
 import { FakeBroadcastChannel } from "@/test/setup";
 
 const channels = () => FakeBroadcastChannel.instances;
+const storageEvent = (key: string | null) =>
+  new StorageEvent("storage", { key, newValue: "x" });
+const withoutBroadcast = (fn: () => void) => {
+  const original = globalThis.BroadcastChannel;
+  vi.stubGlobal("BroadcastChannel", undefined);
+  try {
+    fn();
+  } finally {
+    vi.stubGlobal("BroadcastChannel", original);
+  }
+};
 const message = () => channels()[0].onmessage!({} as MessageEvent);
 
 describe("scoresSync", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
   it("is a no-op without BroadcastChannel", () => {
     const original = globalThis.BroadcastChannel;
@@ -72,5 +86,68 @@ describe("scoresSync", () => {
     const channel = channels()[0];
     resetScoresSync();
     expect(channel.closed).toBe(true);
+  });
+
+  describe("storage fallback", () => {
+    it("writes a changing key and bumps on announce", () =>
+      withoutBroadcast(() => {
+        const { result } = renderHook(() => useImportVersion());
+        act(() => announceImport());
+        const first = localStorage.getItem("scores-import");
+        expect(first).not.toBeNull();
+        expect(result.current).toBe(1);
+        act(() => announceImport());
+        expect(localStorage.getItem("scores-import")).not.toBe(first);
+      }));
+
+    it("invalidates and bumps on a matching storage event", () =>
+      withoutBroadcast(() => {
+        const invalidate = vi.spyOn(cache, "invalidateScores");
+        const { result } = renderHook(() => useImportVersion());
+        act(() => void window.dispatchEvent(storageEvent("scores-import")));
+        expect(invalidate).toHaveBeenCalledWith();
+        expect(result.current).toBe(1);
+      }));
+
+    it("ignores other and null keys", () =>
+      withoutBroadcast(() => {
+        const invalidate = vi.spyOn(cache, "invalidateScores");
+        const { result } = renderHook(() => useImportVersion());
+        act(() => void window.dispatchEvent(storageEvent("other")));
+        act(() => void window.dispatchEvent(storageEvent(null)));
+        expect(invalidate).not.toHaveBeenCalled();
+        expect(result.current).toBe(0);
+      }));
+
+    it("swallows a throwing setItem", () =>
+      withoutBroadcast(() => {
+        vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new Error("denied");
+        });
+        const { result } = renderHook(() => useImportVersion());
+        expect(() => act(() => announceImport())).not.toThrow();
+        expect(result.current).toBe(1);
+      }));
+
+    it("attaches one listener and removes it on reset", () =>
+      withoutBroadcast(() => {
+        const add = vi.spyOn(window, "addEventListener");
+        const remove = vi.spyOn(window, "removeEventListener");
+        renderHook(() => useImportVersion());
+        renderHook(() => useImportVersion());
+        expect(add.mock.calls.filter(([t]) => t === "storage")).toHaveLength(1);
+        resetScoresSync();
+        expect(remove.mock.calls.filter(([t]) => t === "storage")).toHaveLength(
+          1,
+        );
+      }));
+  });
+
+  it("uses no storage fallback when BroadcastChannel exists", () => {
+    const add = vi.spyOn(window, "addEventListener");
+    renderHook(() => useImportVersion());
+    act(() => announceImport());
+    expect(add.mock.calls.filter(([t]) => t === "storage")).toHaveLength(0);
+    expect(localStorage.getItem("scores-import")).toBeNull();
   });
 });
