@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import useVetoes from "@/hooks/useVetoes";
+import useVetoes, { useVetoSet } from "@/hooks/useVetoes";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
 
 const res = (body: unknown, status = 200) =>
@@ -547,6 +547,155 @@ describe("useVetoes", () => {
       });
       expect(hook.result.current.all).toEqual({
         d1: new Set(["1", "2"]),
+      });
+    });
+
+    it("never resets the counts on a key change without resetOnKeyChange", async () => {
+      const a = deferred();
+      const b = deferred();
+      const sets = [a.promise, b.promise];
+      const api = {
+        list: async () => ({ vetoes: [] }),
+        set: async () => {
+          await sets.shift();
+        },
+        clear: async () => {},
+      };
+      const { result, rerender } = renderHook(({ k }) => useVetoSet(api, k), {
+        initialProps: { k: "x" },
+      });
+      await flush();
+      let pa!: Promise<boolean>;
+      let pb!: Promise<boolean>;
+      act(() => {
+        pa = result.current.veto(2);
+      });
+      rerender({ k: "y" });
+      await flush();
+      act(() => {
+        pb = result.current.veto(2);
+      });
+      await act(async () => {
+        a.resolve(new Response());
+        await pa;
+      });
+      expect(result.current.isSaving(2)).toBe(true);
+      await act(async () => {
+        b.resolve(new Response());
+        await pb;
+      });
+      expect(result.current.isSaving(2)).toBe(false);
+    });
+
+    describe("overlapping saves", () => {
+      const refetches = (n: number) =>
+        Array.from({ length: n }, () => res({ vetoes: mine }));
+      const settle = (d: ReturnType<typeof deferred>, p: Promise<unknown>) =>
+        act(async () => {
+          d.resolve(none());
+          await p;
+        });
+
+      it("keeps a game locked until the later of veto and unveto settles", async () => {
+        for (const firstFirst of [true, false]) {
+          const a = deferred();
+          const b = deferred();
+          const hook = await start({
+            "PUT /api/me/vetoes/2": [a.promise],
+            "DELETE /api/me/vetoes/2": [b.promise],
+            [LIST]: refetches(2),
+          });
+          let pa!: Promise<boolean>;
+          let pb!: Promise<boolean>;
+          act(() => {
+            pa = hook.result.current.veto(2);
+            pb = hook.result.current.unveto(2);
+          });
+          const [first, firstP, second, secondP] = firstFirst
+            ? [a, pa, b, pb]
+            : [b, pb, a, pa];
+          await settle(first, firstP);
+          expect(hook.result.current.isSaving(2)).toBe(true);
+          await settle(second, secondP);
+          expect(hook.result.current.isSaving(2)).toBe(false);
+          hook.unmount();
+        }
+      });
+
+      it("unlocks a bulk game when the bulk ends but keeps one a single save holds", async () => {
+        for (const bulkFirst of [true, false]) {
+          const bulk2 = deferred();
+          const single2 = deferred();
+          const hook = await start({
+            "PUT /api/me/vetoes/1": [none()],
+            "PUT /api/me/vetoes/2": bulkFirst
+              ? [bulk2.promise, single2.promise]
+              : [single2.promise, bulk2.promise],
+            [LIST]: refetches(2),
+          });
+          let bulk!: Promise<number[]>;
+          let single!: Promise<boolean>;
+          act(() => {
+            if (bulkFirst) {
+              bulk = hook.result.current.vetoMany([1, 2]);
+              single = hook.result.current.veto(2);
+            } else {
+              single = hook.result.current.veto(2);
+              bulk = hook.result.current.vetoMany([1, 2]);
+            }
+          });
+          await settle(bulk2, bulk);
+          expect(hook.result.current.isSaving(1)).toBe(false);
+          expect(hook.result.current.isSaving(2)).toBe(true);
+          await settle(single2, single);
+          expect(hook.result.current.isSaving(2)).toBe(false);
+          hook.unmount();
+        }
+      });
+
+      it("keeps a bulk game locked when the single save ends first", async () => {
+        const bulk2 = deferred();
+        const single2 = deferred();
+        const hook = await start({
+          "PUT /api/me/vetoes/1": [none()],
+          "PUT /api/me/vetoes/2": [bulk2.promise, single2.promise],
+          [LIST]: refetches(2),
+        });
+        let bulk!: Promise<number[]>;
+        let single!: Promise<boolean>;
+        act(() => {
+          bulk = hook.result.current.vetoMany([1, 2]);
+          single = hook.result.current.veto(2);
+        });
+        await settle(single2, single);
+        expect(hook.result.current.isSaving(2)).toBe(true);
+        await settle(bulk2, bulk);
+        expect(hook.result.current.isSaving(1)).toBe(false);
+        expect(hook.result.current.isSaving(2)).toBe(false);
+      });
+
+      it("locks a shared id until both bulk calls settle", async () => {
+        const a2 = deferred();
+        const b2 = deferred();
+        const hook = await start({
+          "PUT /api/me/vetoes/1": [none()],
+          "PUT /api/me/vetoes/2": [a2.promise, b2.promise],
+          "PUT /api/me/vetoes/3": [none()],
+          [LIST]: refetches(2),
+        });
+        let a!: Promise<number[]>;
+        let b!: Promise<number[]>;
+        act(() => {
+          a = hook.result.current.vetoMany([1, 2]);
+          b = hook.result.current.vetoMany([2, 3]);
+        });
+        await settle(a2, a);
+        expect(hook.result.current.isSaving(1)).toBe(false);
+        expect(hook.result.current.isSaving(2)).toBe(true);
+        expect(hook.result.current.isSaving(3)).toBe(true);
+        await settle(b2, b);
+        expect(hook.result.current.isSaving(2)).toBe(false);
+        expect(hook.result.current.isSaving(3)).toBe(false);
       });
     });
   });

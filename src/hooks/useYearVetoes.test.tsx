@@ -212,4 +212,79 @@ describe("useYearVetoes", () => {
     });
     expect(result.current.errorFor(5)).toBeNull();
   });
+
+  describe("overlapping saves across key changes", () => {
+    const render = (fetchImpl: typeof fetch) =>
+      renderHook(({ y }) => useYearVetoes(y, fetchImpl), {
+        initialProps: { y: "2025" },
+      });
+    const save = (result: {
+      current: { veto: (id: number) => Promise<boolean> };
+    }) => {
+      let p!: Promise<boolean>;
+      act(() => {
+        p = result.current.veto(5);
+      });
+      return p;
+    };
+
+    it("does not let the old year's save unlock the new year's save", async () => {
+      const old = deferred();
+      const fresh = deferred();
+      const fetchImpl = routed({
+        "GET /api/year-vetoes/2025": [list()],
+        "PUT /api/me/year-vetoes/2025/5": [old.promise],
+        "GET /api/year-vetoes/2026": [list(), list()],
+        "PUT /api/me/year-vetoes/2026/5": [fresh.promise],
+      });
+      const { result, rerender } = render(fetchImpl);
+      await flush();
+      const oldSave = save(result);
+      expect(result.current.isSaving(5)).toBe(true);
+      rerender({ y: "2026" });
+      await flush();
+      expect(result.current.saving.size).toBe(0);
+      const newSave = save(result);
+      expect(result.current.isSaving(5)).toBe(true);
+      await act(async () => {
+        old.resolve(none());
+        await oldSave;
+      });
+      expect(result.current.isSaving(5)).toBe(true);
+      await act(async () => {
+        fresh.resolve(none());
+        await newSave;
+      });
+      expect(result.current.isSaving(5)).toBe(false);
+    });
+
+    it("keeps a save under a returned-to year locked past the old save", async () => {
+      const old = deferred();
+      const fresh = deferred();
+      const fetchImpl = routed({
+        "GET /api/year-vetoes/2025": [list(), list(), list()],
+        "PUT /api/me/year-vetoes/2025/5": [old.promise, fresh.promise],
+        "GET /api/year-vetoes/2026": [list()],
+      });
+      const { result, rerender } = render(fetchImpl);
+      await flush();
+      const oldSave = save(result);
+      rerender({ y: "2026" });
+      await flush();
+      rerender({ y: "2025" });
+      await flush();
+      const newSave = save(result);
+      expect(result.current.isSaving(5)).toBe(true);
+      await act(async () => {
+        old.resolve(none());
+        await oldSave;
+      });
+      expect(result.current.isSaving(5)).toBe(true);
+      await act(async () => {
+        fresh.resolve(none());
+        await newSave;
+      });
+      expect(result.current.isSaving(5)).toBe(false);
+    });
+  });
 });
