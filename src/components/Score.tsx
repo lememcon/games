@@ -31,7 +31,7 @@ const Score = ({ score, max }: { score: number; max: number }) => {
         style={{
           color,
           fontWeight: 700,
-          fontSize: "0.72rem",
+          fontSize: "var(--score-font, 0.72rem)",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
         }}
@@ -42,8 +42,8 @@ const Score = ({ score, max }: { score: number; max: number }) => {
         aria-hidden
         style={{
           flex: 1,
-          minWidth: 48,
-          height: 8,
+          minWidth: "var(--score-bar-min, 48px)",
+          height: "var(--score-bar-h, 8px)",
           borderRadius: 4,
           background: "rgba(0, 0, 0, 0.1)",
           overflow: "hidden",

@@ -15,4 +15,14 @@ describe("Score", () => {
     expect(getByText("10")).toBeInTheDocument();
     expect(getByText("Poor")).toBeInTheDocument();
   });
+
+  it("sizes the label and bar through overridable CSS variables", () => {
+    const { getByText } = renderWithMantine(<Score score={90} max={100} />);
+    const bar = getByText("Great").nextElementSibling as HTMLElement;
+    expect(getByText("Great").style.fontSize).toBe(
+      "var(--score-font, 0.72rem)",
+    );
+    expect(bar.style.height).toBe("var(--score-bar-h, 8px)");
+    expect(bar.style.minWidth).toBe("var(--score-bar-min, 48px)");
+  });
 });

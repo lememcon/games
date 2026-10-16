@@ -325,6 +325,21 @@ body {
     flex: 1 1 100%;
     order: 1;
   }
+
+  .tray-row__score {
+    --score-font: 0.66rem;
+    --score-bar-h: 6px;
+    --score-bar-min: 36px;
+    min-width: 128px;
+  }
+
+  .tray-row__actions .tray-played {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ---- Played toggle ---- */
