@@ -188,6 +188,110 @@ describe("useYearVetoes", () => {
     );
   });
 
+  describe("vetoMany across a year switch", () => {
+    const setup = (routes: Record<string, Pending[]>) => {
+      const fetchImpl = routed(routes);
+      const hook = renderHook(({ y }) => useYearVetoes(y, fetchImpl), {
+        initialProps: { y: "2025" },
+      });
+      const calls = (url: string) =>
+        fetchImpl.mock.calls.filter(([u]) => u === url).length;
+      return { fetchImpl, calls, ...hook };
+    };
+
+    it("drops a stale run's failure and leaves the new year alone", async () => {
+      const put1 = deferred();
+      const put2 = deferred();
+      const { result, rerender, calls } = setup({
+        "GET /api/year-vetoes/2025": [list()],
+        "PUT /api/me/year-vetoes/2025/5": [put1.promise],
+        "PUT /api/me/year-vetoes/2025/6": [put2.promise],
+        "GET /api/year-vetoes/2026": [list(9)],
+      });
+      await flush();
+      let run!: Promise<number[]>;
+      act(() => {
+        run = result.current.vetoMany([5, 6]);
+      });
+      rerender({ y: "2026" });
+      await waitFor(() =>
+        expect(result.current.all).toEqual({ d1: new Set(["9"]) }),
+      );
+      const before = calls("GET /api/year-vetoes/2025");
+      put1.resolve(none());
+      put2.resolve(res({ error: "boom" }, 500));
+      await act(async () => {
+        expect(await run).toEqual([]);
+      });
+      expect(calls("GET /api/year-vetoes/2025")).toBe(before);
+      expect(result.current.bulkError).toBeNull();
+      expect(result.current.all).toEqual({ d1: new Set(["9"]) });
+      expect(result.current.saving.size).toBe(0);
+    });
+
+    it("ignores a late old list and keeps the new year's lock", async () => {
+      const refetch = deferred();
+      const put = deferred();
+      const { result, rerender } = setup({
+        "GET /api/year-vetoes/2025": [list(), refetch.promise],
+        "PUT /api/me/year-vetoes/2025/5": [none()],
+        "GET /api/year-vetoes/2026": [list(9)],
+        "PUT /api/me/year-vetoes/2026/5": [put.promise],
+      });
+      await flush();
+      let run!: Promise<number[]>;
+      act(() => {
+        run = result.current.vetoMany([5]);
+      });
+      await flush();
+      rerender({ y: "2026" });
+      await waitFor(() =>
+        expect(result.current.all).toEqual({ d1: new Set(["9"]) }),
+      );
+      let saved!: Promise<boolean>;
+      act(() => {
+        saved = result.current.veto(5);
+      });
+      expect(result.current.isSaving(5)).toBe(true);
+      refetch.resolve(list(1));
+      await act(async () => {
+        expect(await run).toEqual([]);
+      });
+      expect(result.current.all).toEqual({ d1: new Set(["9"]) });
+      expect(result.current.bulkError).toBeNull();
+      expect(result.current.isSaving(5)).toBe(true);
+      put.resolve(none());
+      await act(async () => {
+        await saved;
+      });
+    });
+
+    it("still applies the new year's own list after a stale run", async () => {
+      const put = deferred();
+      const next = deferred();
+      const { result, rerender } = setup({
+        "GET /api/year-vetoes/2025": [list()],
+        "PUT /api/me/year-vetoes/2025/5": [put.promise],
+        "GET /api/year-vetoes/2026": [next.promise],
+      });
+      await flush();
+      let run!: Promise<number[]>;
+      act(() => {
+        run = result.current.vetoMany([5]);
+      });
+      rerender({ y: "2026" });
+      await flush();
+      put.resolve(none());
+      await act(async () => {
+        expect(await run).toEqual([]);
+      });
+      next.resolve(list(9));
+      await waitFor(() =>
+        expect(result.current.all).toEqual({ d1: new Set(["9"]) }),
+      );
+    });
+  });
+
   it("does not leak a failed save's error into the next year", async () => {
     const put = deferred();
     const fetchImpl = routed({

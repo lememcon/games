@@ -150,15 +150,21 @@ export const useVetoSet = (
   };
 
   // Vetoes many games with one refetch. Failures are reported together in
-  // bulkError rather than per game; resolves with the ids that did not save.
+  // bulkError rather than per game; resolves with the ids that did not save,
+  // or [] when the key changed meanwhile.
   const vetoMany = async (bggIds: number[]): Promise<number[]> => {
     const scope = apiRef.current;
     if (!scope || bggIds.length === 0) return [];
+    const startKey = keyRef.current;
+    const stale = () => resetOnKeyChange && keyRef.current !== startKey;
     const counts = inflight.current;
     acquire(counts, bggIds);
     setSaving((prev) => new Set([...prev, ...bggIds]));
     setBulkError(null);
     const results = await Promise.allSettled(bggIds.map((id) => scope.set(id)));
+    // A stale run must not touch the counter, or it would discard the new
+    // key's own list fetch.
+    if (stale()) return [];
     const failed = bggIds.filter((_, i) => results[i].status === "rejected");
     let message: string | null = null;
     if (failed.length === bggIds.length) {
@@ -170,10 +176,11 @@ export const useVetoSet = (
     const mine = ++latest.current;
     try {
       const d = await scope.list();
-      if (mine === latest.current) setAll(vetoesByMember(d.vetoes));
+      if (mine === latest.current && !stale()) setAll(vetoesByMember(d.vetoes));
     } catch {
       if (mine === latest.current) message ??= GENERIC_ERROR;
     }
+    if (stale()) return [];
     unlock(counts, bggIds);
     setBulkError(message);
     return failed;
