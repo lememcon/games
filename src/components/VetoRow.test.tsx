@@ -66,11 +66,31 @@ describe("VetoRow", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("links a permanent veto to the legacy game redirect", () => {
+    renderWithMantine(<VetoRow bggId={1} name="Root" />);
+    expect(screen.getByRole("link", { name: "Root" })).toHaveAttribute(
+      "href",
+      "/games/1",
+    );
+  });
+
+  it("links a year veto to that year's game page", () => {
+    renderWithMantine(<VetoRow bggId={1} name="Root" year={2024} />);
+    expect(screen.getByRole("link", { name: "Root" })).toHaveAttribute(
+      "href",
+      "/2024/games/1",
+    );
+  });
+
   it("falls back to the game id and wraps long names", () => {
     renderWithMantine(<VetoRow bggId={9} name={null} />);
     expect(screen.getByText("Game 9")).toHaveStyle({
       overflowWrap: "anywhere",
     });
+    expect(screen.getByRole("link", { name: "Game 9" })).toHaveAttribute(
+      "href",
+      "/games/9",
+    );
   });
 
   it("renders an Undo button with its label", async () => {

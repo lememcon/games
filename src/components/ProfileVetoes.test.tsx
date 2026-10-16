@@ -77,6 +77,7 @@ describe("ProfileVetoes", () => {
     render();
     expect(screen.getByText("Azul")).toBeInTheDocument();
     expect(screen.getByText("Game 9")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Azul" })).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: "Undo veto of Azul" }),
     );

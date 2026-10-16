@@ -208,6 +208,14 @@ describe("ProfileYearVetoes", () => {
       screen.getByRole("button", { name: "Undo 2025 veto of Wingspan" }),
     );
     expect(hook.state.clear).toHaveBeenCalledWith(2025, 2);
+    expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
+      "href",
+      "/2025/games/2",
+    );
+    expect(screen.getByRole("link", { name: "Game 9" })).toHaveAttribute(
+      "href",
+      "/2026/games/9",
+    );
     expect(
       screen.getByRole("button", { name: "Undo 2026 veto of Game 9" }),
     ).toBeInTheDocument();

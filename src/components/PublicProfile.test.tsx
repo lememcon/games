@@ -171,6 +171,18 @@ describe("PublicProfile", () => {
     expect(screen.getByText("Game 4")).toBeInTheDocument();
     expect(screen.getByText("Wingspan")).toBeInTheDocument();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("link", { name: "Catan" })).toHaveAttribute(
+      "href",
+      "/games/1",
+    );
+    expect(screen.getByRole("link", { name: "Brass" })).toHaveAttribute(
+      "href",
+      "/2026/games/3",
+    );
+    expect(screen.getByRole("link", { name: "Wingspan" })).toHaveAttribute(
+      "href",
+      "/2025/games/2",
+    );
   });
 
   it("hides empty veto sections", () => {

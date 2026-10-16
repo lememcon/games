@@ -112,6 +112,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
             <VetoRow
               key={v.bggId}
               bggId={v.bggId}
+              year={year}
               name={v.name}
               image={v.image}
               ext={v.ext}
