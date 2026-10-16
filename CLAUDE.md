@@ -42,7 +42,11 @@ A separate `commitlint` job runs on pull requests only.
 - `src/lib/profile.ts` — pure display-name validation and profile stat formatters;
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for
   react-refresh).
-- `src/lib/routes.ts` — scoreboard URL scheme; also owns the shareable filter query
+- `src/lib/floaters.ts` — drifting-cover math (`pickFloaters` with preferred ids,
+  `coverId`, `buildCoverPool`, `topScoreIds`); `useBackdropCovers` feeds `PageBackdrop`,
+  the cover layer behind every signed-in page (year pages only show games scored that
+  year, the player's top 10 first).
+- `src/lib/routes.ts` — scoreboard URL scheme (also `routeYear`, `defaultYear`); also owns the shareable filter query
   (`?players=A,B&hidePlayed=1`: `buildFilterSearch`, `parseFilterSearch`, `sharePath`).
 - `src/hooks/` — `useData` (fetches live score JSON), `useLocalState` (localStorage-backed
   state), `usePlayed` (server-backed per-member played flags via `/api/me/played`, with an

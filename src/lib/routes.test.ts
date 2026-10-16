@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildFilterSearch,
+  defaultYear,
   gamePath,
   isYear,
   parseFilterSearch,
   parseScoreboardPath,
   playerPath,
   recapPath,
+  routeYear,
   sharePath,
   topPicksPath,
   yearPath,
@@ -245,5 +247,41 @@ describe("playerPath", () => {
   it("builds a member's profile path", () => {
     expect(playerPath("123")).toBe("/players/123");
     expect(playerPath("a b")).toBe("/players/a%20b");
+  });
+});
+
+describe("routeYear", () => {
+  it.each([
+    ["/2024", "2024"],
+    ["/2024/games/11", "2024"],
+    ["/2024/top-picks", "2024"],
+    ["/players/1/recap/2023", "2023"],
+    ["/players/1/recap/2023/", "2023"],
+  ])("reads the year from %s", (path, year) => {
+    expect(routeYear(path)).toBe(year);
+  });
+
+  it.each([
+    "/",
+    "/profile",
+    "/admin",
+    "/games/11",
+    "/players/1",
+    "/players/1/recap/x",
+  ])("has no year for %s", (path) => {
+    expect(routeYear(path)).toBeNull();
+  });
+});
+
+describe("defaultYear", () => {
+  const years = ["2023", "2024", "2025"];
+  it("prefers the path year, then the saved one, then the newest", () => {
+    expect(defaultYear(years, "2024", "2023")).toBe("2023");
+    expect(defaultYear(years, "2024", "1999")).toBe("2024");
+    expect(defaultYear(years, "2024")).toBe("2024");
+    expect(defaultYear(years, "1999", null)).toBe("2025");
+  });
+  it("is null with no years", () => {
+    expect(defaultYear([], "2024", "2024")).toBeNull();
   });
 });

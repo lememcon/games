@@ -5,6 +5,9 @@ import AuthedApp from "@/components/AuthedApp";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser } from "@/types";
 
+vi.mock("@/components/PageBackdrop", () => ({
+  default: () => <div>backdrop</div>,
+}));
 vi.mock("@/components/Scoreboard", () => ({
   default: () => <div>scoreboard</div>,
 }));
@@ -47,6 +50,11 @@ const at = (path: string, user: ApprovedUser) => {
 
 describe("AuthedApp", () => {
   afterEach(() => window.history.pushState({}, "", "/"));
+
+  it.each(["/", "/profile", "/admin"])("renders the backdrop on %s", (path) => {
+    at(path, admin);
+    expect(screen.getByText("backdrop")).toBeInTheDocument();
+  });
 
   it("renders the scoreboard by default", () => {
     at("/", member);

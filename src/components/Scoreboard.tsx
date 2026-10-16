@@ -41,6 +41,7 @@ import { scoreboardMeta } from "@/lib/pageMeta";
 import { PlayerColorProvider } from "@/lib/playerColors";
 import {
   buildFilterSearch,
+  defaultYear,
   gamePath,
   parseFilterSearch,
   parseScoreboardPath,
@@ -91,9 +92,7 @@ function Scoreboard({ user }: ScoreboardProps) {
     yearsKnown && urlYear !== null && years.includes(urlYear) ? urlYear : null;
   // Where bare / and legacy /games/:id go: the last viewed year if it still has
   // scores, else the newest.
-  const defaultYear = years.includes(storedYear)
-    ? storedYear
-    : (years[years.length - 1] ?? null);
+  const fallbackYear = defaultYear(years, storedYear);
   const data = useData(year);
   const dataReady = !data.loading && !data.error;
   usePageMeta(
@@ -307,7 +306,7 @@ function Scoreboard({ user }: ScoreboardProps) {
   // The home and legacy redirects keep the query, so the filters ride along.
   const redirecting =
     (route.kind === "home" || route.kind === "legacyGame") &&
-    !(yearsKnown && defaultYear === null);
+    !(yearsKnown && fallbackYear === null);
   useEffect(() => {
     if (redirecting) return;
     if (!isYearList || (yearsKnown && year === null)) pending.current = null;
@@ -505,18 +504,18 @@ function Scoreboard({ user }: ScoreboardProps) {
             skeleton
           ) : route.kind === "unknown" ? (
             <Redirect key="unknown" to="/" replace />
-          ) : defaultYear === null ? (
+          ) : fallbackYear === null ? (
             noScores
           ) : route.kind === "home" ? (
             <Redirect
               key="home"
-              to={yearPath(defaultYear) + window.location.search}
+              to={yearPath(fallbackYear) + window.location.search}
               replace
             />
           ) : route.kind === "legacyGame" ? (
             <Redirect
               key="legacy"
-              to={gamePath(defaultYear, route.id) + window.location.search}
+              to={gamePath(fallbackYear, route.id) + window.location.search}
               replace
             />
           ) : year === null ? (
