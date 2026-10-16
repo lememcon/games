@@ -7,6 +7,7 @@ import { MantineProvider } from "@mantine/core";
 
 import GamesList from "@/components/GamesList";
 import type { VetoesState } from "@/hooks/useVetoes";
+import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { renderWithMantine } from "@/test/utils";
 import type { GamesData, SelectedGame } from "@/types";
 
@@ -184,32 +185,66 @@ describe("GamesList", () => {
       ...over,
     });
 
-    it("shows each game's pressed state for the member", () => {
+    const makeYear = (over: Partial<YearVetoesState> = {}): YearVetoesState =>
+      makeVetoes({ all: { d1: new Set(["200"]) }, ...over });
+
+    it("shows each game's veto state for the member", () => {
+      const { getByRole } = renderList({
+        vetoes: makeVetoes(),
+        yearVetoes: makeYear(),
+        discordId: "d1",
+      });
+
+      const label = (g: string) => getByRole("button", { name: `Veto: ${g}` });
+      expect(label("Root")).toHaveTextContent("✓ Vetoed");
+      expect(label("Chess")).toHaveTextContent("✓ Skipped 2024");
+      expect(label("Nim")).toHaveTextContent("✓ Vetoed");
+      expect(label("Go")).toHaveTextContent("Not for me…");
+    });
+
+    it("reads each scope from its own set, not a merged one", () => {
+      const { getByRole } = renderList({
+        vetoes: makeVetoes({ all: { d1: new Set(["100"]) } }),
+        yearVetoes: makeYear({ all: { d1: new Set(["100", "200"]) } }),
+        discordId: "d1",
+      });
+
+      // Root is in both sets, so the every-year label wins.
+      expect(getByRole("button", { name: "Veto: Root" })).toHaveTextContent(
+        "✓ Vetoed",
+      );
+      expect(getByRole("button", { name: "Veto: Chess" })).toHaveTextContent(
+        "✓ Skipped 2024",
+      );
+    });
+
+    it("asks to open the dialog by numeric id", async () => {
+      const user = userEvent.setup();
+      const onOpenVeto = vi.fn();
+      const { getByRole } = renderList({
+        vetoes: makeVetoes(),
+        yearVetoes: makeYear(),
+        discordId: "d1",
+        onOpenVeto,
+      });
+
+      await user.click(getByRole("button", { name: "Veto: Chess" }));
+      expect(onOpenVeto).toHaveBeenLastCalledWith(200);
+      await user.click(getByRole("button", { name: "Veto: Nim" }));
+      expect(onOpenVeto).toHaveBeenLastCalledWith(400);
+    });
+
+    it("tolerates a missing onOpenVeto and missing year vetoes", async () => {
+      const user = userEvent.setup();
       const { getByRole } = renderList({
         vetoes: makeVetoes(),
         discordId: "d1",
       });
 
-      const pressed = (g: string) =>
-        getByRole("button", { name: `Veto: ${g}` }).getAttribute(
-          "aria-pressed",
-        );
-      expect(pressed("Root")).toBe("true");
-      expect(pressed("Chess")).toBe("false");
-      expect(pressed("Nim")).toBe("true");
-    });
-
-    it("vetoes on the podium and unvetoes on rows by numeric id", async () => {
-      const user = userEvent.setup();
-      const vetoes = makeVetoes();
-      const { getByRole } = renderList({ vetoes, discordId: "d1" });
-
       await user.click(getByRole("button", { name: "Veto: Chess" }));
-      expect(vetoes.veto).toHaveBeenCalledWith(200, "Chess");
-      await user.click(getByRole("button", { name: "Veto: Root" }));
-      expect(vetoes.unveto).toHaveBeenCalledWith(100);
-      await user.click(getByRole("button", { name: "Veto: Nim" }));
-      expect(vetoes.unveto).toHaveBeenCalledWith(400);
+      expect(getByRole("button", { name: "Veto: Chess" })).toHaveTextContent(
+        "Not for me…",
+      );
     });
 
     it("disables only the game being saved", () => {
@@ -221,6 +256,21 @@ describe("GamesList", () => {
       expect(getByRole("button", { name: "Veto: Chess" })).toBeDisabled();
       expect(getByRole("button", { name: "Veto: Root" })).toBeEnabled();
       expect(getByRole("button", { name: "Veto: Nim" })).toBeEnabled();
+    });
+
+    it("disables a game while its year veto saves, and shows that error", () => {
+      const { getByRole } = renderList({
+        vetoes: makeVetoes(),
+        yearVetoes: makeYear({
+          isSaving: (id) => id === 200,
+          errorFor: (id) => (id === 300 ? "Year nope" : null),
+        }),
+        discordId: "d1",
+      });
+
+      expect(getByRole("button", { name: "Veto: Chess" })).toBeDisabled();
+      expect(getByRole("button", { name: "Veto: Root" })).toBeEnabled();
+      expect(getByRole("alert")).toHaveTextContent("Year nope");
     });
 
     it("hides the button for games without a numeric id", () => {

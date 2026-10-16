@@ -1,3 +1,4 @@
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -266,7 +267,7 @@ describe("Game", () => {
     });
   });
 
-  describe("veto switch", () => {
+  describe("veto button", () => {
     const vetoes = (all = {}, extra = {}) => ({
       all,
       saving: new Set<number>(),
@@ -280,7 +281,11 @@ describe("Game", () => {
       unveto: vi.fn(),
       ...extra,
     });
-    const view = (state: ReturnType<typeof vetoes> | undefined) =>
+    type State = ReturnType<typeof vetoes>;
+    const view = (
+      state: State | undefined,
+      yearState: State | undefined = vetoes(),
+    ) =>
       renderWithMantine(
         <Game
           data={data}
@@ -288,27 +293,58 @@ describe("Game", () => {
           year="2024"
           id="11"
           vetoes={state}
+          yearVetoes={yearState}
           discordId="d1"
         />,
       );
+    const opener = () => screen.getByRole("button", { name: "Veto: Belfort" });
 
-    it("vetoes this game", async () => {
+    it("vetoes this game for every year through the dialog", async () => {
       const state = vetoes();
-      const { getByRole } = view(state);
-      await userEvent.click(getByRole("switch", { name: "Not for me" }));
+      const yearState = vetoes();
+      view(state, yearState);
+      expect(opener()).toHaveAttribute("aria-haspopup", "dialog");
+      expect(
+        screen.getByText("You have not vetoed this game."),
+      ).toBeInTheDocument();
+      await userEvent.click(opener());
+      await userEvent.click(screen.getByRole("button", { name: /every year/ }));
       expect(state.veto).toHaveBeenCalledWith(11);
+      expect(yearState.veto).not.toHaveBeenCalled();
     });
 
-    it("shows an existing veto and undoes it", async () => {
+    it("vetoes this game for the year only", async () => {
+      const state = vetoes();
+      const yearState = vetoes();
+      view(state, yearState);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Not in 2024" }),
+      );
+      expect(yearState.veto).toHaveBeenCalledWith(11);
+      expect(state.veto).not.toHaveBeenCalled();
+    });
+
+    it("shows existing vetoes and clears each kind", async () => {
       const state = vetoes({ d1: new Set(["11"]) });
-      const { getByRole } = view(state);
-      const toggle = getByRole("switch", { name: "Not for me" });
-      expect(toggle).toBeChecked();
-      await userEvent.click(toggle);
+      const yearState = vetoes({ d1: new Set(["11"]) });
+      view(state, yearState);
+      expect(
+        screen.getByText("Vetoed for every year and skipped for 2024."),
+      ).toBeInTheDocument();
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Remove: not for me" }),
+      );
       expect(state.unveto).toHaveBeenCalledWith(11);
+      await userEvent.click(opener());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Remove: not in 2024" }),
+      );
+      expect(yearState.unveto).toHaveBeenCalledWith(11);
     });
 
-    it("locks the switch and shows the error for this game only", () => {
+    it("locks the button and shows either error for this game only", () => {
       const state = vetoes(
         {},
         {
@@ -316,15 +352,30 @@ describe("Game", () => {
           errorFor: vi.fn((id: number) => (id === 11 ? "Nope" : null)),
         },
       );
-      const { getByRole } = view(state);
-      expect(getByRole("switch", { name: "Not for me" })).toBeDisabled();
-      expect(getByRole("alert")).toHaveTextContent("Nope");
+      const yearState = vetoes();
+      view(state, yearState);
+      expect(opener()).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent("Nope");
       expect(state.isSaving).toHaveBeenCalledWith(11);
       expect(state.errorFor).toHaveBeenCalledWith(11);
     });
 
-    it("is hidden without the vetoes prop", () => {
-      expect(view(undefined).queryByText("Not for me")).toBeNull();
+    it("shows a year error and locks while the year saves", () => {
+      const yearState = vetoes(
+        {},
+        {
+          isSaving: vi.fn(() => true),
+          errorFor: vi.fn(() => "Year nope"),
+        },
+      );
+      view(vetoes(), yearState);
+      expect(opener()).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent("Year nope");
+    });
+
+    it("is hidden without the vetoes props", () => {
+      view(undefined);
+      expect(screen.queryByRole("button", { name: /^Veto:/ })).toBeNull();
     });
   });
 });

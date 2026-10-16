@@ -7,14 +7,10 @@ import GameCard from "@/components/GameCard";
 import GameRow from "@/components/GameRow";
 import SelectBar from "@/components/SelectBar";
 import type { VetoesState } from "@/hooks/useVetoes";
+import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { leastHappyPlayer, realBounds } from "@/lib/games";
 import { toggleSelected, vetoTargets } from "@/lib/selection";
 import type { GamesData, SelectedGame } from "@/types";
-
-// Like VetoesState, but veto also gets the game's name (for the undo bar).
-type ListVetoes = Omit<VetoesState, "veto"> & {
-  veto: (bggId: number, name: string) => void;
-};
 
 interface GamesListProps {
   games: SelectedGame[];
@@ -26,9 +22,13 @@ interface GamesListProps {
   onToggle: (id: string) => void;
   // Rendered between the podium and the remaining rows.
   afterPodium?: ReactNode;
-  // The members' vetoes and the signed-in member; omitted to hide the buttons.
-  vetoes?: ListVetoes;
+  // The members' every-year and this-year vetoes and the signed-in member;
+  // omitted to hide the buttons.
+  vetoes?: VetoesState;
+  yearVetoes?: YearVetoesState;
   discordId?: string;
+  // A game's veto button was pressed (by bgg id); the caller opens the dialog.
+  onOpenVeto?: (bggId: number) => void;
 }
 
 // Only show real bounds; games missing metadata leave the range blank rather
@@ -48,12 +48,16 @@ const GamesList = ({
   onToggle,
   afterPodium,
   vetoes,
+  yearVetoes,
   discordId,
+  onOpenVeto,
 }: GamesListProps) => {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const canSelect = !!vetoes && !!discordId && games.length > 0;
-  const busy = !!vetoes && vetoes.saving.size > 0;
+  const busy =
+    (!!vetoes && vetoes.saving.size > 0) ||
+    (!!yearVetoes && yearVetoes.saving.size > 0);
   const active = selecting && canSelect;
   // Ids no longer in the list (a filter changed) are dropped.
   const selected = new Set(
@@ -90,15 +94,13 @@ const GamesList = ({
   const vetoProps = (game: SelectedGame) => {
     const bggId = Number(game.id);
     if (!vetoes || !discordId || Number.isNaN(bggId)) return {};
-    const vetoed = vetoes.all[discordId]?.has(game.id) ?? false;
     return {
-      vetoed,
-      vetoDisabled: vetoes.isSaving(bggId),
-      vetoError: vetoes.errorFor(bggId),
-      onVeto: () => {
-        if (vetoed) void vetoes.unveto(bggId);
-        else vetoes.veto(bggId, game.name);
-      },
+      vetoed: vetoes.all[discordId]?.has(game.id) ?? false,
+      yearVetoed: yearVetoes?.all[discordId]?.has(game.id) ?? false,
+      vetoDisabled:
+        vetoes.isSaving(bggId) || (yearVetoes?.isSaving(bggId) ?? false),
+      vetoError: vetoes.errorFor(bggId) ?? yearVetoes?.errorFor(bggId) ?? null,
+      onVeto: () => onOpenVeto?.(bggId),
     };
   };
 

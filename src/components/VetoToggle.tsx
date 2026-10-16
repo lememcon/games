@@ -1,27 +1,43 @@
 interface VetoToggleProps {
   game: string;
+  year: string;
+  // Vetoed for every year.
   vetoed: boolean;
+  // Vetoed for this year only.
+  yearVetoed: boolean;
   disabled?: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
 }
 
-// One button that flips a game between vetoed and not. Pressed reads as a
-// "Vetoed" badge with a check; unpressed offers "Not for me".
-const VetoToggle = ({ game, vetoed, disabled, onToggle }: VetoToggleProps) => (
+// One button that opens the veto dialog. The label shows what is set: nothing
+// ("Not for me…"), every year ("✓ Vetoed"), or only this year ("✓ Skipped
+// 2026"). Either one reads as on.
+const VetoToggle = ({
+  game,
+  year,
+  vetoed,
+  yearVetoed,
+  disabled,
+  onOpen,
+}: VetoToggleProps) => (
   <button
     type="button"
-    className={`tray-played tray-played--veto${vetoed ? " tray-played--on" : ""}`}
-    aria-pressed={vetoed}
+    className={`tray-played tray-played--veto${vetoed || yearVetoed ? " tray-played--on" : ""}`}
+    aria-haspopup="dialog"
     aria-label={`Veto: ${game}`}
     disabled={disabled}
-    onClick={onToggle}
+    onClick={onOpen}
   >
     {vetoed ? (
       <>
         <span aria-hidden>✓</span> Vetoed
       </>
+    ) : yearVetoed ? (
+      <>
+        <span aria-hidden>✓</span> Skipped {year}
+      </>
     ) : (
-      "Not for me"
+      "Not for me…"
     )}
   </button>
 );

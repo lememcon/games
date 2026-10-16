@@ -62,6 +62,13 @@ const state = vi.hoisted(() => ({
   unveto: vi.fn(),
   vetoErrors: {} as Record<number, string>,
   vetoSaving: new Set<number>(),
+  // Everyone's vetoes for the viewed year only.
+  yearVetoes: {} as Record<string, ReadonlySet<string>>,
+  useYearVetoes: vi.fn(),
+  yearVeto: vi.fn(),
+  yearUnveto: vi.fn(),
+  yearVetoErrors: {} as Record<number, string>,
+  yearVetoSaving: new Set<number>(),
   playedError: null as string | null,
   allPlayedError: null as string | null,
   allPlayedLoaded: true,
@@ -122,6 +129,24 @@ vi.mock("@/hooks/useVetoes", () => ({
   },
 }));
 
+vi.mock("@/hooks/useYearVetoes", () => ({
+  default: (...args: unknown[]) => {
+    state.useYearVetoes(...args);
+    return {
+      all: state.yearVetoes,
+      saving: state.yearVetoSaving,
+      bulkError: null,
+      vetoMany: vi.fn(),
+      clearBulkError: vi.fn(),
+      error: state.yearVetoErrors,
+      isSaving: (id: number) => state.yearVetoSaving.has(id),
+      errorFor: (id: number) => state.yearVetoErrors[id] ?? null,
+      veto: state.yearVeto,
+      unveto: state.yearUnveto,
+    };
+  },
+}));
+
 vi.mock("@/hooks/useAllPlayed", () => ({
   useMarkPlayed: (year: string) => {
     state.useAllPlayed(year);
@@ -165,6 +190,11 @@ describe("Scoreboard", () => {
     state.unveto = vi.fn(async () => true);
     state.vetoErrors = {};
     state.vetoSaving = new Set();
+    state.yearVetoes = {};
+    state.yearVeto = vi.fn(async () => true);
+    state.yearUnveto = vi.fn(async () => true);
+    state.yearVetoErrors = {};
+    state.yearVetoSaving = new Set();
     state.playedError = null;
     state.allPlayedError = null;
     state.allPlayedLoaded = true;
@@ -1039,6 +1069,18 @@ describe("Scoreboard", () => {
     });
   });
 
+  // Opens a game's veto dialog and picks a choice (default: every year).
+  const chooseVeto = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+    choice: RegExp | string = /every year/,
+  ) => {
+    await user.click(screen.getByRole("button", { name: `Veto: ${name}` }));
+    await user.click(screen.getByRole("button", { name: choice }));
+    // Let the save settle so the undo bar is in before any timer is advanced.
+    await act(async () => {});
+  };
+
   describe("member vetoes", () => {
     const linked: Data = {
       ...loadedData,
@@ -1114,27 +1156,148 @@ describe("Scoreboard", () => {
       expect(queryByText(/selected$/)).toBeNull();
     });
 
-    it("vetoes a game from its card", async () => {
+    it("fetches year vetoes for the viewed year", () => {
+      at("/2026");
+      render();
+      expect(state.useYearVetoes).toHaveBeenCalledWith("2026");
+    });
+
+    it("hides a game with a year-only veto from a selected vetoer", () => {
+      at("/2026");
+      state.data = linked;
+      state.yearVetoes = { d1: new Set(["11"]) };
+      localStorage.setItem("players", JSON.stringify(["alice", "bob"]));
+      const { queryByText } = render();
+
+      expect(queryByText("Belfort")).toBeNull();
+    });
+
+    it("keeps a year-vetoed game when the vetoer is not selected", () => {
+      at("/2026");
+      state.data = linked;
+      state.yearVetoes = { d1: new Set(["11"]) };
+      localStorage.setItem("players", JSON.stringify(["bob"]));
+      const { getByText } = render();
+
+      expect(getByText("Belfort")).toBeInTheDocument();
+    });
+
+    it("does not mount the dialog until a veto button is pressed", async () => {
       at("/2026");
       const user = userEvent.setup();
-      const { getByRole } = render();
+      const { getByRole, queryByRole } = render();
+      expect(queryByRole("dialog")).toBeNull();
 
       await user.click(getByRole("button", { name: "Veto: Belfort" }));
 
-      expect(state.veto).toHaveBeenCalledWith(11);
+      expect(getByRole("dialog")).toHaveAccessibleName('Veto "Belfort"');
     });
 
-    it("unvetoes a game the member already vetoed", async () => {
+    it("vetoes a game for every year from its card", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      render();
+
+      await chooseVeto(user, "Belfort");
+
+      expect(state.veto).toHaveBeenCalledWith(11);
+      expect(state.yearVeto).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("vetoes a game for the year only", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      render();
+
+      await chooseVeto(user, "Belfort", "Not in 2026");
+
+      expect(state.yearVeto).toHaveBeenCalledWith(11);
+      expect(state.veto).not.toHaveBeenCalled();
+    });
+
+    it("removes an every-year veto without an undo bar", async () => {
       at("/2026");
       state.vetoes = { "1": new Set(["11"]) };
       const user = userEvent.setup();
-      const { getByRole } = render();
+      const { getByRole, queryByRole } = render();
 
       const button = getByRole("button", { name: "Veto: Belfort" });
-      expect(button).toHaveAttribute("aria-pressed", "true");
-      await user.click(button);
+      expect(button).toHaveTextContent("✓ Vetoed");
+      await chooseVeto(user, "Belfort", "Remove: not for me");
 
       expect(state.unveto).toHaveBeenCalledWith(11);
+      expect(queryByRole("button", { name: "Undo" })).toBeNull();
+    });
+
+    it("removes a year-only veto without an undo bar", async () => {
+      at("/2026");
+      state.yearVetoes = { "1": new Set(["11"]) };
+      const user = userEvent.setup();
+      const { getByRole, queryByRole } = render();
+
+      expect(getByRole("button", { name: "Veto: Belfort" })).toHaveTextContent(
+        "✓ Skipped 2026",
+      );
+      await chooseVeto(user, "Belfort", "Remove: not in 2026");
+
+      expect(state.yearUnveto).toHaveBeenCalledWith(11);
+      expect(state.unveto).not.toHaveBeenCalled();
+      expect(queryByRole("button", { name: "Undo" })).toBeNull();
+    });
+
+    it("cancelling the dialog changes nothing", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      const { getByRole, queryByRole } = render();
+
+      await user.click(getByRole("button", { name: "Veto: Belfort" }));
+      await user.click(getByRole("button", { name: "Cancel" }));
+
+      expect(queryByRole("dialog")).toBeNull();
+      expect(state.veto).not.toHaveBeenCalled();
+      expect(state.yearVeto).not.toHaveBeenCalled();
+    });
+
+    it("closes the dialog when the year changes", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      const { getByRole, queryByRole } = render();
+      await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+      act(() => {
+        at("/2025");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+
+      await waitFor(() => expect(path()).toBe("/2025"));
+      expect(queryByRole("dialog")).toBeNull();
+    });
+
+    it("disables each dialog choice while its scope saves", async () => {
+      at("/2026");
+      const user = userEvent.setup();
+      const { getByRole, rerender } = render();
+      await user.click(getByRole("button", { name: "Veto: Belfort" }));
+
+      state.yearVetoSaving = new Set([11]);
+      rerender(
+        <MantineProvider>
+          <Scoreboard user={member} />
+        </MantineProvider>,
+      );
+      expect(getByRole("button", { name: /every year/ })).toBeEnabled();
+      expect(getByRole("button", { name: "Not in 2026" })).toBeDisabled();
+
+      state.yearVetoSaving = new Set();
+      state.vetoSaving = new Set([11]);
+      rerender(
+        <MantineProvider>
+          <Scoreboard user={member} />
+        </MantineProvider>,
+      );
+      expect(getByRole("button", { name: /every year/ })).toBeDisabled();
+      expect(getByRole("button", { name: "Not in 2026" })).toBeEnabled();
     });
 
     describe("undo bar", () => {
@@ -1165,7 +1328,7 @@ describe("Scoreboard", () => {
       const veto = async (name: string) => {
         const user = userEvent.setup();
         const view = render();
-        await user.click(view.getByRole("button", { name: `Veto: ${name}` }));
+        await chooseVeto(user, name);
         return { user, ...view };
       };
 
@@ -1190,7 +1353,7 @@ describe("Scoreboard", () => {
         at("/2026");
         const user = userEvent.setup();
         const { getByRole, rerender } = render();
-        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await chooseVeto(user, "Belfort");
 
         state.vetoes = { "1": new Set(["11"]) };
         state.data = { ...emptyData };
@@ -1283,8 +1446,8 @@ describe("Scoreboard", () => {
         );
         const user = userEvent.setup();
         const { getByRole } = render();
-        await user.click(getByRole("button", { name: "Veto: Nim" }));
-        await user.click(getByRole("button", { name: "Veto: Go" }));
+        await chooseVeto(user, "Nim");
+        await chooseVeto(user, "Go");
 
         await act(async () => finish[1](true));
         await act(async () => finish[0](true));
@@ -1351,6 +1514,125 @@ describe("Scoreboard", () => {
         expect(getByRole("button", { name: "Undo" })).toBeEnabled();
       });
 
+      const yearVeto = async (name: string) => {
+        const user = userEvent.setup();
+        const view = render();
+        await chooseVeto(user, name, "Not in 2026");
+        return { user, ...view };
+      };
+
+      it("names the year for a year veto", async () => {
+        at("/2026");
+        const { getByRole } = await yearVeto("Belfort");
+
+        expect(getByRole("status")).toHaveTextContent(
+          "Vetoed Belfort for 2026.",
+        );
+        expect(state.yearVeto).toHaveBeenCalledWith(11);
+        expect(state.veto).not.toHaveBeenCalled();
+      });
+
+      it("undoes a year veto in the year scope only", async () => {
+        at("/2026");
+        const { user, getByRole, queryByRole } = await yearVeto("Belfort");
+
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.yearUnveto).toHaveBeenCalledWith(11);
+        expect(state.unveto).not.toHaveBeenCalled();
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
+      it("undoes an every-year veto in that scope only", async () => {
+        at("/2026");
+        const { user, getByRole } = await veto("Belfort");
+
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.unveto).toHaveBeenCalledWith(11);
+        expect(state.yearUnveto).not.toHaveBeenCalled();
+      });
+
+      it("focuses Undo after a choice in the dialog", async () => {
+        at("/2026");
+        const { getByRole, queryByRole } = await yearVeto("Belfort");
+
+        expect(queryByRole("dialog")).toBeNull();
+        expect(getByRole("button", { name: "Undo" })).toHaveFocus();
+      });
+
+      it("disables Undo while the year veto is saving", async () => {
+        at("/2026");
+        const { getByRole, rerender } = await yearVeto("Belfort");
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+
+        // The every-year set saving does not matter for a year veto.
+        state.vetoSaving = new Set([11]);
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Undo" })).toBeEnabled();
+
+        state.vetoSaving = new Set();
+        state.yearVetoSaving = new Set([11]);
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+        expect(getByRole("button", { name: "Undo" })).toBeDisabled();
+      });
+
+      it("shows the year scope's error when undoing a year veto fails", async () => {
+        at("/2026");
+        state.yearUnveto = vi.fn(async () => {
+          state.yearVetoErrors = { 11: "Year undo failed" };
+          return false;
+        });
+        const { user, getByRole, rerender } = await yearVeto("Belfort");
+
+        await user.click(getByRole("button", { name: "Undo" }));
+        rerender(
+          <MantineProvider>
+            <Scoreboard user={member} />
+          </MantineProvider>,
+        );
+
+        expect(getByRole("status")).toHaveTextContent("Year undo failed");
+        expect(getByRole("button", { name: "Undo" })).toBeInTheDocument();
+      });
+
+      it("undoes the chosen kind for a game that carries both", async () => {
+        at("/2026");
+        state.vetoes = { "1": new Set(["11"]) };
+        const user = userEvent.setup();
+        const { getByRole, queryByRole } = render();
+
+        await chooseVeto(user, "Belfort", "Not in 2026");
+        await user.click(getByRole("button", { name: "Undo" }));
+
+        expect(state.yearUnveto).toHaveBeenCalledWith(11);
+        expect(state.unveto).not.toHaveBeenCalled();
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+        expect(queryByRole("alert")).toBeNull();
+      });
+
+      it("clears the bar when the year changes", async () => {
+        at("/2026");
+        const { getByRole, queryByRole } = await yearVeto("Belfort");
+        expect(getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+        act(() => {
+          at("/2025");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+
+        await waitFor(() => expect(path()).toBe("/2025"));
+        expect(queryByRole("button", { name: "Undo" })).toBeNull();
+      });
+
       it("dismisses the bar", async () => {
         at("/2026");
         const { user, getByRole, queryByRole } = await veto("Belfort");
@@ -1377,10 +1659,10 @@ describe("Scoreboard", () => {
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const { getByRole } = render();
 
-        await user.click(getByRole("button", { name: "Veto: Nim" }));
+        await chooseVeto(user, "Nim");
         expect(getByRole("status")).toHaveTextContent("Vetoed Nim.");
         act(() => void vi.advanceTimersByTime(5000));
-        await user.click(getByRole("button", { name: "Veto: Go" }));
+        await chooseVeto(user, "Go");
         await act(async () => {});
         expect(getByRole("status")).toHaveTextContent("Vetoed Go.");
 
@@ -1395,7 +1677,7 @@ describe("Scoreboard", () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const { getByRole } = render();
-        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await chooseVeto(user, "Belfort");
 
         act(() => void vi.advanceTimersByTime(5000));
         expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
@@ -1408,7 +1690,7 @@ describe("Scoreboard", () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const { getByRole } = render();
-        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await chooseVeto(user, "Belfort");
 
         await user.hover(getByRole("button", { name: "Dismiss" }));
         act(() => void vi.advanceTimersByTime(30000));
@@ -1424,7 +1706,7 @@ describe("Scoreboard", () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const { getByRole } = render();
-        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await chooseVeto(user, "Belfort");
         expect(getByRole("button", { name: "Undo" })).toHaveFocus();
 
         await user.tab();
@@ -1444,7 +1726,7 @@ describe("Scoreboard", () => {
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
         const { getByRole, unmount } = render();
         const before = vi.getTimerCount();
-        await user.click(getByRole("button", { name: "Veto: Belfort" }));
+        await chooseVeto(user, "Belfort");
         await act(async () => {});
         expect(getByRole("status")).toHaveTextContent("Vetoed Belfort.");
 
@@ -1461,12 +1743,36 @@ describe("Scoreboard", () => {
       expect(getByRole("alert")).toHaveTextContent("Something went wrong");
     });
 
-    it("shows the member's veto switch on the game page", () => {
+    it("shows the member's veto button and state on the game page", () => {
       at("/2026/games/11");
       state.vetoes = { "1": new Set(["11"]) };
+      state.yearVetoes = { "1": new Set(["11"]) };
+      const { getByRole, getByText } = render();
+
+      expect(getByRole("button", { name: "Veto: Belfort" })).toHaveTextContent(
+        "✓ Vetoed",
+      );
+      expect(
+        getByText("Vetoed for every year and skipped for 2026."),
+      ).toBeInTheDocument();
+    });
+
+    it("vetoes for the year from the game page", async () => {
+      at("/2026/games/11");
+      const user = userEvent.setup();
+      render();
+
+      await chooseVeto(user, "Belfort", "Not in 2026");
+
+      expect(state.yearVeto).toHaveBeenCalledWith(11);
+    });
+
+    it("shows a year veto error", () => {
+      at("/2026");
+      state.yearVetoErrors = { 11: "Year went wrong" };
       const { getByRole } = render();
 
-      expect(getByRole("switch", { name: "Not for me" })).toBeChecked();
+      expect(getByRole("alert")).toHaveTextContent("Year went wrong");
     });
   });
 

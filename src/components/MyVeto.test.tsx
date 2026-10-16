@@ -6,38 +6,79 @@ import MyVeto from "@/components/MyVeto";
 import { renderWithMantine } from "@/test/utils";
 
 const setup = (over: Partial<Parameters<typeof MyVeto>[0]> = {}) => {
-  const onChange = vi.fn();
+  const onVeto = vi.fn();
+  const onYearVeto = vi.fn();
   renderWithMantine(
     <MyVeto
+      game="Azul"
+      year="2026"
       vetoed={false}
-      saving={false}
+      yearVetoed={false}
+      savingVeto={false}
+      savingYear={false}
       error={null}
-      onChange={onChange}
+      onVeto={onVeto}
+      onYearVeto={onYearVeto}
       {...over}
     />,
   );
-  return onChange;
+  return { onVeto, onYearVeto };
 };
 
+const opener = () => screen.getByRole("button", { name: "Veto: Azul" });
+
 describe("MyVeto", () => {
-  it("vetoes when switched on", async () => {
-    const onChange = setup();
+  it.each([
+    [false, false, "You have not vetoed this game."],
+    [true, false, "Vetoed for every year."],
+    [false, true, "Skipped for 2026."],
+    [true, true, "Vetoed for every year and skipped for 2026."],
+  ])("states %s/%s as %s", (vetoed, yearVetoed, line) => {
+    setup({ vetoed, yearVetoed });
+    expect(screen.getByText(line)).toBeInTheDocument();
+  });
+
+  it("mounts the dialog only while open", async () => {
+    setup();
     expect(screen.getByText(/linked to your account/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("switch", { name: "Not for me" }));
-    expect(onChange).toHaveBeenCalledWith(true);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.click(opener());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("undoes when switched off", async () => {
-    const onChange = setup({ vetoed: true });
-    const toggle = screen.getByRole("switch", { name: "Not for me" });
-    expect(toggle).toBeChecked();
-    await userEvent.click(toggle);
-    expect(onChange).toHaveBeenCalledWith(false);
+  it("vetoes for every year through the dialog", async () => {
+    const { onVeto, onYearVeto } = setup();
+    await userEvent.click(opener());
+    await userEvent.click(screen.getByRole("button", { name: /every year/ }));
+    expect(onVeto).toHaveBeenCalledWith(true);
+    expect(onYearVeto).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("is disabled while saving and shows an error", () => {
-    setup({ saving: true, error: "Nope" });
-    expect(screen.getByRole("switch", { name: "Not for me" })).toBeDisabled();
+  it("clears both kinds through the dialog", async () => {
+    const { onVeto, onYearVeto } = setup({ vetoed: true, yearVetoed: true });
+    await userEvent.click(opener());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove: not for me" }),
+    );
+    await userEvent.click(opener());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove: not in 2026" }),
+    );
+    expect(onVeto).toHaveBeenCalledWith(false);
+    expect(onYearVeto).toHaveBeenCalledWith(false);
+  });
+
+  it("is disabled while either scope saves and shows an error", () => {
+    setup({ savingYear: true, error: "Nope" });
+    expect(opener()).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("Nope");
+  });
+
+  it("is disabled while the every-year scope saves", () => {
+    setup({ savingVeto: true });
+    expect(opener()).toBeDisabled();
   });
 });
