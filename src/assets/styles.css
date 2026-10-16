@@ -297,7 +297,7 @@ body {
    cover and the long played-by list drops to its own last line instead of
    stretching the row. */
 @media (max-width: 600px) {
-  .tray-row__main {
+  .tray-row__main:has(> .tray-row__head) {
     display: contents;
   }
 
