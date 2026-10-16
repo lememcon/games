@@ -279,8 +279,10 @@ Admins mirror BGG cover images into an S3-compatible bucket from `/api/admin/cov
 `GET job`, `POST job/cancel`, and `PUT /api/admin/covers/:bggId` with a raw image body
 (JPEG, PNG, GIF or WebP, 10 MB at most) for a custom cover, which a later import or BGG
 download never replaces. The job mirrors one cover a second, skips covers already
-mirrored, and stops on repeated `403`/`429` answers from BGG or a `403` from the store.
-After an import or BGG download, press Mirror covers.
+mirrored, and stops on repeated `403`/`429` answers from BGG, a `403` from the store, or
+three store failures in a row. After an import or BGG download, press Mirror covers. A
+custom upload replaces the game's BGG image URL (marked custom), so rolling back S3 leaves
+such games without a cover until they are re-uploaded or fixed in the database.
 
 Setup checklist:
 
