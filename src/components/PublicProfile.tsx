@@ -15,6 +15,7 @@ import {
 import StatTile from "@/components/StatTile";
 import TopGamesByYear from "@/components/TopGamesByYear";
 import VetoRow from "@/components/VetoRow";
+import useGames from "@/hooks/useGames";
 import usePageMeta from "@/hooks/usePageMeta";
 import useProfile from "@/hooks/useProfile";
 import { pageMeta, playerMeta } from "@/lib/pageMeta";
@@ -23,6 +24,7 @@ import { recapPath } from "@/lib/routes";
 
 const PublicProfile = ({ discordId }: { discordId: string }) => {
   const state = useProfile(discordId);
+  const games = useGames();
   usePageMeta(
     state.status === "ready"
       ? playerMeta(state.profile.name, discordId)
@@ -86,7 +88,7 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
               </Group>
             </Stack>
           )}
-          <TopGamesByYear topByYear={stats.topByYear} />
+          <TopGamesByYear topByYear={stats.topByYear} games={games.games} />
         </>
       ) : (
         <Text c="dimmed">No scores are linked to this member yet.</Text>

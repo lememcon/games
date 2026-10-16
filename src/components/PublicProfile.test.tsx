@@ -10,7 +10,9 @@ import type { Profile } from "@/types";
 const hook = vi.hoisted(() => ({
   state: { status: "loading" } as unknown,
   useProfile: vi.fn(),
+  games: { games: {}, loading: false, error: false } as unknown,
 }));
+vi.mock("@/hooks/useGames", () => ({ default: () => hook.games }));
 vi.mock("@/hooks/useProfile", () => ({
   default: (id: string) => {
     hook.useProfile(id);
@@ -71,6 +73,21 @@ describe("PublicProfile", () => {
     set({ status: "ready", profile: legacy as Profile });
     renderWithMantine(<PublicProfile discordId="5" />);
     expect(screen.getByRole("heading", { name: "Kel" })).toBeInTheDocument();
+  });
+
+  it("shows a cover on the top games from the games data", () => {
+    hook.games = {
+      games: { "9": { image: "https://example.com/9.jpg" } },
+      loading: false,
+      error: false,
+    };
+    set({ status: "ready", profile: base });
+    const { container } = renderWithMantine(<PublicProfile discordId="5" />);
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://example.com/9.jpg",
+    );
+    hook.games = { games: {}, loading: false, error: false };
   });
 
   it("shows the name and the years and games played tiles", () => {

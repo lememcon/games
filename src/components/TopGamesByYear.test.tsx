@@ -21,14 +21,26 @@ const years: YearTopGames[] = [
   },
 ];
 
+const games = { "1": { image: "https://example.com/1.jpg" } };
+
 describe("TopGamesByYear", () => {
+  it("shows a cover for a game with an image and a blank box otherwise", () => {
+    const { container } = renderWithMantine(
+      <TopGamesByYear topByYear={years} games={games} />,
+    );
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute("src", "https://example.com/1.jpg");
+    expect(container.querySelectorAll(".tray-cover__blank")).toHaveLength(2);
+  });
+
   it("renders nothing for an empty list", () => {
-    renderWithMantine(<TopGamesByYear topByYear={[]} />);
+    renderWithMantine(<TopGamesByYear topByYear={[]} games={{}} />);
     expect(screen.queryByRole("heading")).toBeNull();
   });
 
   it("shows a card per year with counts, places, links and scores", () => {
-    renderWithMantine(<TopGamesByYear topByYear={years} />);
+    renderWithMantine(<TopGamesByYear topByYear={years} games={games} />);
     expect(screen.getByRole("heading", { name: "2026" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "2025" })).toBeInTheDocument();
     expect(screen.getByText("2 of 12 games")).toBeInTheDocument();
@@ -47,7 +59,7 @@ describe("TopGamesByYear", () => {
   });
 
   it("notes hidden games only when the total exceeds those shown", () => {
-    renderWithMantine(<TopGamesByYear topByYear={years} />);
+    renderWithMantine(<TopGamesByYear topByYear={years} games={games} />);
     expect(screen.getAllByText(/more not shown/)).toHaveLength(1);
     expect(screen.getByText("+10 more not shown")).toBeInTheDocument();
   });

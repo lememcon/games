@@ -2,8 +2,9 @@ import { Link } from "wouter";
 
 import { Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
 
+import GameCover from "@/components/GameCover";
 import { gamePath } from "@/lib/routes";
-import type { YearTopGames } from "@/types";
+import type { GamesData, YearTopGames } from "@/types";
 
 const MEDALS: Record<number, string> = {
   1: "yellow",
@@ -11,7 +12,15 @@ const MEDALS: Record<number, string> = {
   3: "orange",
 };
 
-const TopGamesByYear = ({ topByYear }: { topByYear: YearTopGames[] }) => {
+interface TopGamesByYearProps {
+  topByYear: YearTopGames[];
+  games: GamesData;
+}
+
+const TopGamesByYear = ({
+  topByYear,
+  games: gamesData,
+}: TopGamesByYearProps) => {
   if (topByYear.length === 0) return null;
 
   return (
@@ -38,6 +47,11 @@ const TopGamesByYear = ({ topByYear }: { topByYear: YearTopGames[] }) => {
                   >
                     {g.rank}
                   </Badge>
+                  <GameCover
+                    bggId={g.bggId}
+                    image={gamesData[String(g.bggId)]?.image}
+                    ext={gamesData[String(g.bggId)]?.ext}
+                  />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
                 <Text>{g.score}</Text>

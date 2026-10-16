@@ -721,7 +721,7 @@ function Scoreboard({ user }: ScoreboardProps) {
                       }}
                     />
                   )}
-                  <UnplayedShelf />
+                  <UnplayedShelf games={game_data} />
                 </>
               )}
               <Button

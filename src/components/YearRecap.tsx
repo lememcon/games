@@ -12,6 +12,7 @@ import {
   Title,
 } from "@mantine/core";
 
+import GameCover from "@/components/GameCover";
 import useData from "@/hooks/useData";
 import useGames from "@/hooks/useGames";
 import useMemberPlayed from "@/hooks/useMemberPlayed";
@@ -222,6 +223,11 @@ const Loaded = ({
                   <Badge variant="light" aria-label={`place ${g.rank}`}>
                     {g.rank}
                   </Badge>
+                  <GameCover
+                    bggId={g.bggId}
+                    image={games[String(g.bggId)]?.image}
+                    ext={games[String(g.bggId)]?.ext}
+                  />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
                 </Group>
                 <Text c="dimmed">not played</Text>
@@ -243,7 +249,14 @@ const Loaded = ({
           <Stack gap="xs">
             {recap.newPicks.map((g) => (
               <Group key={g.bggId} justify="space-between" wrap="nowrap">
-                <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
+                <Group gap="xs" wrap="nowrap">
+                  <GameCover
+                    bggId={g.bggId}
+                    image={games[String(g.bggId)]?.image}
+                    ext={games[String(g.bggId)]?.ext}
+                  />
+                  <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
+                </Group>
                 <Text c="dimmed">first played {year}</Text>
               </Group>
             ))}

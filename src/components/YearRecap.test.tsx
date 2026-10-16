@@ -100,6 +100,15 @@ const profile = (stats: unknown = {}): ProfileState => ({
 const show = (year = "2025") =>
   renderWithMantine(<YearRecap discordId="me" year={year} />);
 
+const recapImages = () => ({
+  games: {
+    "1": { image: "https://example.com/1.jpg" },
+    "2": { image: "https://example.com/2.jpg" },
+  },
+  loading: false,
+  error: false,
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.years = { years: ["2023", "2024", "2025"], loading: false, error: false };
@@ -410,5 +419,18 @@ describe("YearRecap page metadata", () => {
     expect(canonical()).toBe(
       "https://games.lememcon.com/players/me/recap/2025",
     );
+  });
+});
+
+describe("YearRecap covers", () => {
+  it("shows covers on the unplayed-top and new-pick rows", () => {
+    h.games = recapImages();
+    const { container } = show();
+    const srcs = [...container.querySelectorAll("img")].map((i) =>
+      i.getAttribute("src"),
+    );
+    expect(srcs).toContain("https://example.com/1.jpg");
+    expect(srcs).toContain("https://example.com/2.jpg");
+    expect(container.querySelector(".tray-cover__blank")).not.toBeNull();
   });
 });

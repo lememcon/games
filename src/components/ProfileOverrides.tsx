@@ -12,6 +12,7 @@ import {
   Title,
 } from "@mantine/core";
 
+import GameCover from "@/components/GameCover";
 import MyPlayerRange from "@/components/MyPlayerRange";
 import type { GamesState } from "@/hooks/useGames";
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
@@ -85,9 +86,16 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
             const bounds = realBounds(games.games[id]);
             return (
               <Group key={id} justify="space-between">
-                <Text flex="1 1 160px" miw={0} style={WRAP}>
-                  {name}
-                </Text>
+                <Group gap="xs" wrap="nowrap" flex="1 1 160px" miw={0}>
+                  <GameCover
+                    bggId={id}
+                    image={games.games[id]?.image}
+                    ext={games.games[id]?.ext}
+                  />
+                  <Text flex={1} miw={0} style={WRAP}>
+                    {name}
+                  </Text>
+                </Group>
                 {bounds ? (
                   <MyPlayerRange
                     // Remount after a save or reset so the inputs show server state.
