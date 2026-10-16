@@ -28,7 +28,7 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec(
-    `DELETE FROM member_year_veto; DELETE FROM member_veto; DELETE FROM year; DELETE FROM game; DELETE FROM app_user;
+    `DELETE FROM member_year_veto; DELETE FROM member_veto; DELETE FROM game_metadata; DELETE FROM year; DELETE FROM game; DELETE FROM app_user;
      INSERT INTO year (year) VALUES (2025), (2026);
      INSERT INTO game (bgg_id, name) VALUES (1, 'Root'), (2, 'Azul');`,
   );
@@ -91,10 +91,44 @@ describe("listMine", () => {
     await store.set(ALEX, 2026, 2);
     await store.set(JO, 2026, 2);
     expect(await store.listMine(ALEX)).toEqual([
-      { year: 2026, bggId: 2, name: "Azul" },
-      { year: 2026, bggId: 1, name: "Root" },
-      { year: 2026, bggId: 3, name: null },
-      { year: 2025, bggId: 1, name: "Root" },
+      { year: 2026, bggId: 2, name: "Azul", image: null, ext: null },
+      { year: 2026, bggId: 1, name: "Root", image: null, ext: null },
+      { year: 2026, bggId: 3, name: null, image: null, ext: null },
+      { year: 2025, bggId: 1, name: "Root", image: null, ext: null },
+    ]);
+  });
+
+  it("returns cover metadata when present, nulls when absent", async () => {
+    await client.exec(
+      `INSERT INTO game_metadata (bgg_id, image_url, ext) VALUES
+         (1, 'https://example.com/root.jpg', '.jpg'),
+         (2, 'http://example.com/x.png', NULL);`,
+    );
+    await store.set(ALEX, 2026, 2);
+    await store.set(ALEX, 2026, 1);
+    await store.set(ALEX, 2025, 1);
+    expect(await store.listMine(ALEX)).toEqual([
+      {
+        year: 2026,
+        bggId: 2,
+        name: "Azul",
+        image: "http://example.com/x.png",
+        ext: null,
+      },
+      {
+        year: 2026,
+        bggId: 1,
+        name: "Root",
+        image: "https://example.com/root.jpg",
+        ext: ".jpg",
+      },
+      {
+        year: 2025,
+        bggId: 1,
+        name: "Root",
+        image: "https://example.com/root.jpg",
+        ext: ".jpg",
+      },
     ]);
   });
 

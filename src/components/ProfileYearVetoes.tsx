@@ -78,6 +78,8 @@ const ProfileYearVetoes = ({ games }: ProfileYearVetoesProps) => {
               key={v.bggId}
               bggId={v.bggId}
               name={v.name}
+              image={v.image}
+              ext={v.ext}
               undo={{
                 label: `Undo ${year} veto of ${v.name ?? `Game ${v.bggId}`}`,
                 disabled: mine.saving,

@@ -448,6 +448,7 @@ export function fakeMemberOverrides(
 export function fakeMemberVetoes(
   initial: {
     games?: Record<number, string | null>;
+    meta?: Record<number, { image?: string | null; ext?: string | null }>;
     vetoes?: { discordId: string; bggId: number }[];
   } = {},
 ) {
@@ -468,6 +469,8 @@ export function fakeMemberVetoes(
         .map(({ bggId }): MyVetoRow => ({
           bggId,
           name: games.get(bggId) ?? null,
+          image: initial.meta?.[bggId]?.image ?? null,
+          ext: initial.meta?.[bggId]?.ext ?? null,
         })),
     set: async (discordId, bggId) => {
       calls.push({ discordId, bggId });
@@ -495,6 +498,7 @@ export function fakeMemberYearVetoes(
   initial: {
     years?: number[];
     games?: Record<number, string | null>;
+    meta?: Record<number, { image?: string | null; ext?: string | null }>;
     vetoes?: { discordId: string; year: number; bggId: number }[];
   } = {},
 ) {
@@ -531,6 +535,8 @@ export function fakeMemberYearVetoes(
           year,
           bggId,
           name: games.get(bggId) ?? null,
+          image: initial.meta?.[bggId]?.image ?? null,
+          ext: initial.meta?.[bggId]?.ext ?? null,
         }))
         .sort(
           (a, b) =>

@@ -95,7 +95,13 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
         <Stack gap="calc(var(--mantine-spacing-xs) / 2)">
           <Title order={4}>Vetoed games</Title>
           {vetoes.map((v) => (
-            <VetoRow key={v.bggId} bggId={v.bggId} name={v.name} />
+            <VetoRow
+              key={v.bggId}
+              bggId={v.bggId}
+              name={v.name}
+              image={v.image}
+              ext={v.ext}
+            />
           ))}
         </Stack>
       )}
@@ -103,7 +109,13 @@ const PublicProfile = ({ discordId }: { discordId: string }) => {
         <Stack key={year} gap="calc(var(--mantine-spacing-xs) / 2)">
           <Title order={4}>Vetoed in {year}</Title>
           {rows.map((v) => (
-            <VetoRow key={v.bggId} bggId={v.bggId} name={v.name} />
+            <VetoRow
+              key={v.bggId}
+              bggId={v.bggId}
+              name={v.name}
+              image={v.image}
+              ext={v.ext}
+            />
           ))}
         </Stack>
       ))}

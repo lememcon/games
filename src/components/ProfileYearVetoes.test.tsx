@@ -8,7 +8,12 @@ import { renderWithMantine } from "@/test/utils";
 
 const hook = vi.hoisted(() => ({
   state: {
-    vetoes: [] as { year: number; bggId: number; name: string | null }[],
+    vetoes: [] as {
+      year: number;
+      bggId: number;
+      name: string | null;
+      image?: string | null;
+    }[],
     loading: false,
     saving: false,
     error: null as string | null,
@@ -206,6 +211,22 @@ describe("ProfileYearVetoes", () => {
     expect(
       screen.getByRole("button", { name: "Undo 2026 veto of Game 9" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a thumbnail for a veto with an image", () => {
+    hook.state.vetoes = [
+      {
+        year: 2026,
+        bggId: 1,
+        name: "Brass",
+        image: "https://example.com/brass.jpg",
+      },
+    ];
+    const { container } = renderIt();
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://example.com/brass.jpg",
+    );
   });
 
   it("disables undo while saving", () => {

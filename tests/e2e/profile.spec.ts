@@ -16,6 +16,12 @@ const longName = "Bartholomew Maximilian Featherstonehaugh-Wetherington";
 const longTitle =
   "Twilight Imperium Fourth Edition Prophecy of Kings Expansion Deluxe";
 const unbreakable = "G".repeat(60);
+const cover = "https://images.example.com/cover.png";
+// 1x1 transparent PNG, served for the veto thumbnails.
+const pixel = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 const profileFor = (name: string): Profile => ({
   discordId: aliceId,
@@ -24,11 +30,11 @@ const profileFor = (name: string): Profile => ({
   linkedPlayers: ["Alice"],
   gamesPlayed: 12,
   vetoes: [
-    { bggId: 101, name: longTitle },
+    { bggId: 101, name: longTitle, image: cover },
     { bggId: 103, name: unbreakable },
   ],
   yearVetoes: [
-    { year: 2024, bggId: 102, name: longTitle },
+    { year: 2024, bggId: 102, name: longTitle, image: cover },
     { year: 2023, bggId: 104, name: "Delta" },
   ],
   stats: {
@@ -64,8 +70,11 @@ const unbreakableScores: PlayerGameScore[] = longScores.map((s) =>
   s.bgg_id === 103 ? { ...s, game: unbreakable } : s,
 );
 
-const setup = (page: Page, name = longName, unbreakableGame = false) =>
-  mockApi(page, {
+const setup = async (page: Page, name = longName, unbreakableGame = false) => {
+  await page.route("https://images.example.com/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: pixel }),
+  );
+  await mockApi(page, {
     me: {
       status: "approved",
       user: { ...approvedUser, displayName: name },
@@ -78,12 +87,12 @@ const setup = (page: Page, name = longName, unbreakableGame = false) =>
       { discordId: aliceId, bggId: 103, min: 2, max: 3 },
     ],
     vetoes: [
-      { bggId: 101, name: longTitle },
+      { bggId: 101, name: longTitle, image: cover },
       { bggId: 103, name: unbreakable },
     ],
     yearVetoes: [
       { year: 2023, bggId: 104, name: "Delta" },
-      { year: 2024, bggId: 102, name: longTitle },
+      { year: 2024, bggId: 102, name: longTitle, image: cover },
       { year: 2024, bggId: 103, name: unbreakable },
     ],
     played: ["101", "102", "103"],
@@ -92,6 +101,7 @@ const setup = (page: Page, name = longName, unbreakableGame = false) =>
       "2023": { [aliceId]: ["102"] },
     },
   });
+};
 
 const expectNoOverflow = async (page: Page) => {
   const [scrollWidth, clientWidth] = await page.evaluate<[number, number]>(
@@ -130,6 +140,7 @@ test("own profile does not overflow horizontally", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: `Remove ${unbreakable}` }),
   ).toBeVisible();
+  await expect(page.locator(".tray-cover--xs img").first()).toBeVisible();
   await expectNoOverflow(page);
 });
 

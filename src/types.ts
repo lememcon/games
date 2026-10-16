@@ -323,6 +323,8 @@ export interface Veto {
 export interface MyVeto {
   bggId: number;
   name: string | null;
+  image?: string | null;
+  ext?: string | null;
 }
 
 // The signed-in member's own veto for one year, from GET /api/me/year-vetoes.
@@ -330,6 +332,8 @@ export interface MyYearVeto {
   year: number;
   bggId: number;
   name: string | null;
+  image?: string | null;
+  ext?: string | null;
 }
 
 // One game's summed scores in one year, from GET /api/years/totals.

@@ -2,7 +2,12 @@ import { and, asc, desc, eq } from "drizzle-orm";
 
 import { refuse } from "../result";
 import type { MemberYearVetoStore } from "../types";
-import { game, memberYearVeto, year as yearTable } from "./schema";
+import {
+  game,
+  gameMetadata,
+  memberYearVeto,
+  year as yearTable,
+} from "./schema";
 import type { StoreDb } from "./userStore";
 
 export function createMemberYearVetoStore(db: StoreDb): MemberYearVetoStore {
@@ -32,9 +37,12 @@ export function createMemberYearVetoStore(db: StoreDb): MemberYearVetoStore {
           year: memberYearVeto.year,
           bggId: memberYearVeto.bggId,
           name: game.name,
+          image: gameMetadata.imageUrl,
+          ext: gameMetadata.ext,
         })
         .from(memberYearVeto)
         .leftJoin(game, eq(game.bggId, memberYearVeto.bggId))
+        .leftJoin(gameMetadata, eq(gameMetadata.bggId, memberYearVeto.bggId))
         .where(eq(memberYearVeto.discordId, discordId))
         .orderBy(
           desc(memberYearVeto.year),
