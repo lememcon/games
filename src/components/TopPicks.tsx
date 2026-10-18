@@ -3,13 +3,13 @@ import { Link } from "wouter";
 import { Stack, Text, Title, VisuallyHidden } from "@mantine/core";
 
 import BackButton from "@/components/BackButton";
+import GameCover from "@/components/GameCover";
 import PlayerName from "@/components/PlayerName";
-import { resolveImage } from "@/lib/games";
-import images from "@/lib/images";
 import type { PlayedMap } from "@/lib/played";
 import { gamePath, yearPath } from "@/lib/routes";
 import { buildTopPicks } from "@/lib/topPicks";
 import type {
+  GameMeta,
   GamesData,
   PlayerGameScore,
   UnplayedPick,
@@ -62,20 +62,19 @@ const Owner = ({ owner }: { owner: UnplayedPickOwner }) => (
 const TopPickRow = ({
   pick,
   year,
-  image,
+  meta,
 }: {
   pick: UnplayedPick;
   year: string;
-  image: string | undefined;
+  meta: GameMeta | undefined;
 }) => (
   <li className="tray-row" style={{ alignItems: "flex-start" }}>
-    <div className="tray-cover tray-cover--sm">
-      {image ? (
-        <img src={image} alt="" />
-      ) : (
-        <div className="tray-cover__blank" aria-hidden />
-      )}
-    </div>
+    <GameCover
+      bggId={pick.bggId}
+      image={meta?.image}
+      ext={meta?.ext}
+      cover={meta?.cover}
+    />
     <div className="tray-row__main">
       <Link href={gamePath(year, pick.bggId)} className="tray-name">
         {pick.game}
@@ -125,11 +124,7 @@ const TopPicks = ({ year, scores, allPlayed, games }: TopPicksProps) => {
                     key={pick.bggId}
                     pick={pick}
                     year={year}
-                    image={resolveImage(
-                      String(pick.bggId),
-                      games[String(pick.bggId)],
-                      images,
-                    )}
+                    meta={games[String(pick.bggId)]}
                   />
                 ))}
               </ul>
