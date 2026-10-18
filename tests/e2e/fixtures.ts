@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test";
+import type { BrowserContext, Page, Route } from "@playwright/test";
 
 import type {
   ApprovedUser,
@@ -109,6 +109,7 @@ interface MockOptions {
   // Everyone's played games per year, for the recap.
   playedByYear?: Record<string, Record<string, string[]>>;
   scores?: PlayerGameScore[];
+  years?: number[];
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -118,7 +119,10 @@ const pathOf = (url: URL | string) => new URL(url).pathname;
 
 // Mocks the whole API. Playwright tries the most recently registered route
 // first, so the catch-all goes in first and the specific routes override it.
-export async function mockApi(page: Page, opts: MockOptions = {}) {
+export async function mockApi(
+  page: Page | BrowserContext,
+  opts: MockOptions = {},
+) {
   const {
     me = approvedMe,
     played = [],
@@ -130,6 +134,8 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     playedByYear,
     scores: scoreRows = scores,
   } = opts;
+  // Copies, so a test can change them without touching the shared exports.
+  const state = { years: [...(opts.years ?? years)], scores: [...scoreRows] };
 
   await page.route(
     (url) => pathOf(url).startsWith("/api/"),
@@ -145,7 +151,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => pathOf(url) === "/api/years",
-    (route) => json(route, { years }),
+    (route) => json(route, { years: state.years }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/years/totals",
@@ -161,7 +167,7 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
   );
   await page.route(
     (url) => /^\/api\/years\/\d+\/scores$/.test(pathOf(url)),
-    (route) => json(route, { player_game_scores: scoreRows }),
+    (route) => json(route, { player_game_scores: state.scores }),
   );
   await page.route(
     (url) => pathOf(url) === "/api/player-overrides",
@@ -265,4 +271,5 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (url) => /^\/api\/me\/played\/\d+\/\d+$/.test(pathOf(url)),
     (route) => json(route, {}),
   );
+  return state;
 }
