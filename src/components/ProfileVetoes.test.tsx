@@ -74,6 +74,30 @@ describe("ProfileVetoes", () => {
     );
   });
 
+  it("prefers the mirrored cover from the games data", () => {
+    gamesState.games = {
+      "7": {
+        name: "Azul",
+        players: { min: 1, max: 4 },
+        image: null,
+        cover: "https://cdn.example.com/7.webp",
+      },
+    };
+    vetoes.state.vetoes = [
+      {
+        bggId: 7,
+        name: "Azul",
+        image: "https://example.com/a.jpg",
+        ext: ".jpg",
+      },
+    ];
+    const { container } = render();
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/7.webp",
+    );
+  });
+
   it("prefers the bundled cover when the veto has an ext", () => {
     vetoes.state.vetoes = [
       {
