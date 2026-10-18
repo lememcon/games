@@ -27,8 +27,9 @@ const parseIds = (body: unknown): string[] => {
 
 // The signed-in member's ten highest scores in a year. A null or empty year (not
 // known yet) fetches nothing and stays loading. State is tagged with the year
-// and import version it belongs to, so a response for a superseded year, or
-// from before an import, is dropped and old data is never shown.
+// it belongs to, so a response for a superseded year is dropped and another
+// year's data is never shown. After an import the previous data for the same
+// year stays until the refetch lands; a failed refetch keeps it.
 const useTopGames = (
   year: string | null,
   fetchImpl: typeof fetch = fetch,
@@ -36,7 +37,6 @@ const useTopGames = (
   const version = useImportVersion();
   const [result, setResult] = useState<{
     year: string;
-    version: number;
     state: TopGamesState;
   } | null>(null);
 
@@ -56,17 +56,19 @@ const useTopGames = (
       }))
       .catch(() => ({ ids: [], loading: false, error: true }))
       .then((state) => {
-        if (!cancelled) setResult({ year, version, state });
+        if (cancelled) return;
+        setResult((prev) =>
+          state.error && prev?.year === year ? prev : { year, state },
+        );
       });
 
     return () => {
       cancelled = true;
     };
+    // version is the refetch trigger after an import; it is not read here.
   }, [year, version, fetchImpl]);
 
-  return year && result?.year === year && result.version === version
-    ? result.state
-    : pending;
+  return year && result?.year === year ? result.state : pending;
 };
 
 export default useTopGames;

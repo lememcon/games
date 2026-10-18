@@ -66,13 +66,13 @@ describe("useUnplayedGames", () => {
         .mockResolvedValueOnce(res({ games: first }))
         .mockResolvedValueOnce(res({ games: second }));
 
-    it("reloads on a message from another tab, never showing old data", async () => {
+    it("reloads on a message from another tab, keeping old data meanwhile", async () => {
       const fetchImpl = twoFetches();
       const { result } = renderHook(() => useUnplayedGames(fetchImpl));
       await waitFor(() => expect(result.current).toEqual(first));
 
       act(() => message());
-      expect(result.current).toEqual([]);
+      expect(result.current).toEqual(first);
       await waitFor(() => expect(result.current).toEqual(second));
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
@@ -83,12 +83,12 @@ describe("useUnplayedGames", () => {
       await waitFor(() => expect(result.current).toEqual(first));
 
       act(() => announceImport());
-      expect(result.current).toEqual([]);
+      expect(result.current).toEqual(first);
       await waitFor(() => expect(result.current).toEqual(second));
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
 
-    it("stays empty when the refetch fails", async () => {
+    it("keeps the old list when the refetch fails", async () => {
       const fetchImpl = vi
         .fn()
         .mockResolvedValueOnce(res({ games: first }))
@@ -101,7 +101,7 @@ describe("useUnplayedGames", () => {
       await act(async () => {
         await new Promise((r) => setTimeout(r));
       });
-      expect(result.current).toEqual([]);
+      expect(result.current).toEqual(first);
     });
   });
 });

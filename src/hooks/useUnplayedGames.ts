@@ -21,30 +21,27 @@ const parseGames = (body: unknown): UnplayedGame[] => {
 
 // Games with no scores in any year, for the never-played shelf. Approved
 // members only (the API refuses others). A failure leaves the list empty so
-// the shelf just stays hidden. State is tagged with the import version it
-// belongs to, so after an import the list is empty until the refetch lands
-// (and stays empty if it fails).
+// the shelf just stays hidden. After an import the previous list stays until
+// the refetch lands (and is kept if it fails).
 const useUnplayedGames = (fetchImpl: typeof fetch = fetch): UnplayedGame[] => {
   const version = useImportVersion();
-  const [state, setState] = useState<{
-    version: number;
-    games: UnplayedGame[];
-  } | null>(null);
+  const [games, setGames] = useState<UnplayedGame[]>(EMPTY);
 
   useEffect(() => {
     let cancelled = false;
     apiFetch<unknown>("/games/unplayed", {}, fetchImpl)
       .then((body) => {
         const parsed = parseGames(body);
-        if (!cancelled) setState({ version, games: parsed });
+        if (!cancelled) setGames(parsed);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
+    // version is the refetch trigger after an import; it is not read here.
   }, [version, fetchImpl]);
 
-  return state?.version === version ? state.games : EMPTY;
+  return games;
 };
 
 export default useUnplayedGames;
