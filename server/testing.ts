@@ -1,4 +1,6 @@
 import type { BggGame } from "./bgg/client";
+import { CoverFetchError } from "./covers/fetch";
+import { createCoverService } from "./covers/service";
 import type { NormalizedImport } from "./import";
 import { refuse } from "./result";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
@@ -128,6 +130,13 @@ export function fakeBggRepo() {
       covers.set(bggId, { key, source });
       return true;
     },
+    setCustomCover: async (bggId, key) => {
+      const row = rows.get(bggId);
+      if (!row) return false;
+      row.imageUrl = "custom";
+      covers.set(bggId, { key, source: "custom" });
+      return true;
+    },
     listCoverNeeds: async () =>
       [...rows.values()]
         .filter((r) => {
@@ -142,6 +151,25 @@ export function fakeBggRepo() {
         .sort((a, b) => a.bggId - b.bggId),
   };
   return { repo, settings, rows, writes, covers };
+}
+
+/**
+ * A real cover service over in-memory fakes, for createApp. Storage is null
+ * (not configured) unless given; fetching a cover always fails.
+ */
+export function fakeCovers(opts: { storage?: CoverStorage | null } = {}) {
+  const bgg = fakeBggRepo();
+  const covers = createCoverService({
+    repo: bgg.repo,
+    storage: opts.storage ?? null,
+    fetchCover: async () => {
+      throw new CoverFetchError("upstream");
+    },
+    coverBaseUrl: "https://covers.example",
+    sleep: async () => {},
+    log: () => {},
+  });
+  return { covers, repo: bgg.repo, rows: bgg.rows, coverRows: bgg.covers };
 }
 
 /** In-memory CoverStorage for tests; records puts, optionally failing every one. */

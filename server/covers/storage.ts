@@ -22,6 +22,17 @@ export interface S3Options {
   now?: () => Date;
 }
 
+/** A failed upload; carries the fixed message and the provider's status, if any. */
+export class CoverStorageError extends Error {
+  readonly status?: number;
+
+  constructor(status?: number) {
+    super(FAILED);
+    this.name = "CoverStorageError";
+    this.status = status;
+  }
+}
+
 /** Content-addressed object key: stable for the same game and bytes. */
 export function coverKey(
   bggId: number,
@@ -45,7 +56,7 @@ export function createS3Storage(opts: S3Options): CoverStorage {
   const base = opts.endpoint ?? `https://s3.${opts.region}.amazonaws.com`;
 
   return {
-    async put(key, bytes, contentType) {
+    async put(key, bytes, contentType, signal) {
       const path = key.split("/").map(encodeURIComponent).join("/");
       const url = `${base.replace(/\/+$/, "")}/${encodeURIComponent(opts.bucket)}/${path}`;
       const signed = await client.sign(url, {
@@ -62,12 +73,15 @@ export function createS3Storage(opts: S3Options): CoverStorage {
       });
       let res: Response;
       try {
-        res = await send(signed, { signal: AbortSignal.timeout(timeoutMs) });
+        const timeout = AbortSignal.timeout(timeoutMs);
+        res = await send(signed, {
+          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+        });
       } catch {
-        throw new Error(FAILED);
+        throw new CoverStorageError();
       }
       await res.body?.cancel().catch(() => {});
-      if (!res.ok) throw new Error(FAILED);
+      if (!res.ok) throw new CoverStorageError(res.status);
     },
   };
 }

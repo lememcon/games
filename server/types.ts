@@ -1,5 +1,6 @@
 import type { BggGame } from "./bgg/client";
 import type { BggService } from "./bgg/service";
+import type { CoverService } from "./covers/service";
 import type { NormalizedImport } from "./import";
 
 export type Role = "member" | "admin";
@@ -62,6 +63,8 @@ export interface AppDeps {
   played: PlayedStore;
   /** BoardGameGeek data admin routes; omitted in tests that do not need them. */
   bgg?: BggService;
+  /** Cover mirror job and custom cover upload; built with null storage when S3 is unset. */
+  covers: CoverService;
   /** Years, games and scores: public reads and the admin import. */
   data: DataStore;
   /** Links between players and app members (admin only). */
@@ -153,6 +156,12 @@ export interface BggRepo {
   setCover(bggId: number, key: string, source: string): Promise<boolean>;
   /** Games whose cover still needs mirroring (https image, not custom). */
   listCoverNeeds(): Promise<CoverNeed[]>;
+  /**
+   * Records an admin-uploaded cover: `image_url` and `image_source` become
+   * "custom", so neither the mirror nor an upsert replaces it. Returns whether
+   * the game has a metadata row.
+   */
+  setCustomCover(bggId: number, key: string): Promise<boolean>;
 }
 
 export interface CoverNeed {
@@ -504,5 +513,10 @@ export interface MemberYearVetoStore {
 
 /** Writes mirrored cover images to object storage (server/covers/storage.ts). */
 export interface CoverStorage {
-  put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
+  put(
+    key: string,
+    bytes: Uint8Array,
+    contentType: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }

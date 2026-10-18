@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./app";
 import { PROTECTED_ADMIN_IDS } from "./roles";
 import {
+  fakeCovers,
   fakeData,
   fakeLinks,
   fakeMemberOverrides,
@@ -11,6 +12,7 @@ import {
   fakeMemberYearVetoes,
   fakePlayed,
   fakeProfiles,
+  fakeStorage,
   fakeStore,
 } from "./testing";
 import type { AdminUser, AppUser } from "./types";
@@ -41,7 +43,10 @@ const users: Record<string, AppUser> = {
 };
 
 // Cookie header stands in for a real session: "as=admin" / "as=member".
-function makeApp(webOrigin: string | undefined = WEB) {
+function makeApp(
+  webOrigin: string | undefined = WEB,
+  covers = fakeCovers().covers,
+) {
   const authHandler = vi.fn(async () => new Response("auth"));
   const fake = fakeStore({
     [ALEX]: { role: "admin", status: "approved" },
@@ -52,6 +57,7 @@ function makeApp(webOrigin: string | undefined = WEB) {
     webOrigin,
     authHandler,
     store: fake.store,
+    covers,
     data: fakeData().data,
     links: fakeLinks().links,
     memberOverrides: fakeMemberOverrides().memberOverrides,
@@ -171,6 +177,79 @@ describe("body size limit", () => {
     expect(res.status).not.toBe(413);
   });
 
+  describe("cover upload", () => {
+    const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    const image = (size: number) => {
+      const bytes = new Uint8Array(size);
+      bytes.set(PNG);
+      return bytes;
+    };
+    const withStorage = () => {
+      const store = fakeStorage();
+      const fake = fakeCovers({ storage: store.storage });
+      fake.rows.set(7, {
+        bggId: 7,
+        minPlayers: 2,
+        maxPlayers: 4,
+        imageUrl: null,
+        ext: null,
+        fetchedAt: new Date(0),
+      });
+      return { app: makeApp(WEB, fake.covers).app, puts: store.puts };
+    };
+    const put = (
+      app: ReturnType<typeof makeApp>["app"],
+      body: NonNullable<RequestInit["body"]>,
+    ) =>
+      app.request("/api/admin/covers/7", {
+        method: "PUT",
+        headers: {
+          ...same,
+          ...as("admin").headers,
+          "content-type": "image/png",
+        },
+        body,
+        duplex: "half",
+      } as RequestInit);
+
+    it("answers 409 through the real app when storage is not configured", async () => {
+      const res = await put(makeApp().app, image(1024));
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: "storage_not_configured" });
+    });
+
+    it("accepts a body between 256 KB and 10 MB", async () => {
+      const { app, puts } = withStorage();
+      const res = await put(app, image(1024 * 1024));
+      expect(res.status).toBe(200);
+      expect(puts[0].bytes.byteLength).toBe(1024 * 1024);
+    });
+
+    it("accepts a streamed body without Content-Length", async () => {
+      const { app, puts } = withStorage();
+      let sent = false;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (sent) return controller.close();
+          sent = true;
+          controller.enqueue(image(512 * 1024));
+        },
+      });
+      const res = await put(app, body);
+      expect(res.status).toBe(200);
+      expect(puts[0].bytes.byteLength).toBe(512 * 1024);
+    });
+
+    it("keeps the small limit on other cover routes", async () => {
+      const res = await makeApp().app.request("/api/admin/covers/mirror", {
+        method: "POST",
+        headers: { ...same, ...as("admin").headers },
+        body: big,
+      });
+      expect(res.status).toBe(413);
+    });
+  });
+
   it.each(["PUT", "PATCH"])(
     "applies the small limit to %s on the import route",
     async (method) => {
@@ -190,6 +269,7 @@ describe("error handler", () => {
       baseUrl: BASE,
       authHandler: async () => new Response("auth"),
       store: fakeStore().store,
+      covers: fakeCovers().covers,
       data: fakeData().data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
@@ -271,6 +351,7 @@ describe("GET /api/me color", () => {
       baseUrl: BASE,
       authHandler: async () => new Response("auth"),
       store: fakeStore().store,
+      covers: fakeCovers().covers,
       data: fakeData().data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
@@ -306,6 +387,7 @@ describe("GET /api/me display names", () => {
       baseUrl: BASE,
       authHandler: async () => new Response("auth"),
       store: fakeStore().store,
+      covers: fakeCovers().covers,
       data: fakeData().data,
       links: fakeLinks().links,
       memberOverrides: fakeMemberOverrides().memberOverrides,
