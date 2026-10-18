@@ -14,9 +14,10 @@ Netlify). It is entirely read-only:
 
 - Score data is fetched at runtime from an **external** feed
   `https://data.lememcon.com/{year}.json` (`src/hooks/useData.ts:23`).
-- Game metadata (player counts, cover art) is **bundled** as `src/assets/games.json`
-  (48KB), refreshed by `update.cjs` (`pnpm update`) which hits the BGG XML API and commits
-  back to the repo.
+- Game metadata (player counts, image URL) lives in `src/assets/games.json` (48KB),
+  refreshed by `update.cjs` (`pnpm update`) which hits the BGG XML API and commits back to
+  the repo; the file feeds that script and the import. Cover images are **not** bundled:
+  they load from remote https URLs (the server-mirrored `cover`, else the BGG `image`).
 - All interactive state — selected `year`, `players` filter, `hidePlayed` toggle, and
   per-game **play counts** — lived only in each browser's `localStorage`
   (`src/hooks/useLocalState.ts`, `src/hooks/usePlayedCounts.ts`). Play counts have since moved
@@ -158,8 +159,9 @@ base URL and `credentials: "include"` on its calls.
   into `game_metadata`, with `ON CONFLICT` upserts so it is re-runnable.
 - `update.cjs` BGG enrichment is repurposed to upsert into `game_metadata`; it stays a
   script because of its throttled batches.
-- Cover images stay bundled for now: `buildSelectedGames` resolves art by `id + ext`, so
-  moving metadata to the DB does not require moving image files.
+- Cover images are not bundled: `buildSelectedGames` resolves art with `resolveImage`
+  (`meta.cover`, the server-mirrored URL, then `meta.image`, else none);
+  `/api/games` supplies `image`, and `cover` when a mirrored copy exists.
 
 ### Testing
 
