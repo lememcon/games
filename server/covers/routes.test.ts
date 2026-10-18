@@ -63,7 +63,10 @@ function setup(
   const store = fakeStorage();
   const covers = createCoverService({
     repo: fake.repo,
-    storage: over.storage === undefined ? store.storage : over.storage,
+    resolveStorage: async () => ({
+      storage: over.storage === undefined ? store.storage : over.storage,
+      coverBaseUrl: "https://covers.example",
+    }),
     fetchCover:
       over.fetchCover ??
       (async () => ({
@@ -71,7 +74,6 @@ function setup(
         contentType: "image/jpeg",
         ext: "jpg",
       })),
-    coverBaseUrl: "https://covers.example",
     sleep: async () => {},
     log: () => {},
   });

@@ -55,34 +55,53 @@ export function createS3Storage(opts: S3Options): CoverStorage {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const base = opts.endpoint ?? `https://s3.${opts.region}.amazonaws.com`;
 
-  return {
-    async put(key, bytes, contentType, signal) {
-      const path = key.split("/").map(encodeURIComponent).join("/");
-      const url = `${base.replace(/\/+$/, "")}/${encodeURIComponent(opts.bucket)}/${path}`;
-      const signed = await client.sign(url, {
-        method: "PUT",
-        body: bytes,
-        headers: {
-          "Content-Type": contentType,
-          "Cache-Control": CACHE_CONTROL,
-          "X-Amz-Content-Sha256": createHash("sha256")
-            .update(bytes)
-            .digest("hex"),
-        },
-        aws: { datetime: amzDate(opts.now?.() ?? new Date()) },
+  const urlFor = (key: string) => {
+    const path = key.split("/").map(encodeURIComponent).join("/");
+    return `${base.replace(/\/+$/, "")}/${encodeURIComponent(opts.bucket)}/${path}`;
+  };
+
+  /** Signs and sends one request. A redirect is never followed: it is a failure. */
+  async function request(
+    url: string,
+    init: Parameters<AwsClient["sign"]>[1],
+    signal?: AbortSignal,
+  ) {
+    const signed = await client.sign(url, {
+      ...init,
+      aws: { datetime: amzDate(opts.now?.() ?? new Date()) },
+    });
+    let res: Response;
+    try {
+      const timeout = AbortSignal.timeout(timeoutMs);
+      res = await send(signed, {
+        redirect: "manual",
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
-      let res: Response;
-      try {
-        const timeout = AbortSignal.timeout(timeoutMs);
-        res = await send(signed, {
-          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-        });
-      } catch {
-        throw new CoverStorageError();
-      }
-      await res.body?.cancel().catch(() => {});
-      if (!res.ok) throw new CoverStorageError(res.status);
-    },
+    } catch {
+      throw new CoverStorageError();
+    }
+    await res.body?.cancel().catch(() => {});
+    if (!res.ok) throw new CoverStorageError(res.status);
+  }
+
+  return {
+    put: (key, bytes, contentType, signal) =>
+      request(
+        urlFor(key),
+        {
+          method: "PUT",
+          body: bytes,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": CACHE_CONTROL,
+            "X-Amz-Content-Sha256": createHash("sha256")
+              .update(bytes)
+              .digest("hex"),
+          },
+        },
+        signal,
+      ),
+    delete: (key, signal) => request(urlFor(key), { method: "DELETE" }, signal),
   };
 }
 

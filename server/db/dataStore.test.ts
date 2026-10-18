@@ -655,7 +655,7 @@ describe("top games", () => {
 describe("cover urls", () => {
   it("serves a mirrored cover until the image url changes", async () => {
     const repo = createBggRepo(db);
-    const covered = createDataStore(db, "https://cdn.example");
+    const covered = createDataStore(db, async () => "https://cdn.example");
     const img = (n: number) => `https://cf.geekdo-images.com/c/${n}.jpg`;
     const meta = (imageUrl: string) => ({
       bggId: 987001,
@@ -672,5 +672,34 @@ describe("cover urls", () => {
     );
     await repo.upsertMetadata([meta(img(2))], new Date());
     expect((await covered.getGames())["987001"].cover).toBeUndefined();
+  });
+
+  it("reads the base url on every call, so changed settings apply at once", async () => {
+    const repo = createBggRepo(db);
+    let base: string | undefined = "https://one.example";
+    const live = createDataStore(db, async () => base);
+    const img = "https://cf.geekdo-images.com/c/live.jpg";
+    await repo.upsertMetadata(
+      [
+        {
+          bggId: 987002,
+          minPlayers: 2,
+          maxPlayers: 4,
+          imageUrl: img,
+          ext: ".jpg",
+        },
+      ],
+      new Date(),
+    );
+    await repo.setCover(987002, "covers/987002.jpg", img);
+    expect((await live.getGames())["987002"].cover).toBe(
+      "https://one.example/covers/987002.jpg",
+    );
+    base = "https://two.example";
+    expect((await live.getGames())["987002"].cover).toBe(
+      "https://two.example/covers/987002.jpg",
+    );
+    base = undefined;
+    expect((await live.getGames())["987002"].cover).toBeUndefined();
   });
 });

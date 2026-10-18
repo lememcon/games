@@ -48,11 +48,14 @@ function setup(
   );
   const sleep = vi.fn(over.sleep ?? (async () => {}));
   const log = vi.fn();
+  const current = {
+    storage: over.storage === undefined ? store.storage : over.storage,
+    coverBaseUrl: "https://covers.example" as string | null,
+  };
   const service = createCoverService({
     repo: fake.repo,
-    storage: over.storage === undefined ? store.storage : over.storage,
+    resolveStorage: async () => ({ ...current }),
     fetchCover,
-    coverBaseUrl: "https://covers.example",
     now: () => 0,
     sleep,
     log,
@@ -61,7 +64,16 @@ function setup(
     for (let i = 0; i < 50 && !service.job().finishedAt; i++) await settle();
     return service.job();
   };
-  return { service, fetchCover, sleep, log, finished, ...fake, ...store };
+  return {
+    service,
+    fetchCover,
+    sleep,
+    log,
+    finished,
+    current,
+    ...fake,
+    ...store,
+  };
 }
 
 describe("mirror job", () => {
@@ -284,7 +296,7 @@ describe("mirror job", () => {
     const put = vi.fn(async () => {
       throw new CoverStorageError(403);
     });
-    const s = setup({ storage: { put } });
+    const s = setup({ storage: { put, delete: async () => {} } });
     await s.service.start({ mode: "missing" });
     const job = await s.finished();
     expect(job).toMatchObject({ state: "failed", failed: 1, done: 0 });
@@ -301,7 +313,10 @@ describe("mirror job", () => {
       const put = vi.fn(async () => {
         throw new CoverStorageError(status);
       });
-      const s = setup({ ids: [1, 2, 3, 4, 5], storage: { put } });
+      const s = setup({
+        ids: [1, 2, 3, 4, 5],
+        storage: { put, delete: async () => {} },
+      });
       await s.service.start({ mode: "missing" });
       const job = await s.finished();
       expect(job).toMatchObject({ state: "failed", failed: 3, done: 2 });
@@ -319,6 +334,7 @@ describe("mirror job", () => {
           calls += 1;
           if (calls !== 3) throw new CoverStorageError(500);
         },
+        delete: async () => {},
       },
     });
     await s.service.start({ mode: "missing" });
@@ -338,7 +354,7 @@ describe("mirror job", () => {
           signal?.addEventListener("abort", () => rej(new CoverStorageError()));
         }),
     );
-    const s = setup({ storage: { put } });
+    const s = setup({ storage: { put, delete: async () => {} } });
     await s.service.start({ mode: "missing" });
     await entered.promise;
     expect(s.service.cancel().state).toBe("cancelled");
@@ -409,7 +425,10 @@ describe("status", () => {
     const fake = fakeBggRepo();
     const service = createCoverService({
       repo: fake.repo,
-      storage: fakeStorage().storage,
+      resolveStorage: async () => ({
+        storage: fakeStorage().storage,
+        coverBaseUrl: null,
+      }),
       fetchCover: async () => image(1),
     });
     expect((await service.status()).coverBaseUrl).toBeNull();
@@ -417,6 +436,57 @@ describe("status", () => {
     await settle();
     expect(info).toHaveBeenCalled();
     info.mockRestore();
+  });
+});
+
+describe("changing storage settings", () => {
+  it("lets a running job finish on the storage it started with", async () => {
+    const first = fakeStorage();
+    const entered = deferred();
+    const release = deferred();
+    const slow = fakeStorage();
+    slow.storage.put = async (key, bytes, contentType) => {
+      entered.resolve();
+      await release.promise;
+      slow.puts.push({ key, bytes, contentType });
+    };
+    const s = setup({ storage: slow.storage });
+    await s.service.start({ mode: "missing" });
+    await entered.promise;
+    s.current.storage = first.storage;
+    release.resolve();
+    expect(await s.finished()).toMatchObject({ state: "done", mirrored: 3 });
+    expect(slow.puts).toHaveLength(3);
+    expect(first.puts).toHaveLength(0);
+  });
+
+  it("reports and uses the settings in force at each call", async () => {
+    const s = setup({ storage: null });
+    expect((await s.service.status()).configured).toBe(false);
+    const fresh = fakeStorage();
+    s.current.storage = fresh.storage;
+    s.current.coverBaseUrl = "https://cdn.example";
+    expect(await s.service.status()).toMatchObject({
+      configured: true,
+      coverBaseUrl: "https://cdn.example",
+    });
+    const result = await s.service.upload(1, new Uint8Array(PNG));
+    expect(result.ok && result.value.cover).toMatch(
+      /^https:\/\/cdn\.example\//,
+    );
+    expect(fresh.puts).toHaveLength(1);
+  });
+
+  it("releases the lock when resolving storage fails or finds none", async () => {
+    const s = setup({ storage: null });
+    expect(await s.service.start({ mode: "missing" })).toMatchObject({
+      status: 409,
+      error: "storage_not_configured",
+    });
+    s.current.storage = fakeStorage().storage;
+    expect(await s.service.start({ mode: "missing" })).toMatchObject({
+      ok: true,
+    });
   });
 });
 
@@ -450,7 +520,10 @@ describe("upload", () => {
     );
     const service = createCoverService({
       repo: fake.repo,
-      storage: fakeStorage().storage,
+      resolveStorage: async () => ({
+        storage: fakeStorage().storage,
+        coverBaseUrl: null,
+      }),
       fetchCover: async () => image(1),
     });
     const result = await service.upload(1, png);

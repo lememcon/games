@@ -138,6 +138,21 @@ describe("loadEnv", () => {
       expect(run).toThrow(/^(?![\s\S]*pw@)/);
     });
 
+    it("still boots with values the stricter admin rules reject", () => {
+      const long = "k".repeat(300);
+      const env = loadEnv({
+        ...valid,
+        S3_BUCKET: "UPPER_case.Bucket",
+        S3_REGION: "US_East_1",
+        S3_ACCESS_KEY_ID: long,
+        S3_SECRET_ACCESS_KEY: long,
+        COVER_BASE_URL: "https://cdn.example.com",
+      });
+      expect(env.S3_BUCKET).toBe("UPPER_case.Bucket");
+      expect(env.S3_REGION).toBe("US_East_1");
+      expect(env.S3_SECRET_ACCESS_KEY).toBe(long);
+    });
+
     it("never puts credentials in the error", () => {
       expect(() =>
         loadEnv({ ...valid, S3_SECRET_ACCESS_KEY: "s3cret" }),

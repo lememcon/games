@@ -7,6 +7,7 @@ import { secureHeaders } from "hono/secure-headers";
 
 import { bggRoutes } from "./bgg/routes";
 import { coverRoutes } from "./covers/routes";
+import { storageRoutes } from "./covers/storageRoutes";
 import { csrf, requireAdmin, requireApproved, session } from "./middleware";
 import { dataRoutes } from "./routes/data";
 import { importRoutes } from "./routes/import";
@@ -104,6 +105,8 @@ export function createApp(deps: AppDeps) {
   api.route("/admin", adminRoutes(deps.store));
   if (deps.bgg) api.route("/admin/bgg", bggRoutes(deps.bgg));
   api.route("/admin/covers", coverRoutes(deps.covers));
+  if (deps.coverConfig)
+    api.route("/admin/cover-storage", storageRoutes(deps.coverConfig));
   api.route("/admin", importRoutes(deps.data));
   api.route("/admin", linkRoutes(deps.links));
   api.route(

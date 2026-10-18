@@ -17,7 +17,7 @@ function capture(status = 200, body = "") {
   const sent: Request[] = [];
   const fetch = (async (req: Request) => {
     sent.push(req);
-    return new Response(body, { status });
+    return new Response(status === 204 ? null : body, { status });
   }) as unknown as typeof globalThis.fetch;
   return { sent, fetch };
 }
@@ -87,6 +87,49 @@ describe("createS3Storage", () => {
   });
 });
 
+describe("createS3Storage delete and redirects", () => {
+  it("signs a DELETE to the object url", async () => {
+    const { sent, fetch } = capture(204);
+    await createS3Storage({ ...base, fetch }).delete("covers/.probe/a.txt");
+    expect(sent[0].method).toBe("DELETE");
+    expect(sent[0].url).toBe(
+      "https://s3.us-east-1.amazonaws.com/covers/covers/.probe/a.txt",
+    );
+    expect(sent[0].headers.get("authorization")).toContain("AKIAEXAMPLE");
+  });
+
+  it("fails a refused delete with the provider status", async () => {
+    const { fetch } = capture(403);
+    const err = await createS3Storage({ ...base, fetch })
+      .delete("k")
+      .catch((e: Error) => e);
+    expect((err as CoverStorageError).status).toBe(403);
+  });
+
+  it.each(["put", "delete"] as const)(
+    "never follows a redirect on %s",
+    async (op) => {
+      const calls: { url: string; redirect?: string }[] = [];
+      const fetch = (async (req: Request, init?: RequestInit) => {
+        calls.push({ url: req.url, redirect: init?.redirect });
+        return new Response(null, {
+          status: 307,
+          headers: { location: "https://other.example/x" },
+        });
+      }) as unknown as typeof globalThis.fetch;
+      const storage = createS3Storage({ ...base, fetch });
+      const err = await (
+        op === "put"
+          ? storage.put("k", new Uint8Array(1), "image/png")
+          : storage.delete("k")
+      ).catch((e: Error) => e);
+      expect((err as CoverStorageError).status).toBe(307);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].redirect).toBe("manual");
+    },
+  );
+});
+
 describe("createS3Storage failures", () => {
   it("wraps a rejecting fetch in the fixed message", async () => {
     const fetch = (async () => {
@@ -149,6 +192,12 @@ describe("fakeStorage", () => {
     expect(puts).toEqual([
       { key: "k", bytes: new Uint8Array(1), contentType: "image/png" },
     ]);
+  });
+
+  it("records deletes", async () => {
+    const { storage, deletes } = fakeStorage();
+    await storage.delete("k");
+    expect(deletes).toEqual(["k"]);
   });
 
   it("can be forced to fail", async () => {
