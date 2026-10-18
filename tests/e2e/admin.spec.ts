@@ -122,6 +122,17 @@ const setup = async (page: Page) => {
   });
   await mock("/api/admin/bgg/status", bggStatus);
   await mock("/api/admin/covers/status", coverStatus);
+  await mock("/api/admin/cover-storage", {
+    source: "admin",
+    configured: true,
+    bucket: "b".repeat(60),
+    region: "us-east-1",
+    endpoint: null,
+    coverBaseUrl: `https://${"c".repeat(60)}.example.com`,
+    accessKeyId: "••••AB12",
+    secretSet: true,
+    updatedAt: null,
+  });
 };
 
 const expectNoOverflow = async (page: Page) => {
@@ -150,6 +161,9 @@ test("admin page does not overflow horizontally", async ({ page }) => {
     page.getByRole("heading", { name: "Cover images" }),
   ).toBeVisible();
   await expect(page.getByText("C".repeat(120))).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cover storage" }),
+  ).toBeVisible();
   await expectNoOverflow(page);
 });
 

@@ -18,6 +18,7 @@ import {
 
 import BggDataPanel from "@/components/admin/BggDataPanel";
 import CoverPanel from "@/components/admin/CoverPanel";
+import CoverStorageCard from "@/components/admin/CoverStorageCard";
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
 import usePageMeta from "@/hooks/usePageMeta";
@@ -198,6 +199,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
 
       <PlayerLinksPanel />
       <BggDataPanel />
+      <CoverStorageCard />
       <CoverPanel />
     </Stack>
   );
