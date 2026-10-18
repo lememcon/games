@@ -409,3 +409,40 @@ export interface UnplayedPickTier {
   rank: number;
   games: UnplayedPick[];
 }
+
+// Cover storage admin (/api/admin/cover-storage). The secret key is never
+// returned: only whether one is set; the key id is masked.
+export type CoverStorageSource = "admin" | "env" | "none";
+
+export interface CoverStorageInfo {
+  source: CoverStorageSource;
+  configured: boolean;
+  bucket: string | null;
+  region: string | null;
+  endpoint: string | null;
+  coverBaseUrl: string | null;
+  // Last characters of the access key id only.
+  accessKeyId: string | null;
+  secretSet: boolean;
+  updatedAt: string | null;
+  // The saved settings no longer decrypt and must be entered again.
+  unreadable?: boolean;
+}
+
+export interface CoverStorageInput {
+  bucket: string;
+  region: string;
+  endpoint?: string;
+  coverBaseUrl: string;
+  accessKeyId: string;
+  // Blank reuses the saved secret when the endpoint, region and key id are unchanged.
+  secretAccessKey?: string;
+}
+
+export interface CoverStorageTest {
+  ok: boolean;
+  status:
+    "ok" | "not_configured" | "denied" | "not_found" | "unreachable" | "error";
+  message: string;
+  warning?: string;
+}
