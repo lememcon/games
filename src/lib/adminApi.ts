@@ -8,6 +8,9 @@ import type {
   BggStatus,
   CoverJob,
   CoverStatus,
+  CoverStorageInfo,
+  CoverStorageInput,
+  CoverStorageTest,
 } from "@/types";
 
 const BASE = "/admin/bgg";
@@ -65,4 +68,24 @@ export const coverApi = (fetchImpl: typeof fetch = fetch) => ({
   getJob: () => apiFetch<CoverJob>(`${COVERS}/job`, {}, fetchImpl),
   cancelJob: () =>
     apiFetch<CoverJob>(`${COVERS}/job/cancel`, { method: "POST" }, fetchImpl),
+});
+
+const STORAGE = "/admin/cover-storage";
+
+export const coverStorageApi = (fetchImpl: typeof fetch = fetch) => ({
+  get: () => apiFetch<CoverStorageInfo>(STORAGE, {}, fetchImpl),
+  put: (input: CoverStorageInput) =>
+    apiFetch<CoverStorageInfo>(
+      STORAGE,
+      { method: "PUT", body: input },
+      fetchImpl,
+    ),
+  clear: () => apiFetch<void>(STORAGE, { method: "DELETE" }, fetchImpl),
+  // No input tests the saved settings.
+  test: (input?: CoverStorageInput) =>
+    apiFetch<CoverStorageTest>(
+      `${STORAGE}/test`,
+      { method: "POST", body: input ?? {} },
+      fetchImpl,
+    ),
 });
