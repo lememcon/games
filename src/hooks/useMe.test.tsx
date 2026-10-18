@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import useMe from "@/hooks/useMe";
+import { channelByName } from "@/test/setup";
 
 const ok = (body: unknown) => new Response(JSON.stringify(body));
 const approved = {
@@ -88,5 +89,107 @@ describe("useMe", () => {
     await act(async () => resolvers[0](ok({ status: "anonymous" })));
 
     expect(result.current.me).toEqual(approved);
+  });
+
+  describe("profile changes from another tab", () => {
+    const remote = () =>
+      act(() =>
+        channelByName("user-changes").onmessage!({
+          data: "profile",
+        } as MessageEvent),
+      );
+
+    it("refetches without going back to loading", async () => {
+      const renamed = { ...approved, user: { ...approved.user, name: "Kel" } };
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(ok(approved))
+        .mockResolvedValueOnce(ok(renamed));
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+
+      remote();
+      expect(result.current.loading).toBe(false);
+      await waitFor(() => expect(result.current.me).toEqual(renamed));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the shown account when the quiet refetch fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(ok(approved))
+        .mockRejectedValueOnce(new TypeError("offline"));
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+
+      remote();
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(result.current.me).toEqual(approved);
+      expect(result.current.error).toBe(false);
+    });
+
+    it("lets retry start a new request while a cross-tab one is out", async () => {
+      const renamed = { ...approved, user: { ...approved.user, name: "Kel" } };
+      const resolvers: ((r: Response) => void)[] = [];
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(ok(approved))
+        .mockImplementation(
+          () => new Promise<Response>((r) => resolvers.push(r)),
+        );
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+
+      remote();
+      act(() => result.current.retry());
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+      await act(async () => resolvers[1](ok(renamed)));
+      await act(async () => resolvers[0](ok(approved)));
+      expect(result.current.me).toEqual(renamed);
+    });
+
+    it("does not refetch on mount in StrictMode", async () => {
+      const fetchImpl = vi.fn(() => Promise.resolve(ok(approved)));
+      const { result } = renderHook(() => useMe(fetchImpl), {
+        wrapper: StrictMode,
+      });
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores other topics", async () => {
+      const fetchImpl = vi.fn().mockResolvedValue(ok(approved));
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+      act(() =>
+        channelByName("user-changes").onmessage!({
+          data: "played",
+        } as MessageEvent),
+      );
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("also works through the storage fallback", async () => {
+      const original = globalThis.BroadcastChannel;
+      vi.stubGlobal("BroadcastChannel", undefined);
+      try {
+        const fetchImpl = vi.fn().mockResolvedValue(ok(approved));
+        const { result } = renderHook(() => useMe(fetchImpl));
+        await waitFor(() => expect(result.current.me).toEqual(approved));
+        act(
+          () =>
+            void window.dispatchEvent(
+              new StorageEvent("storage", {
+                key: "user-changes",
+                newValue: "profile:1:0.5",
+              }),
+            ),
+        );
+        await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      } finally {
+        vi.stubGlobal("BroadcastChannel", original);
+      }
+    });
   });
 });

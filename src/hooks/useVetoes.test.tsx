@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import useVetoes, { useVetoSet } from "@/hooks/useVetoes";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { FakeBroadcastChannel, channelByName } from "@/test/setup";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -11,6 +12,15 @@ const mine = [{ discordId: "d1", bggId: 1 }];
 const withGames = (...ids: number[]) => ({
   vetoes: [...mine, ...ids.map((bggId) => ({ discordId: "d1", bggId }))],
 });
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
+const remote = (topic: string) =>
+  act(() =>
+    channelByName("user-changes").onmessage!({ data: topic } as MessageEvent),
+  );
 
 type Pending = Response | Promise<Response>;
 
@@ -746,6 +756,80 @@ describe("useVetoes", () => {
         expect(hook.result.current.isSaving(2)).toBe(false);
         expect(hook.result.current.isSaving(3)).toBe(false);
       });
+    });
+  });
+
+  describe("cross-tab sync", () => {
+    it("refetches when another tab changed vetoes", async () => {
+      const { hook, fetchImpl } = await setup(res(withGames(2)));
+      remote("vetoes");
+      await waitFor(() =>
+        expect(hook.result.current.all).toEqual({ d1: new Set(["1", "2"]) }),
+      );
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("never lets a stale in-flight refetch overwrite a newer one", async () => {
+      const older = deferred();
+      const { hook } = await setup(
+        older.promise as unknown as Response,
+        res(withGames(3)),
+      );
+      remote("vetoes");
+      remote("vetoes");
+      await waitFor(() =>
+        expect(hook.result.current.all).toEqual({ d1: new Set(["1", "3"]) }),
+      );
+      await act(async () => older.resolve(res({ vetoes: [] })));
+      expect(hook.result.current.all).toEqual({ d1: new Set(["1", "3"]) });
+    });
+
+    it("keeps the old list while the refetch is out", async () => {
+      const slow = deferred();
+      const { hook } = await setup(slow.promise as unknown as Response);
+      remote("vetoes");
+      expect(hook.result.current.all).toEqual({ d1: new Set(["1"]) });
+      await act(async () => slow.resolve(res(withGames(2))));
+      expect(hook.result.current.all).toEqual({ d1: new Set(["1", "2"]) });
+    });
+
+    it("ignores other topics", async () => {
+      const { fetchImpl } = await setup();
+      remote("played");
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("announces after a saved veto, not a failed one", async () => {
+      const { hook } = await setup(none(), res(withGames(2)));
+      await act(async () => {
+        await hook.result.current.veto(2);
+      });
+      expect(posts()).toEqual(["vetoes"]);
+
+      const failing = await setup(res({}, 500), res(withGames(2)));
+      await act(async () => {
+        await failing.hook.result.current.veto(2);
+      });
+      expect(posts()).toEqual(["vetoes"]);
+    });
+
+    it("announces vetoMany with at least one saved id, not when all fail", async () => {
+      const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method !== "PUT") return res({ vetoes: mine });
+        return url.endsWith("/3") ? none() : res({}, 500);
+      });
+      const hook = renderHook(() =>
+        useVetoes(fetchImpl as unknown as typeof fetch),
+      );
+      await waitFor(() => expect(hook.result.current.all).not.toEqual({}));
+      await act(async () => {
+        await hook.result.current.vetoMany([2]);
+      });
+      expect(posts()).toEqual([]);
+      await act(async () => {
+        await hook.result.current.vetoMany([2, 3]);
+      });
+      expect(posts()).toEqual(["vetoes"]);
     });
   });
 });

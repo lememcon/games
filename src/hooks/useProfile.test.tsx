@@ -1,7 +1,8 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useProfile from "@/hooks/useProfile";
+import { channelByName } from "@/test/setup";
 import type { Profile } from "@/types";
 
 const profile: Profile = {
@@ -76,5 +77,58 @@ describe("useProfile", () => {
     resolve(json(profile));
     await Promise.resolve();
     expect(result.current).toEqual({ status: "loading" });
+  });
+
+  it("refetches on a profile change from another tab, keeping the old result", async () => {
+    let finish!: (r: Response) => void;
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(json(profile))
+      .mockReturnValueOnce(new Promise<Response>((r) => (finish = r)));
+    const { result } = renderHook(() => useProfile("1", fetchImpl));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    act(() =>
+      channelByName("user-changes").onmessage!({
+        data: "profile",
+      } as MessageEvent),
+    );
+    expect(result.current).toEqual({ status: "ready", profile });
+    await act(async () => finish(json({ ...profile, name: "New" })));
+    expect(result.current).toEqual({
+      status: "ready",
+      profile: { ...profile, name: "New" },
+    });
+  });
+
+  it.each([500, 404])(
+    "keeps the shown profile when a change refetch fails with %i",
+    async (status) => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(json(profile))
+        .mockResolvedValueOnce(json({}, status));
+      const { result } = renderHook(() => useProfile("1", fetchImpl));
+      await waitFor(() => expect(result.current.status).toBe("ready"));
+      act(() =>
+        channelByName("user-changes").onmessage!({
+          data: "profile",
+        } as MessageEvent),
+      );
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(result.current).toEqual({ status: "ready", profile });
+    },
+  );
+
+  it("ignores other topics", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json(profile));
+    const { result } = renderHook(() => useProfile("1", fetchImpl));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    act(() =>
+      channelByName("user-changes").onmessage!({
+        data: "played",
+      } as MessageEvent),
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

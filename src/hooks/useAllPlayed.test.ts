@@ -2,6 +2,12 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import useAllPlayed, { useMarkPlayed } from "@/hooks/useAllPlayed";
+import { FakeBroadcastChannel } from "@/test/setup";
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -339,5 +345,31 @@ describe("useMarkPlayed", () => {
       await act(() => result.current[1]("12", ["d1"]));
       expect(result.current[3]).toBe(true);
     });
+  });
+
+  it("announces after a successful mark, not a failed one", async () => {
+    const ok = vi.fn(async (_u: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? json({ played: { d1: ["12"] } })
+        : json({ played: played("2025") }),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useMarkPlayed("2025", ok));
+    await waitFor(() => expect(result.current[0]).toEqual(playedMaps("2025")));
+    await act(() => result.current[1]("12", ["d1"]));
+    expect(posts()).toEqual(["played"]);
+
+    const bad = vi.fn(async (_u: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "POST"
+        ? json({ error: "x" }, 422)
+        : json({ played: played("2025") }),
+    ) as unknown as typeof fetch;
+    const failing = renderHook(() => useMarkPlayed("2025", bad));
+    await waitFor(() =>
+      expect(failing.result.current[0]).toEqual(playedMaps("2025")),
+    );
+    await expect(
+      act(() => failing.result.current[1]("12", ["d1"])),
+    ).rejects.toThrow();
+    expect(posts()).toEqual(["played"]);
   });
 });

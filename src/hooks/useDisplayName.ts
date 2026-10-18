@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
+import { announceChange } from "@/lib/changeSync";
 import { invalidateScores } from "@/lib/scoresCache";
 import type { DisplayNameResult } from "@/types";
 
@@ -34,6 +35,7 @@ const useDisplayName = (
           fetchImpl,
         );
         invalidateScores();
+        announceChange("profile");
         onSaved();
         return result;
       } catch (e) {

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import useData from "@/hooks/useData";
 import * as cache from "@/lib/scoresCache";
 import { announceImport } from "@/lib/scoresSync";
-import { FakeBroadcastChannel } from "@/test/setup";
+import { channelByName } from "@/test/setup";
 
 const scores = [
   { game: "Root", rank: 1, score: 50, player: "alice", bgg_id: 100 },
@@ -16,7 +16,7 @@ const ok = (payload: unknown) =>
   Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }));
 
 const message = () =>
-  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
+  channelByName("scores-import").onmessage!({} as MessageEvent);
 
 const mockFetch = (payload: unknown) =>
   (globalThis.fetch = vi.fn(() => ok(payload)) as unknown as typeof fetch);
@@ -323,5 +323,23 @@ describe("useData", () => {
       expect(later.result.current.scores).toEqual([scores[2]]);
       expect(fn).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("reloads scores when another tab changed the profile", async () => {
+    mockFetch({ player_game_scores: scores });
+    const { result } = renderHook(() => useData("2025"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+      .length;
+    act(() =>
+      channelByName("user-changes").onmessage!({
+        data: "profile",
+      } as MessageEvent),
+    );
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBeGreaterThan(calls);
   });
 });

@@ -3,10 +3,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import useMyVetoes from "@/hooks/useMyVetoes";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { FakeBroadcastChannel, channelByName } from "@/test/setup";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 const mine = [{ bggId: 1, name: "Root" }];
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
 
 describe("useMyVetoes", () => {
   it("loads the member's vetoes", async () => {
@@ -112,5 +118,39 @@ describe("useMyVetoes", () => {
     });
     expect(hook.result.current.saving).toBe(false);
     expect(hook.result.current.vetoes).toEqual(mine);
+  });
+
+  it("refetches when another tab changed vetoes, keeping the old list meanwhile", async () => {
+    let finish!: (r: Response) => void;
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: mine }))
+      .mockReturnValueOnce(new Promise<Response>((r) => (finish = r)));
+    const hook = renderHook(() => useMyVetoes(fetchImpl));
+    await waitFor(() => expect(hook.result.current.vetoes).toEqual(mine));
+    act(() =>
+      channelByName("user-changes").onmessage!({
+        data: "vetoes",
+      } as MessageEvent),
+    );
+    expect(hook.result.current.vetoes).toEqual(mine);
+    expect(hook.result.current.loading).toBe(false);
+    await act(async () => finish(res({ vetoes: [] })));
+    expect(hook.result.current.vetoes).toEqual([]);
+  });
+
+  it("announces after a saved change, not a failed one", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res({ vetoes: mine }))
+      .mockResolvedValueOnce(res({}, 500))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(res({ vetoes: [] }));
+    const hook = renderHook(() => useMyVetoes(fetchImpl));
+    await waitFor(() => expect(hook.result.current.vetoes).toEqual(mine));
+    await act(() => hook.result.current.clear(1));
+    expect(posts()).toEqual([]);
+    await act(() => hook.result.current.clear(1));
+    expect(posts()).toEqual(["vetoes"]);
   });
 });

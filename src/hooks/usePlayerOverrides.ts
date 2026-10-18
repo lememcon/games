@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { announceChange } from "@/lib/changeSync";
 import { rangesByMember } from "@/lib/games";
 import { playerOverridesApi } from "@/lib/playerOverridesApi";
 import type { Bounds } from "@/types";
@@ -48,6 +49,7 @@ const usePlayerOverrides = (fetchImpl: typeof fetch = fetch) => {
       let ok = true;
       try {
         await run();
+        announceChange("overrides");
       } catch (e) {
         ok = false;
         setError(describe(e));

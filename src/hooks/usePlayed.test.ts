@@ -1,7 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import usePlayed from "@/hooks/usePlayed";
+import { channelByName } from "@/test/setup";
 
 type Result = { current: ReturnType<typeof usePlayed> };
 
@@ -660,6 +662,163 @@ describe("usePlayed", () => {
 
       await waitFor(() => expect(f.calls).toHaveLength(2));
       expect(f.calls[1].body).toEqual({ games: ["100", "200"] });
+    });
+  });
+
+  describe("cross-tab sync", () => {
+    const channel = () => channelByName("user-changes");
+    const remote = () =>
+      act(() => channel().onmessage!({ data: "played" } as MessageEvent));
+    const gets = (calls: Call[]) =>
+      calls.filter(
+        (c) => c.method === "GET" && c.path.startsWith("/me/played"),
+      );
+    const deletes = (calls: Call[]) =>
+      calls.filter((c) => c.method === "DELETE");
+
+    it("refetches and shows the new list when idle", async () => {
+      const { result, calls } = await loaded(["100"]);
+      remote();
+      expect(gets(calls)).toHaveLength(2);
+      await answer(gets(calls)[1], 200, { played: ["7", "200"] });
+      await waitFor(() => expect(isPlayed(result, "200")).toBe(true));
+      expect(isPlayed(result, "100")).toBe(false);
+    });
+
+    it("waits for an in-flight write, keeps the toggle, then refetches", async () => {
+      const { result, calls, puts } = await loaded();
+      toggle(result, "100");
+      remote();
+      expect(gets(calls)).toHaveLength(1);
+      expect(isPlayed(result, "100")).toBe(true);
+      await answer(puts()[0], 200);
+      expect(gets(calls)).toHaveLength(2);
+      await answer(gets(calls)[1], 200, { played: ["7", "100", "300"] });
+      await waitFor(() => expect(isPlayed(result, "300")).toBe(true));
+      expect(isPlayed(result, "100")).toBe(true);
+    });
+
+    it("waits for a pending clear", async () => {
+      const { result, calls } = await loaded(["100"]);
+      act(() => result.current[5]());
+      remote();
+      expect(gets(calls)).toHaveLength(1);
+      await answer(deletes(calls)[0], 204);
+      expect(gets(calls)).toHaveLength(2);
+      await answer(gets(calls)[1], 200, { played: ["9"] });
+      await waitFor(() => expect(isPlayed(result, "9")).toBe(true));
+    });
+
+    it("does not revert a toggle made while the refetch was out", async () => {
+      const { result, calls, puts } = await loaded();
+      remote();
+      toggle(result, "100");
+      await answer(puts()[0], 200);
+      // The stale answer still lacks game 100; its extra game must be dropped.
+      await answer(gets(calls)[1], 200, { played: ["7", "555"] });
+      expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "555")).toBe(false);
+      // It ran again, and that answer is applied.
+      expect(gets(calls)).toHaveLength(3);
+      await answer(gets(calls)[2], 200, { played: ["7", "100", "666"] });
+      expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "666")).toBe(true);
+    });
+
+    it("counts markConfirmed as a write", async () => {
+      const { result, calls } = await loaded();
+      remote();
+      act(() => result.current[3]("100"));
+      await answer(gets(calls)[1], 200, { played: ["7", "555"] });
+      expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "555")).toBe(false);
+      expect(gets(calls)).toHaveLength(3);
+      await answer(gets(calls)[2], 200, { played: ["7", "100", "666"] });
+      expect(isPlayed(result, "666")).toBe(true);
+    });
+
+    it("remembers a message before the first load is in and refreshes once after", async () => {
+      const f = makeFetch();
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
+      remote();
+      expect(gets(f.calls)).toHaveLength(1);
+      await answer(f.calls[0], 200, { played: ["7"] });
+      await waitFor(() => expect(gets(f.calls)).toHaveLength(2));
+      await answer(gets(f.calls)[1], 200, { played: ["7", "300"] });
+      await waitFor(() => expect(isPlayed(result, "300")).toBe(true));
+      expect(gets(f.calls)).toHaveLength(2);
+    });
+
+    it("coalesces a burst into one more refetch", async () => {
+      const { calls } = await loaded();
+      remote();
+      remote();
+      remote();
+      expect(gets(calls)).toHaveLength(2);
+      await answer(gets(calls)[1], 200, { played: ["7"] });
+      expect(gets(calls)).toHaveLength(3);
+      await answer(gets(calls)[2], 200, { played: ["7"] });
+      expect(gets(calls)).toHaveLength(3);
+    });
+
+    it("does not refetch on mount, even in StrictMode", async () => {
+      const f = makeFetch();
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl), {
+        wrapper: StrictMode,
+      });
+      const initial = gets(f.calls).length;
+      await answer(f.calls[initial - 1], 200, { played: ["7"] });
+      await waitFor(() => expect(isPlayed(result, "7")).toBe(true));
+      expect(gets(f.calls)).toHaveLength(initial);
+    });
+
+    it("drops a refetch that resolves after the year changed", async () => {
+      const { result, calls, rerender } = await loaded();
+      remote();
+      rerender({ y: "2024" });
+      await answer(gets(calls)[2], 200, { played: ["5"] });
+      await answer(gets(calls)[1], 200, { played: ["99"] });
+      await waitFor(() => expect(isPlayed(result, "5")).toBe(true));
+      expect(isPlayed(result, "99")).toBe(false);
+    });
+
+    it("drops a refetch that resolves after unmount", async () => {
+      const { result, calls, unmount } = await loaded();
+      remote();
+      unmount();
+      await answer(gets(calls)[1], 200, { played: ["99"] });
+      expect(isPlayed(result, "99")).toBe(false);
+      expect(gets(calls)).toHaveLength(2);
+    });
+
+    it("keeps what is shown when the refetch fails or is not signed in", async () => {
+      const { result, calls } = await loaded(["100"]);
+      remote();
+      await answer(gets(calls)[1], 500);
+      remote();
+      await answer(gets(calls)[2], 401);
+      expect(isPlayed(result, "100")).toBe(true);
+      expect(result.current[4]).toBeNull();
+    });
+
+    it("announces a successful write but not a failed one", async () => {
+      const { result, puts } = await loaded();
+      toggle(result, "100");
+      await answer(puts()[0], 500);
+      expect(channel().posted).toEqual([]);
+      toggle(result, "100");
+      await answer(puts()[1], 200);
+      expect(channel().posted).toEqual(["played"]);
+    });
+
+    it("announces a successful clear but not a failed one", async () => {
+      const { result, calls } = await loaded(["100"]);
+      act(() => result.current[5]());
+      await answer(deletes(calls)[0], 500);
+      expect(channel().posted).toEqual([]);
+      act(() => result.current[5]());
+      await answer(deletes(calls)[1], 204);
+      expect(channel().posted).toEqual(["played"]);
     });
   });
 });

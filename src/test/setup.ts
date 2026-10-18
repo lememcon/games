@@ -1,5 +1,6 @@
 import { beforeEach, vi } from "vitest";
 
+import { resetChangeSync } from "@/lib/changeSync";
 import { resetScoresCache } from "@/lib/scoresCache";
 import { resetScoresSync } from "@/lib/scoresSync";
 
@@ -50,6 +51,8 @@ export class FakeBroadcastChannel {
     this.closed = true;
   }
 }
+export const channelByName = (name: string) =>
+  FakeBroadcastChannel.instances.find((c) => c.name === name)!;
 vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
 
 // Scores are cached per year at module level, and the import channel is a
@@ -58,4 +61,5 @@ beforeEach(() => {
   FakeBroadcastChannel.instances = [];
   resetScoresCache();
   resetScoresSync();
+  resetChangeSync();
 });
