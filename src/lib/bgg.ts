@@ -20,7 +20,10 @@ export const describeBggError = (e: unknown): string => {
   return GENERIC_ERROR;
 };
 
-export const isRunning = (job: BggJob | undefined): boolean =>
+// The fields the progress helpers read; BggJob and CoverJob both satisfy it.
+type JobProgress = Pick<BggJob, "state" | "total" | "done">;
+
+export const isRunning = (job: JobProgress | undefined): boolean =>
   job?.state === "running";
 
 // Games that still need a download: nothing stored yet, or stored but incomplete.
@@ -49,7 +52,7 @@ export const toggleAll = (selected: number[], ids: number[]): number[] =>
     ? selected.filter((s) => !ids.includes(s))
     : [...new Set([...selected, ...ids])];
 
-export const progressPercent = (job: BggJob): number =>
+export const progressPercent = (job: JobProgress): number =>
   job.total === 0
     ? job.state === "idle"
       ? 0

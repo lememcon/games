@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { coverApi } from "@/lib/adminApi";
-import { describeCoverError, isCoverRunning } from "@/lib/coverJob";
+import { isRunning } from "@/lib/bgg";
+import { describeCoverError } from "@/lib/coverJob";
 import type { CoverStatus } from "@/types";
 
 const POLL_MS = 2000;
@@ -32,7 +33,7 @@ const useCoverStatus = (fetchImpl: typeof fetch = fetch) => {
     void refresh();
   }, [refresh]);
 
-  const running = isCoverRunning(status?.job);
+  const running = isRunning(status?.job);
   useEffect(() => {
     if (!running) return;
     let stopped = false;
@@ -41,7 +42,7 @@ const useCoverStatus = (fetchImpl: typeof fetch = fetch) => {
       try {
         const job = await api.getJob();
         if (stopped) return;
-        if (isCoverRunning(job)) {
+        if (isRunning(job)) {
           setStatus((s) => (s ? { ...s, job } : s));
         } else {
           // Ended: the pending count changed, so refetch /status once.
@@ -65,7 +66,7 @@ const useCoverStatus = (fetchImpl: typeof fetch = fetch) => {
     try {
       const job = await api.mirror();
       setStatus((s) => (s ? { ...s, job } : s));
-      if (!isCoverRunning(job)) await refresh();
+      if (!isRunning(job)) await refresh();
     } catch (e) {
       setActionError(describeCoverError(e));
     }

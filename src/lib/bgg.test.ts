@@ -87,6 +87,17 @@ describe("games helpers", () => {
   });
 });
 
+describe("job helpers on cover-shaped jobs", () => {
+  const cover = { state: "running", total: 4, done: 1 } as const;
+
+  it("detects running and computes percent", () => {
+    expect(isRunning(cover)).toBe(true);
+    expect(isRunning({ ...cover, state: "done" })).toBe(false);
+    expect(progressPercent(cover)).toBe(25);
+    expect(progressPercent({ ...cover, total: 0, state: "idle" })).toBe(0);
+  });
+});
+
 describe("job helpers", () => {
   it("reports running and progress", () => {
     expect(isRunning(job())).toBe(true);

@@ -8,7 +8,7 @@ import {
   Text,
 } from "@mantine/core";
 
-import { coverPercent } from "@/lib/coverJob";
+import { progressPercent } from "@/lib/bgg";
 import type { CoverJob } from "@/types";
 
 const TITLES: Record<CoverJob["state"], string> = {
@@ -41,7 +41,7 @@ const CoverJobProgress = ({
           )}
         </Group>
         <Progress
-          value={coverPercent(job)}
+          value={progressPercent(job)}
           aria-label="Mirror progress"
           animated={running}
         />

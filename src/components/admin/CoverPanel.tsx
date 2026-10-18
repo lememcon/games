@@ -2,7 +2,7 @@ import { Alert, Button, Group, Stack, Text, Title } from "@mantine/core";
 
 import CoverJobProgress from "@/components/admin/CoverJobProgress";
 import useCoverStatus from "@/hooks/useCoverStatus";
-import { isCoverRunning } from "@/lib/coverJob";
+import { isRunning } from "@/lib/bgg";
 
 const NO_STORAGE = "Cover storage isn't configured on the server.";
 
@@ -20,7 +20,7 @@ const CoverPanel = () => {
 
   const { status } = data;
   const canMirror =
-    status.configured && !isCoverRunning(status.job) && status.pending > 0;
+    status.configured && !isRunning(status.job) && status.pending > 0;
 
   return (
     <Stack mt="md">
