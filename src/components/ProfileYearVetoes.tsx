@@ -80,7 +80,6 @@ const ProfileYearVetoes = ({ games }: ProfileYearVetoesProps) => {
               year={year}
               name={v.name}
               image={v.image}
-              ext={v.ext}
               cover={games.games[String(v.bggId)]?.cover}
               undo={{
                 label: `Undo ${year} veto of ${v.name ?? `Game ${v.bggId}`}`,

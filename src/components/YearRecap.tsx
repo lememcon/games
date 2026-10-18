@@ -41,11 +41,7 @@ const FactGame = ({
   games: GameMap;
 }) => (
   <Group gap="xs" wrap="nowrap" justify="flex-end">
-    <GameCover
-      bggId={bggId}
-      image={games[String(bggId)]?.image}
-      ext={games[String(bggId)]?.ext}
-    />
+    <GameCover image={games[String(bggId)]?.image} />
     <Text c="dimmed" miw={0} style={{ overflowWrap: "anywhere" }}>
       {label}
     </Text>
@@ -283,9 +279,7 @@ const Loaded = ({
                     {g.rank}
                   </Badge>
                   <GameCover
-                    bggId={g.bggId}
                     image={games[String(g.bggId)]?.image}
-                    ext={games[String(g.bggId)]?.ext}
                     cover={games[String(g.bggId)]?.cover}
                   />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>
@@ -311,9 +305,7 @@ const Loaded = ({
               <Group key={g.bggId} justify="space-between" wrap="nowrap">
                 <Group gap="xs" wrap="nowrap">
                   <GameCover
-                    bggId={g.bggId}
                     image={games[String(g.bggId)]?.image}
-                    ext={games[String(g.bggId)]?.ext}
                     cover={games[String(g.bggId)]?.cover}
                   />
                   <Link href={gamePath(year, g.bggId)}>{g.game}</Link>

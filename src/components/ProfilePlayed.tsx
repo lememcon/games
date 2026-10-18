@@ -85,9 +85,7 @@ const ProfilePlayed = ({ games }: { games: GamesState }) => {
               {playedGames(played, names).map((g) => (
                 <Group key={g.id} justify="space-between" wrap="nowrap">
                   <GameCover
-                    bggId={g.id}
                     image={games.games[g.id]?.image}
-                    ext={games.games[g.id]?.ext}
                     cover={games.games[g.id]?.cover}
                   />
                   <Text flex={1} miw={0} style={{ overflowWrap: "anywhere" }}>

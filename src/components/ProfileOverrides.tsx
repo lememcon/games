@@ -88,9 +88,7 @@ const ProfileOverrides = ({ discordId, games }: ProfileOverridesProps) => {
               <Group key={id} justify="space-between">
                 <Group gap="xs" wrap="nowrap" flex="1 1 160px" miw={0}>
                   <GameCover
-                    bggId={id}
                     image={games.games[id]?.image}
-                    ext={games.games[id]?.ext}
                     cover={games.games[id]?.cover}
                   />
                   <Text flex={1} miw={0} style={WRAP}>

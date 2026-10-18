@@ -69,12 +69,7 @@ const TopPickRow = ({
   meta: GameMeta | undefined;
 }) => (
   <li className="tray-row" style={{ alignItems: "flex-start" }}>
-    <GameCover
-      bggId={pick.bggId}
-      image={meta?.image}
-      ext={meta?.ext}
-      cover={meta?.cover}
-    />
+    <GameCover image={meta?.image} cover={meta?.cover} />
     <div className="tray-row__main">
       <Link href={gamePath(year, pick.bggId)} className="tray-name">
         {pick.game}

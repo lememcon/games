@@ -29,9 +29,7 @@ const UnplayedShelf = ({ games: gamesData }: { games: GamesData }) => {
           {games.map((g) => (
             <Group key={g.bgg_id} gap="xs" wrap="nowrap">
               <GameCover
-                bggId={g.bgg_id}
                 image={gamesData[String(g.bgg_id)]?.image}
-                ext={gamesData[String(g.bgg_id)]?.ext}
                 cover={gamesData[String(g.bgg_id)]?.cover}
               />
               <Text

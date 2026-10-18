@@ -10,7 +10,7 @@ const blank = (c: HTMLElement) => c.querySelector(".tray-cover__blank");
 describe("GameCover", () => {
   it("shows a lazy decorative image for an https cover", () => {
     const { container } = renderWithMantine(
-      <GameCover bggId={1} image="https://example.com/r.jpg" />,
+      <GameCover image="https://example.com/r.jpg" />,
     );
     const img = cover(container)!;
     expect(img).toHaveAttribute("src", "https://example.com/r.jpg");
@@ -21,9 +21,7 @@ describe("GameCover", () => {
   it("prefers the server cover over the image URL", () => {
     const { container } = renderWithMantine(
       <GameCover
-        bggId="7"
         image="https://example.com/a.jpg"
-        ext=".jpg"
         cover="https://cdn.example.com/7.jpg"
       />,
     );
@@ -34,14 +32,14 @@ describe("GameCover", () => {
   });
 
   it("shows a blank box without a cover", () => {
-    const { container } = renderWithMantine(<GameCover bggId={1} />);
+    const { container } = renderWithMantine(<GameCover />);
     expect(cover(container)).toBeNull();
     expect(blank(container)).not.toBeNull();
   });
 
   it("falls back to the blank box when the image fails", () => {
     const { container } = renderWithMantine(
-      <GameCover bggId={1} image="https://example.com/r.jpg" />,
+      <GameCover image="https://example.com/r.jpg" />,
     );
     fireEvent.error(cover(container)!);
     expect(cover(container)).toBeNull();
