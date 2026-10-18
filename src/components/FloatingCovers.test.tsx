@@ -85,6 +85,7 @@ describe("FloatingCovers", () => {
 
   it("renders duplicate ids without a key warning", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const random = vi.spyOn(Math, "random").mockReturnValue(0);
     const covers = makeCovers(12);
     const { container } = render(
       <FloatingCovers
@@ -96,7 +97,10 @@ describe("FloatingCovers", () => {
     await waitFor(() =>
       expect(container.querySelectorAll("img")).toHaveLength(10),
     );
+    const shown = srcs(container);
+    expect(new Set(shown).size).toBeLessThan(shown.length);
     expect(spy).not.toHaveBeenCalled();
+    random.mockRestore();
     spy.mockRestore();
   });
 

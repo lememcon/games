@@ -163,14 +163,20 @@ describe("pickFloaters weights", () => {
   });
 
   it("weights once one score differs from the rest", () => {
-    const base = pickFloaters(ids, 10, seeded(7), preferred);
-    const nudged = pickFloaters(ids, 10, seeded(7), preferred, {
+    const zero = () => 0;
+    const countOf = (out: { id: string }[], id: string) =>
+      out.filter((f) => f.id === id).length;
+    const base = pickFloaters(ids, 10, zero, preferred);
+    const nudged = pickFloaters(ids, 10, zero, preferred, {
       g1: 4,
       g2: 4,
       g3: 5,
     });
     expect(nudged).toHaveLength(10);
-    expect(nudged).not.toEqual(base);
+    // Weighted draws with replacement: rng 0 picks the first preferred id
+    // every time; the unweighted path keeps each preferred id once.
+    preferred.forEach((id) => expect(countOf(base, id)).toBe(1));
+    expect(countOf(nudged, preferred[0])).toBe(preferred.length);
   });
 
   it("handles zero and negative scores within the pool", () => {

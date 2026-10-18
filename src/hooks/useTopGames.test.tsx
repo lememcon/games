@@ -36,6 +36,18 @@ describe("useTopGames", () => {
     );
   });
 
+  it("maps a row without a numeric score to NaN", async () => {
+    const fetchImpl = vi.fn(() =>
+      json({ games: [{ bgg_id: 1 }] }),
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useTopGames("2025", fetchImpl));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.ids).toEqual(["1"]);
+    expect(result.current.error).toBe(false);
+    expect(Object.keys(result.current.scores)).toEqual(["1"]);
+    expect(Number.isNaN(result.current.scores["1"])).toBe(true);
+  });
+
   it.each([{}, { games: "x" }, { games: [{ score: 1 }] }, { games: [null] }])(
     "reports an error for a bad body %j",
     async (body) => {
