@@ -116,15 +116,17 @@ describe("startImportFeed", () => {
   });
 
   it("stop clears the timer and listeners and ignores a late response", async () => {
+    start();
+    await tick(0);
     let release!: (v: string) => void;
     fetchVersion.mockImplementationOnce(
       () => new Promise<string>((r) => (release = r)),
     );
-    start();
-    await tick(0);
+    await tick();
     stop!();
-    release("a");
+    release("b");
     await tick(0);
+    expect(onChange).not.toHaveBeenCalled();
     fetchVersion.mockClear();
     window.dispatchEvent(new Event("focus"));
     setVisibility("visible");

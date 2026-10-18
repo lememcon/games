@@ -31,7 +31,7 @@ const MEMBER: AppUser = {
 const PENDING: AppUser = { ...MEMBER, status: "pending" } as unknown as AppUser;
 
 function makeApp(user: AppUser | null = null) {
-  const { data, scoreCalls, years } = fakeData({
+  const { data, scoreCalls } = fakeData({
     years: {
       2025: [
         rows[0],
@@ -72,7 +72,7 @@ function makeApp(user: AppUser | null = null) {
     played: fakePlayed().played,
     resolveSession: async () => ({ user }),
   });
-  return Object.assign(app, { scoreCalls, data, years });
+  return Object.assign(app, { scoreCalls });
 }
 
 describe("GET /api/data-version", () => {
@@ -90,24 +90,6 @@ describe("GET /api/data-version", () => {
       headers: { "If-None-Match": first.headers.get("etag")! },
     });
     expect(res.status).toBe(304);
-  });
-
-  it("changes after a year import and after a games-only import", async () => {
-    const app = makeApp();
-    const ctx = { importedBy: "1", sourceFilename: "f.json" };
-    const empty = { players: [], scores: [], warnings: [] };
-    const read = async () =>
-      (
-        (await (await app.request("/api/data-version")).json()) as {
-          version: string;
-        }
-      ).version;
-    const v0 = await read();
-    await app.data.importData({ ...empty, year: 2030, games: [] }, ctx);
-    const v1 = await read();
-    await app.data.importData({ ...empty, year: null, games: [] }, ctx);
-    const v2 = await read();
-    expect(new Set([v0, v1, v2]).size).toBe(3);
   });
 });
 

@@ -24,10 +24,7 @@ export const remoteImport = (): void => {
 };
 
 const onStorage = (e: StorageEvent) => {
-  if (e.key === STORAGE_KEY) {
-    invalidateScores();
-    bump();
-  }
+  if (e.key === STORAGE_KEY) remoteImport();
 };
 
 // One channel per tab, opened on first use and kept for the tab's life. Any
