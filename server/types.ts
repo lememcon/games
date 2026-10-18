@@ -1,5 +1,6 @@
 import type { BggGame } from "./bgg/client";
 import type { BggService } from "./bgg/service";
+import type { CoverConfig } from "./covers/config";
 import type { CoverService } from "./covers/service";
 import type { NormalizedImport } from "./import";
 
@@ -65,6 +66,8 @@ export interface AppDeps {
   bgg?: BggService;
   /** Cover mirror job and custom cover upload; built with null storage when S3 is unset. */
   covers: CoverService;
+  /** Admin-saved cover storage settings; omitted in tests that do not need them. */
+  coverConfig?: CoverConfig;
   /** Years, games and scores: public reads and the admin import. */
   data: DataStore;
   /** Links between players and app members (admin only). */
@@ -513,6 +516,8 @@ export interface MemberYearVetoStore {
 
 /** Writes mirrored cover images to object storage (server/covers/storage.ts). */
 export interface CoverStorage {
+  /** Removes an object; the settings test uses it to clean up its probe. */
+  delete(key: string, signal?: AbortSignal): Promise<void>;
   put(
     key: string,
     bytes: Uint8Array,

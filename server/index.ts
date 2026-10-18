@@ -5,6 +5,7 @@ import { createAuth, createSessionResolver } from "./auth";
 import { createBggClient } from "./bgg/client";
 import { createNeededIds } from "./bgg/needed";
 import { createBggService } from "./bgg/service";
+import { createCoverConfig } from "./covers/config";
 import { createCoverFetcher } from "./covers/fetch";
 import { createCoverService } from "./covers/service";
 import { createS3Storage } from "./covers/storage";
@@ -32,28 +33,23 @@ const bgg = createBggService({
   fetchNeededIds: createNeededIds(),
   secret: env.BETTER_AUTH_SECRET,
 });
-// loadEnv makes the S3 variables all-or-none, so one check covers them.
-const storage =
-  env.S3_BUCKET &&
-  env.S3_REGION &&
-  env.S3_ACCESS_KEY_ID &&
-  env.S3_SECRET_ACCESS_KEY &&
-  env.COVER_BASE_URL
-    ? createS3Storage({
-        endpoint: env.S3_ENDPOINT,
-        region: env.S3_REGION,
-        bucket: env.S3_BUCKET,
-        accessKeyId: env.S3_ACCESS_KEY_ID,
-        secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-      })
-    : null;
+// The saved settings win over the S3_* environment, which loadEnv keeps all-or-none.
+const coverConfig = createCoverConfig({
+  repo: bggRepo,
+  secret: env.BETTER_AUTH_SECRET,
+  env,
+  makeStorage: (config, opts) =>
+    createS3Storage({ ...config, timeoutMs: opts?.timeoutMs }),
+});
 const covers = createCoverService({
   repo: bggRepo,
-  storage,
+  resolveStorage: coverConfig.resolve,
   fetchCover: createCoverFetcher(),
-  coverBaseUrl: env.COVER_BASE_URL,
 });
-const data = createDataStore(db, env.COVER_BASE_URL);
+const data = createDataStore(
+  db,
+  async () => (await coverConfig.resolve()).coverBaseUrl ?? undefined,
+);
 const links = createLinkStore(db);
 const profiles = createProfileStore(db);
 const played = createPlayedStore(db);
@@ -69,6 +65,7 @@ const app = createApp({
   store,
   bgg,
   covers,
+  coverConfig,
   data,
   links,
   profiles,

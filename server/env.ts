@@ -1,3 +1,5 @@
+import { httpsOrigin } from "./covers/config";
+
 export interface Env {
   DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
@@ -9,7 +11,10 @@ export interface Env {
   /** Parent domain for the session cookie, e.g. .lememcon.com (unset on localhost). */
   COOKIE_DOMAIN?: string;
   PORT: number;
-  /** Cover mirror (S3-compatible). All of these are set together or none are. */
+  /**
+   * Cover mirror (S3-compatible), a fallback for the settings an admin saves.
+   * All of these are set together or none are.
+   */
   S3_BUCKET?: string;
   S3_REGION?: string;
   S3_ACCESS_KEY_ID?: string;
@@ -85,27 +90,14 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     );
   }
 
-  const httpsOrigin = (key: string): string | undefined => {
+  const originOf = (key: string): string | undefined => {
     if (!get(key)) return undefined;
-    try {
-      const url = new URL(get(key));
-      if (
-        url.protocol === "https:" &&
-        url.pathname === "/" &&
-        !url.search &&
-        !url.hash &&
-        !url.username &&
-        !url.password
-      )
-        return url.origin;
-    } catch {
-      // falls through to the error below
-    }
-    errors.push(`${key} must be an https origin`);
-    return undefined;
+    const origin = httpsOrigin(get(key));
+    if (origin === null) errors.push(`${key} must be an https origin`);
+    return origin ?? undefined;
   };
-  const coverBaseUrl = httpsOrigin("COVER_BASE_URL");
-  const s3Endpoint = httpsOrigin("S3_ENDPOINT");
+  const coverBaseUrl = originOf("COVER_BASE_URL");
+  const s3Endpoint = originOf("S3_ENDPOINT");
 
   if (errors.length > 0) {
     throw new Error(`Invalid environment:\n- ${errors.join("\n- ")}`);

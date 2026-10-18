@@ -1,4 +1,10 @@
 import type { BggGame } from "./bgg/client";
+import {
+  createCoverConfig,
+  type MakeStorage,
+  type S3Config,
+  type S3Env,
+} from "./covers/config";
 import { CoverFetchError } from "./covers/fetch";
 import { createCoverService } from "./covers/service";
 import type { NormalizedImport } from "./import";
@@ -161,27 +167,63 @@ export function fakeCovers(opts: { storage?: CoverStorage | null } = {}) {
   const bgg = fakeBggRepo();
   const covers = createCoverService({
     repo: bgg.repo,
-    storage: opts.storage ?? null,
+    resolveStorage: async () => ({
+      storage: opts.storage ?? null,
+      coverBaseUrl: "https://covers.example",
+    }),
     fetchCover: async () => {
       throw new CoverFetchError("upstream");
     },
-    coverBaseUrl: "https://covers.example",
     sleep: async () => {},
     log: () => {},
   });
   return { covers, repo: bgg.repo, rows: bgg.rows, coverRows: bgg.covers };
 }
 
+/**
+ * A real cover config over an in-memory repo, for createApp and config tests.
+ * `makeStorage` records each config it was given and returns a fake storage.
+ */
+export function fakeCoverConfig(
+  opts: {
+    env?: S3Env;
+    makeStorage?: MakeStorage;
+    now?: () => number;
+    secret?: string;
+  } = {},
+) {
+  const bgg = fakeBggRepo();
+  const made: S3Config[] = [];
+  const storage = fakeStorage();
+  const config = createCoverConfig({
+    repo: bgg.repo,
+    secret: opts.secret ?? "x".repeat(32),
+    env: opts.env ?? {},
+    makeStorage:
+      opts.makeStorage ??
+      ((cfg) => {
+        made.push(cfg);
+        return storage.storage;
+      }),
+    now: opts.now,
+  });
+  return { config, repo: bgg.repo, settings: bgg.settings, made, storage };
+}
+
 /** In-memory CoverStorage for tests; records puts, optionally failing every one. */
 export function fakeStorage(opts: { fail?: boolean } = {}) {
   const puts: { key: string; bytes: Uint8Array; contentType: string }[] = [];
+  const deletes: string[] = [];
   const storage: CoverStorage = {
     put: async (key, bytes, contentType) => {
       if (opts.fail) throw new Error("storage failed");
       puts.push({ key, bytes, contentType });
     },
+    delete: async (key) => {
+      deletes.push(key);
+    },
   };
-  return { storage, puts };
+  return { storage, puts, deletes };
 }
 
 /** Code-unit string comparison, matching the SQL collation. */

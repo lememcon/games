@@ -52,10 +52,12 @@ export interface CustomCover {
 
 export interface CoverServiceDeps {
   repo: BggRepo;
-  /** Null when the S3 variables are unset. */
-  storage: CoverStorage | null;
+  /** Current storage and base URL; storage is null when none is configured. */
+  resolveStorage: () => Promise<{
+    storage: CoverStorage | null;
+    coverBaseUrl: string | null;
+  }>;
   fetchCover: (url: string, signal?: AbortSignal) => Promise<CoverImage>;
-  coverBaseUrl?: string;
   now?: () => number;
   sleep?: Sleep;
   log?: (line: string) => void;
@@ -86,8 +88,7 @@ const idleJob = (): CoverJob => ({
  * from the BGG download job; assumes one server instance.
  */
 export function createCoverService(deps: CoverServiceDeps) {
-  const { repo, storage, fetchCover } = deps;
-  const coverBaseUrl = deps.coverBaseUrl ?? null;
+  const { repo, resolveStorage, fetchCover } = deps;
   const now = deps.now ?? Date.now;
   const sleep = deps.sleep ?? abortableSleep;
   const log = deps.log ?? console.info;
@@ -100,6 +101,7 @@ export function createCoverService(deps: CoverServiceDeps) {
   const getJob = (): CoverJob => ({ ...job, errors: [...job.errors] });
 
   async function status(): Promise<CoverStatus> {
+    const { storage, coverBaseUrl } = await resolveStorage();
     return {
       configured: storage !== null,
       coverBaseUrl,
@@ -192,12 +194,17 @@ export function createCoverService(deps: CoverServiceDeps) {
   async function start(req: {
     mode: "missing";
   }): Promise<CoverResult<CoverJob>> {
-    if (!storage) return fail(409, "storage_not_configured");
     // Check-and-set with no await in between: concurrent starts get one winner.
     if (busy) return fail(409, "job_running");
     busy = true;
     let needs: CoverNeed[];
+    let storage: CoverStorage | null;
     try {
+      ({ storage } = await resolveStorage());
+      if (!storage) {
+        busy = false;
+        return fail(409, "storage_not_configured");
+      }
       needs = await repo.listCoverNeeds();
     } catch (e) {
       busy = false;
@@ -213,6 +220,7 @@ export function createCoverService(deps: CoverServiceDeps) {
       startedAt: new Date(now()).toISOString(),
     };
     log(JSON.stringify({ event: "cover_mirror_start", total: needs.length }));
+    // The job keeps this storage even if an admin changes the settings meanwhile.
     void run(needs, storage, ac.signal);
     return { ok: true, value: getJob() };
   }
@@ -231,6 +239,7 @@ export function createCoverService(deps: CoverServiceDeps) {
     bggId: number,
     bytes: Uint8Array,
   ): Promise<CoverResult<CustomCover>> {
+    const { storage, coverBaseUrl } = await resolveStorage();
     if (!storage) return fail(409, "storage_not_configured");
     if (!(await repo.listMetadata()).some((r) => r.bggId === bggId))
       return fail(404, "unknown_game");
