@@ -714,29 +714,39 @@ describe("usePlayed", () => {
       remote();
       toggle(result, "100");
       await answer(puts()[0], 200);
-      // The stale answer still lacks game 100.
-      await answer(gets(calls)[1], 200, { played: ["7"] });
+      // The stale answer still lacks game 100; its extra game must be dropped.
+      await answer(gets(calls)[1], 200, { played: ["7", "555"] });
       expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "555")).toBe(false);
       // It ran again, and that answer is applied.
       expect(gets(calls)).toHaveLength(3);
-      await answer(gets(calls)[2], 200, { played: ["7", "100"] });
+      await answer(gets(calls)[2], 200, { played: ["7", "100", "666"] });
       expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "666")).toBe(true);
     });
 
     it("counts markConfirmed as a write", async () => {
       const { result, calls } = await loaded();
       remote();
       act(() => result.current[3]("100"));
-      await answer(gets(calls)[1], 200, { played: ["7"] });
+      await answer(gets(calls)[1], 200, { played: ["7", "555"] });
       expect(isPlayed(result, "100")).toBe(true);
+      expect(isPlayed(result, "555")).toBe(false);
       expect(gets(calls)).toHaveLength(3);
+      await answer(gets(calls)[2], 200, { played: ["7", "100", "666"] });
+      expect(isPlayed(result, "666")).toBe(true);
     });
 
-    it("ignores messages before the first load is in", () => {
+    it("remembers a message before the first load is in and refreshes once after", async () => {
       const f = makeFetch();
-      renderHook(() => usePlayed("2025", f.fetchImpl));
+      const { result } = renderHook(() => usePlayed("2025", f.fetchImpl));
       remote();
       expect(gets(f.calls)).toHaveLength(1);
+      await answer(f.calls[0], 200, { played: ["7"] });
+      await waitFor(() => expect(gets(f.calls)).toHaveLength(2));
+      await answer(gets(f.calls)[1], 200, { played: ["7", "300"] });
+      await waitFor(() => expect(isPlayed(result, "300")).toBe(true));
+      expect(gets(f.calls)).toHaveLength(2);
     });
 
     it("coalesces a burst into one more refetch", async () => {

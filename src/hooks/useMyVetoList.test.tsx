@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import useMyVetoList from "@/hooks/useMyVetoList";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { channelByName } from "@/test/setup";
 
 type Item = { bggId: number };
 const a = [{ bggId: 1 }];
@@ -102,6 +103,33 @@ describe("useMyVetoList", () => {
       await hook.result.current.mutate(async () => {});
     });
     expect(hook.result.current.error).toBeNull();
+  });
+
+  it("does not let a late remote load overwrite a newer mutation refetch", async () => {
+    const lateResolvers: ((v: { vetoes: Item[] }) => void)[] = [];
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ vetoes: a })
+      .mockImplementationOnce(() => new Promise((r) => lateResolvers.push(r)))
+      .mockResolvedValueOnce({ vetoes: b });
+    const pick = () => list;
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const hook = renderHook(() => useMyVetoList<Item>(fetchImpl, pick));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+
+    act(() =>
+      channelByName("user-changes").onmessage!({
+        data: "vetoes",
+      } as MessageEvent),
+    );
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await hook.result.current.mutate(async () => {});
+    });
+    expect(hook.result.current.vetoes).toEqual(b);
+
+    await act(async () => lateResolvers[0]({ vetoes: a }));
+    expect(hook.result.current.vetoes).toEqual(b);
   });
 
   it("does not update after unmounting before the load settles", async () => {

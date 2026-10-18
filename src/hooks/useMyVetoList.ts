@@ -19,13 +19,17 @@ const useMyVetoList = <T>(
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
+  // Counts every list request; only the latest one's answer is applied.
+  const latest = useRef(0);
   const changes = useChangeVersion("vetoes");
 
   useEffect(() => {
     let cancelled = false;
+    const id = ++latest.current;
+    const current = () => !cancelled && id === latest.current;
     pick(vetoesApi(fetchImpl))()
-      .then((d) => !cancelled && setVetoes(d.vetoes))
-      .catch(() => !cancelled && setError(GENERIC_ERROR))
+      .then((d) => current() && setVetoes(d.vetoes))
+      .catch(() => current() && setError(GENERIC_ERROR))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -44,7 +48,9 @@ const useMyVetoList = <T>(
       try {
         await run();
         announceChange("vetoes");
-        setVetoes((await pick(vetoesApi(fetchImpl))()).vetoes);
+        const id = ++latest.current;
+        const d = await pick(vetoesApi(fetchImpl))();
+        if (id === latest.current) setVetoes(d.vetoes);
         ok = true;
       } catch (e) {
         setError(describeApiError(e, messages));

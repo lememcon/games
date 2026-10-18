@@ -100,6 +100,26 @@ describe("useProfile", () => {
     });
   });
 
+  it.each([500, 404])(
+    "keeps the shown profile when a change refetch fails with %i",
+    async (status) => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(json(profile))
+        .mockResolvedValueOnce(json({}, status));
+      const { result } = renderHook(() => useProfile("1", fetchImpl));
+      await waitFor(() => expect(result.current.status).toBe("ready"));
+      act(() =>
+        channelByName("user-changes").onmessage!({
+          data: "profile",
+        } as MessageEvent),
+      );
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(result.current).toEqual({ status: "ready", profile });
+    },
+  );
+
   it("ignores other topics", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(json(profile));
     const { result } = renderHook(() => useProfile("1", fetchImpl));

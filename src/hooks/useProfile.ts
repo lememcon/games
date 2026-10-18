@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { useChangeVersion } from "@/lib/changeSync";
@@ -24,7 +24,19 @@ const useProfile = (
     state: ProfileState;
   } | null>(null);
 
+  // Set by the effect for the id and version it last ran with.
+  const last = useRef<{ id: string; changes: number } | null>(null);
+  const shown = useRef<{ id: string; state: ProfileState } | null>(null);
+
   useEffect(() => {
+    // Only the change version moved and a profile is already shown: a failed
+    // refetch keeps it.
+    const refresh =
+      last.current?.id === discordId &&
+      last.current.changes !== changes &&
+      shown.current?.id === discordId &&
+      shown.current.state.status === "ready";
+    last.current = { id: discordId, changes };
     let cancelled = false;
     apiFetch<Profile>(
       `/profiles/${encodeURIComponent(discordId)}`,
@@ -38,7 +50,9 @@ const useProfile = (
           : { status: "error" },
       )
       .then((state) => {
-        if (!cancelled) setResult({ id: discordId, state });
+        if (cancelled || (refresh && state.status !== "ready")) return;
+        shown.current = { id: discordId, state };
+        setResult({ id: discordId, state });
       });
     return () => {
       cancelled = true;

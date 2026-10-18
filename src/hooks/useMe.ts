@@ -24,7 +24,9 @@ interface MeState {
 
 // Loads the signed-in account. Failures and unexpected bodies are an error
 // state (never "anonymous"); retry is manual and ignored while a request is in
-// flight. Responses from superseded requests are dropped.
+// flight. Responses from superseded requests are dropped. A quiet request (a
+// profile change from another tab) never sets the in-flight flag, so retry
+// can always supersede it, and its failure keeps whatever is shown.
 const useMe = (fetchImpl: typeof fetch = fetch) => {
   const [state, setState] = useState<MeState>({
     me: null,
@@ -34,21 +36,26 @@ const useMe = (fetchImpl: typeof fetch = fetch) => {
   const requestId = useRef(0);
   const inFlight = useRef(false);
 
-  const request = useCallback(() => {
-    const id = ++requestId.current;
-    inFlight.current = true;
-    apiFetch<unknown>("/me", {}, fetchImpl)
-      .then((body) => {
-        if (!isMe(body)) throw new Error("unexpected /api/me body");
-        return { me: body, error: false, loading: false };
-      })
-      .catch(() => ({ me: null, error: true, loading: false }))
-      .then((next) => {
-        if (id !== requestId.current) return;
-        inFlight.current = false;
-        setState(next);
-      });
-  }, [fetchImpl]);
+  const request = useCallback(
+    (quiet = false) => {
+      const id = ++requestId.current;
+      if (!quiet) inFlight.current = true;
+      apiFetch<unknown>("/me", {}, fetchImpl)
+        .then((body) => {
+          if (!isMe(body)) throw new Error("unexpected /api/me body");
+          return { me: body, error: false, loading: false };
+        })
+        .catch(() => null)
+        .then((next) => {
+          if (id !== requestId.current) return;
+          inFlight.current = false;
+          const failed: MeState = { me: null, error: true, loading: false };
+          // A quiet failure keeps what is shown; with nothing shown it is an error.
+          setState((s) => next ?? (quiet && s.me ? s : failed));
+        });
+    },
+    [fetchImpl],
+  );
 
   useEffect(() => {
     const ids = requestId;
@@ -65,7 +72,7 @@ const useMe = (fetchImpl: typeof fetch = fetch) => {
   useEffect(() => {
     if (seenVersion.current === profileVersion) return;
     seenVersion.current = profileVersion;
-    request();
+    request(true);
   }, [profileVersion, request]);
 
   const retry = useCallback(() => {

@@ -91,10 +91,6 @@ describe("changeSync", () => {
     expect(() => announceChange("played")).not.toThrow();
   });
 
-  it("works with no subscribers", () => {
-    expect(() => announceChange("played")).not.toThrow();
-  });
-
   it("stops notifying after unsubscribe", () => {
     const { result, unmount } = renderHook(() => useChangeVersion("played"));
     unmount();

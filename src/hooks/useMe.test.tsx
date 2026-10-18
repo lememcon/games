@@ -114,6 +114,41 @@ describe("useMe", () => {
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
 
+    it("keeps the shown account when the quiet refetch fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(ok(approved))
+        .mockRejectedValueOnce(new TypeError("offline"));
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+
+      remote();
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(result.current.me).toEqual(approved);
+      expect(result.current.error).toBe(false);
+    });
+
+    it("lets retry start a new request while a cross-tab one is out", async () => {
+      const renamed = { ...approved, user: { ...approved.user, name: "Kel" } };
+      const resolvers: ((r: Response) => void)[] = [];
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(ok(approved))
+        .mockImplementation(
+          () => new Promise<Response>((r) => resolvers.push(r)),
+        );
+      const { result } = renderHook(() => useMe(fetchImpl));
+      await waitFor(() => expect(result.current.me).toEqual(approved));
+
+      remote();
+      act(() => result.current.retry());
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+      await act(async () => resolvers[1](ok(renamed)));
+      await act(async () => resolvers[0](ok(approved)));
+      expect(result.current.me).toEqual(renamed);
+    });
+
     it("does not refetch on mount in StrictMode", async () => {
       const fetchImpl = vi.fn(() => Promise.resolve(ok(approved)));
       const { result } = renderHook(() => useMe(fetchImpl), {

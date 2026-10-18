@@ -136,7 +136,8 @@ const usePlayed = (
     // when this tab wrote anything while it was out, or is writing now, so it
     // can never undo a local edit; a dropped answer is retried when idle.
     s.run = () => {
-      if (s.cancelled || !s.stale || s.refreshing || !idle(s)) return;
+      if (s.cancelled || !s.ready || !s.stale || s.refreshing || !idle(s))
+        return;
       s.stale = false;
       s.refreshing = true;
       const writes = s.writes;
@@ -205,6 +206,7 @@ const usePlayed = (
       s.ready = true;
       setErrorState(null);
       setShown({ year, played });
+      s.run();
     };
     void load();
 
@@ -213,15 +215,15 @@ const usePlayed = (
     };
   }, [year, fetchImpl]);
 
-  // Another tab changed the played games. Ignored until this tab's own load
-  // is in, which already reads the latest.
+  // Another tab changed the played games. Before this tab's own load is in it
+  // is only remembered (stale); the end of the load then refreshes once.
   const changes = useChangeVersion("played");
   const seenChanges = useRef(changes);
   useEffect(() => {
     if (seenChanges.current === changes) return;
     seenChanges.current = changes;
     const s = session.current;
-    if (!s?.ready) return;
+    if (!s) return;
     s.stale = true;
     s.run();
   }, [changes]);
