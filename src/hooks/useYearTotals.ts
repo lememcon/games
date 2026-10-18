@@ -35,14 +35,12 @@ const loadingState: YearTotalsState = {
 };
 
 // Every game's summed score per year, for the across-the-years sparkline.
-// State is tagged with the import version it belongs to, so after an import
-// (in any tab) it reads as loading until the refetch lands.
+// After an import (in any tab) the previous totals stay on screen until the
+// refetch lands; a failed refetch keeps them, a failed first load reports the
+// error.
 const useYearTotals = (fetchImpl: typeof fetch = fetch): YearTotalsState => {
   const version = useImportVersion();
-  const [state, setState] = useState<{
-    version: number;
-    value: YearTotalsState;
-  } | null>(null);
+  const [state, setState] = useState<YearTotalsState | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,14 +52,15 @@ const useYearTotals = (fetchImpl: typeof fetch = fetch): YearTotalsState => {
       }))
       .catch(() => ({ totals: [], loading: false, error: true }))
       .then((next) => {
-        if (!cancelled) setState({ version, value: next });
+        if (!cancelled) setState((prev) => (next.error && prev ? prev : next));
       });
     return () => {
       cancelled = true;
     };
+    // version is the refetch trigger after an import; it is not read here.
   }, [version, fetchImpl]);
 
-  return state?.version === version ? state.value : loadingState;
+  return state ?? loadingState;
 };
 
 export default useYearTotals;

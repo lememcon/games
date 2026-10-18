@@ -79,15 +79,15 @@ describe("useYearTotals", () => {
         .mockResolvedValueOnce(res({ totals: first }))
         .mockResolvedValueOnce(res({ totals: second }));
 
-    it("reloads on a message from another tab, never showing old data", async () => {
+    it("reloads on a message from another tab, keeping old data meanwhile", async () => {
       const fetchImpl = twoFetches();
       const { result } = renderHook(() => useYearTotals(fetchImpl));
       await waitFor(() => expect(result.current.totals).toEqual(first));
 
       act(() => message());
       expect(result.current).toEqual({
-        totals: [],
-        loading: true,
+        totals: first,
+        loading: false,
         error: false,
       });
       await waitFor(() => expect(result.current.totals).toEqual(second));
@@ -101,9 +101,30 @@ describe("useYearTotals", () => {
       await waitFor(() => expect(result.current.totals).toEqual(first));
 
       act(() => announceImport());
-      expect(result.current.loading).toBe(true);
+      expect(result.current.totals).toEqual(first);
+      expect(result.current.loading).toBe(false);
       await waitFor(() => expect(result.current.totals).toEqual(second));
       expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the old totals silently when the refetch fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(res({ totals: first }))
+        .mockResolvedValueOnce(res({}, 500));
+      const { result } = renderHook(() => useYearTotals(fetchImpl));
+      await waitFor(() => expect(result.current.totals).toEqual(first));
+
+      act(() => message());
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r));
+      });
+      expect(result.current).toEqual({
+        totals: first,
+        loading: false,
+        error: false,
+      });
     });
   });
 });

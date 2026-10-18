@@ -96,13 +96,17 @@ describe("useTopGames", () => {
       return fn as unknown as typeof fetch;
     };
 
-    it("reloads on a message from another tab, never showing old data", async () => {
+    it("reloads on a message from another tab, keeping old data meanwhile", async () => {
       const fetchImpl = sequence(1, 2);
       const { result } = renderHook(() => useTopGames("2025", fetchImpl));
       await waitFor(() => expect(result.current.ids).toEqual(["1"]));
 
       act(() => message());
-      expect(result.current).toEqual({ ids: [], loading: true, error: false });
+      expect(result.current).toEqual({
+        ids: ["1"],
+        loading: false,
+        error: false,
+      });
       await waitFor(() => expect(result.current.ids).toEqual(["2"]));
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
@@ -113,9 +117,46 @@ describe("useTopGames", () => {
       await waitFor(() => expect(result.current.ids).toEqual(["1"]));
 
       act(() => announceImport());
-      expect(result.current.loading).toBe(true);
+      expect(result.current.ids).toEqual(["1"]);
+      expect(result.current.loading).toBe(false);
       await waitFor(() => expect(result.current.ids).toEqual(["2"]));
       expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the old ids silently when the refetch fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockImplementationOnce(() => json(body(1)))
+        .mockImplementationOnce(() => json({}, 500)) as unknown as typeof fetch;
+      const { result } = renderHook(() => useTopGames("2025", fetchImpl));
+      await waitFor(() => expect(result.current.ids).toEqual(["1"]));
+
+      act(() => message());
+      await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r));
+      });
+      expect(result.current).toEqual({
+        ids: ["1"],
+        loading: false,
+        error: false,
+      });
+    });
+
+    it("reports an error when the year changed and the new year fails", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockImplementationOnce(() => json(body(1)))
+        .mockImplementationOnce(() => json({}, 500)) as unknown as typeof fetch;
+      const { result, rerender } = renderHook(
+        ({ year }) => useTopGames(year, fetchImpl),
+        { initialProps: { year: "2024" } },
+      );
+      await waitFor(() => expect(result.current.ids).toEqual(["1"]));
+
+      rerender({ year: "2025" });
+      await waitFor(() => expect(result.current.error).toBe(true));
+      expect(result.current).toEqual({ ids: [], loading: false, error: true });
     });
 
     it("never shows the old year when the year changes mid-refetch", async () => {
