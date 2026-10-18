@@ -1,12 +1,8 @@
 import { fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import GameCover from "@/components/GameCover";
 import { renderWithMantine } from "@/test/utils";
-
-vi.mock("@/lib/images", () => ({
-  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
-}));
 
 const cover = (c: HTMLElement) => c.querySelector("img");
 const blank = (c: HTMLElement) => c.querySelector(".tray-cover__blank");
@@ -22,14 +18,7 @@ describe("GameCover", () => {
     expect(img).toHaveAttribute("loading", "lazy");
   });
 
-  it("prefers the bundled image when the ext matches", () => {
-    const { container } = renderWithMantine(
-      <GameCover bggId="7" image="https://example.com/a.jpg" ext=".jpg" />,
-    );
-    expect(cover(container)).toHaveAttribute("src", "/bundled/7.jpg");
-  });
-
-  it("prefers the server cover over the bundled image", () => {
+  it("prefers the server cover over the image URL", () => {
     const { container } = renderWithMantine(
       <GameCover
         bggId="7"

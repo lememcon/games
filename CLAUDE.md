@@ -62,7 +62,7 @@ A separate `commitlint` job runs on pull requests only.
 - `src/components/` — presentational + container components (`.tsx`). `ProfilePage`
   (`/profile`) and `PublicProfile` (`/players/:discordId`) render in `AdminShell` outside
   `Scoreboard`; `PlayerName` links to a profile when a score row has `discord_id`.
-- `src/assets/` — `games.json`, cover images (refreshed by `pnpm update`), styles.
+- `src/assets/` — `games.json` (refreshed by `pnpm update`), styles.
 - `src/test/setup.ts` — Vitest setup; jsdom shims for Mantine (see below).
 - `server/` — Node server. `app.ts` (`createApp`, routes), `auth.ts` (Better Auth, session
   resolver), `middleware.ts` (csrf, session, admin guard),

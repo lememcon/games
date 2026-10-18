@@ -12,7 +12,6 @@ import type { VetoesState } from "@/hooks/useVetoes";
 import useYearTotals from "@/hooks/useYearTotals";
 import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { realBounds, resolveImage, vetoedByFor } from "@/lib/games";
-import bundledImages from "@/lib/images";
 import { yearPath } from "@/lib/routes";
 import { switchVeto } from "@/lib/vetoSwitch";
 import { seriesFor } from "@/lib/yearTotals";
@@ -56,7 +55,7 @@ const Game = ({
     return null;
   }
   const meta = gameData[id];
-  const image = resolveImage(id, meta, bundledImages) ?? null;
+  const image = resolveImage(meta) ?? null;
   const bounds = realBounds(meta);
   const vetoedBy = vetoedByFor(data.by_player, yearVetoes?.all ?? {}, id);
   const stored = (discordId && overrides?.all[discordId]?.[id]) || null;

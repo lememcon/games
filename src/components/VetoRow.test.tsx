@@ -5,10 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import VetoRow from "@/components/VetoRow";
 import { renderWithMantine } from "@/test/utils";
 
-vi.mock("@/lib/images", () => ({
-  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
-}));
-
 const cover = (container: HTMLElement) => container.querySelector("img");
 const blank = (container: HTMLElement) =>
   container.querySelector(".tray-cover__blank");
@@ -25,19 +21,7 @@ describe("VetoRow", () => {
     expect(img).toHaveAttribute("width", "40");
   });
 
-  it("prefers the bundled image when the ext matches", () => {
-    const { container } = renderWithMantine(
-      <VetoRow
-        bggId={7}
-        name="Azul"
-        image="https://example.com/a.jpg"
-        ext=".jpg"
-      />,
-    );
-    expect(cover(container)).toHaveAttribute("src", "/bundled/7.jpg");
-  });
-
-  it("prefers the mirrored cover over the bundled image and ext", () => {
+  it("prefers the mirrored cover over the image URL and ext", () => {
     const { container } = renderWithMantine(
       <VetoRow
         bggId={7}
@@ -74,7 +58,7 @@ describe("VetoRow", () => {
     expect(blank(container)).not.toBeNull();
   });
 
-  it("shows a blank box for a custom image with no bundled match", () => {
+  it("shows a blank box for a custom image with no https URL", () => {
     const { container } = renderWithMantine(
       <VetoRow bggId={1} name="Root" image="custom" ext=".jpg" />,
     );

@@ -33,7 +33,6 @@ import {
   playerCountsByName,
   suggestSplits,
 } from "@/lib/games";
-import images from "@/lib/images";
 import { markPlayedOptions } from "@/lib/markPlayed";
 import { scoreboardMeta } from "@/lib/pageMeta";
 import { PlayerColorProvider } from "@/lib/playerColors";
@@ -372,7 +371,6 @@ function Scoreboard({ user }: ScoreboardProps) {
     byPlayer: data.by_player,
     players,
     gameData: game_data,
-    images,
     hidePlayed,
     playerPlayed,
     playerRanges,
@@ -385,7 +383,6 @@ function Scoreboard({ user }: ScoreboardProps) {
         byPlayer: data.by_player,
         players,
         gameData: game_data,
-        images,
         hidePlayed,
         playerPlayed,
         playerRanges,

@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import useCovers from "@/hooks/useCovers";
 
-vi.mock("@/lib/images", () => ({
-  default: { "/src/assets/games/12.png": "/bundled/12.png" },
-}));
-
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
@@ -36,7 +32,7 @@ describe("useCovers", () => {
     await waitFor(() => expect(Object.keys(result.current)).toHaveLength(3));
     expect(result.current).toEqual({
       11: "https://cdn.test/cover.jpg",
-      12: "/bundled/12.png",
+      12: "https://cdn.test/image12.jpg",
       13: "https://cdn.test/image13.jpg",
     });
   });
