@@ -327,12 +327,6 @@ describe("toGamesMap", () => {
       expect(cover({ imageKey: "k" })).toBe(undefined);
     });
 
-    it("tolerates trailing slashes on the base URL", () => {
-      expect(cover({ imageKey: "k", imageSource: img }, `${base}/`)).toBe(
-        `${base}/k`,
-      );
-    });
-
     it("is omitted without a base URL, leaving image and ext", () => {
       const row1 = toGamesMap([
         row({

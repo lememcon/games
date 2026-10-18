@@ -187,7 +187,6 @@ export function toGamesMap(
   coverBaseUrl?: string,
 ): GamesMap {
   const map: GamesMap = {};
-  const base = coverBaseUrl?.replace(/\/+$/, "");
   for (const r of rows) {
     const mirrored =
       r.imageKey != null &&
@@ -200,7 +199,9 @@ export function toGamesMap(
         : {}),
       ...(r.imageUrl !== null ? { image: r.imageUrl } : {}),
       ...(r.imageExt !== null ? { ext: r.imageExt } : {}),
-      ...(base && mirrored ? { cover: `${base}/${r.imageKey}` } : {}),
+      ...(coverBaseUrl && mirrored
+        ? { cover: `${coverBaseUrl}/${r.imageKey}` }
+        : {}),
     };
   }
   return map;
