@@ -17,6 +17,7 @@ import {
 } from "@mantine/core";
 
 import BggDataPanel from "@/components/admin/BggDataPanel";
+import CoverPanel from "@/components/admin/CoverPanel";
 import PlayerLinksPanel from "@/components/admin/PlayerLinksPanel";
 import useAdminUsers from "@/hooks/useAdminUsers";
 import usePageMeta from "@/hooks/usePageMeta";
@@ -197,6 +198,7 @@ const AdminPage = ({ meId }: { meId: string }) => {
 
       <PlayerLinksPanel />
       <BggDataPanel />
+      <CoverPanel />
     </Stack>
   );
 };

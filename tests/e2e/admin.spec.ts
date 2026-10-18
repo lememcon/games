@@ -1,6 +1,12 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-import type { AdminUser, BggStatus, PlayerLinks, Role } from "../../src/types";
+import type {
+  AdminUser,
+  BggStatus,
+  CoverStatus,
+  PlayerLinks,
+  Role,
+} from "../../src/types";
 import { aliceId, approvedUser, mockApi } from "./fixtures";
 
 test.use({ viewport: { width: 375, height: 812 } });
@@ -81,6 +87,23 @@ const bggStatus: BggStatus = {
   },
 };
 
+const coverStatus: CoverStatus = {
+  configured: true,
+  coverBaseUrl: null,
+  pending: 2,
+  job: {
+    state: "failed",
+    mode: "missing",
+    total: 2,
+    done: 1,
+    mirrored: 1,
+    failed: 1,
+    errors: ["C".repeat(120)],
+    startedAt: null,
+    finishedAt: null,
+  },
+};
+
 const json = (route: Route, body: unknown) => route.fulfill({ json: body });
 
 const setup = async (page: Page) => {
@@ -98,6 +121,7 @@ const setup = async (page: Page) => {
     updatedAt: null,
   });
   await mock("/api/admin/bgg/status", bggStatus);
+  await mock("/api/admin/covers/status", coverStatus);
 };
 
 const expectNoOverflow = async (page: Page) => {
@@ -122,6 +146,10 @@ test("admin page does not overflow horizontally", async ({ page }) => {
     page.getByRole("combobox", { name: `Add a name for ${longName}` }),
   ).toBeVisible();
   await expect(page.getByText("E".repeat(120))).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cover images" }),
+  ).toBeVisible();
+  await expect(page.getByText("C".repeat(120))).toBeVisible();
   await expectNoOverflow(page);
 });
 

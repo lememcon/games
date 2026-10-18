@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { bggApi } from "@/lib/adminApi";
+import { bggApi, coverApi } from "@/lib/adminApi";
 import { ApiError } from "@/lib/api";
 
 const res = (body: unknown, status = 200) =>
@@ -78,5 +78,27 @@ describe("bggApi", () => {
     await expect(bggApi(empty502).getStatus()).rejects.toMatchObject({
       status: 502,
     });
+  });
+});
+
+describe("coverApi", () => {
+  it("hits each endpoint with the right method and body", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => res({}));
+    const api = coverApi(fetchImpl);
+    await api.getStatus();
+    await api.mirror();
+    await api.getJob();
+    await api.cancelJob();
+    const calls = fetchImpl.mock.calls.map(([url, init]) => [
+      url,
+      init.method,
+      init.body,
+    ]);
+    expect(calls).toEqual([
+      ["/api/admin/covers/status", "GET", undefined],
+      ["/api/admin/covers/mirror", "POST", '{"mode":"missing"}'],
+      ["/api/admin/covers/job", "GET", undefined],
+      ["/api/admin/covers/job/cancel", "POST", undefined],
+    ]);
   });
 });

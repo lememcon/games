@@ -6,6 +6,8 @@ import type {
   BggKeyInfo,
   BggKeyTest,
   BggStatus,
+  CoverJob,
+  CoverStatus,
 } from "@/types";
 
 const BASE = "/admin/bgg";
@@ -49,3 +51,18 @@ export const bggApi = (fetchImpl: typeof fetch = fetch) => ({
 });
 
 export type BggApi = ReturnType<typeof bggApi>;
+
+const COVERS = "/admin/covers";
+
+export const coverApi = (fetchImpl: typeof fetch = fetch) => ({
+  getStatus: () => apiFetch<CoverStatus>(`${COVERS}/status`, {}, fetchImpl),
+  mirror: () =>
+    apiFetch<CoverJob>(
+      `${COVERS}/mirror`,
+      { method: "POST", body: { mode: "missing" } },
+      fetchImpl,
+    ),
+  getJob: () => apiFetch<CoverJob>(`${COVERS}/job`, {}, fetchImpl),
+  cancelJob: () =>
+    apiFetch<CoverJob>(`${COVERS}/job/cancel`, { method: "POST" }, fetchImpl),
+});

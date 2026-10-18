@@ -31,6 +31,9 @@ vi.mock("@/components/admin/PlayerLinksPanel", () => ({
 vi.mock("@/components/admin/BggDataPanel", () => ({
   default: () => <div>bgg panel</div>,
 }));
+vi.mock("@/components/admin/CoverPanel", () => ({
+  default: () => <div>cover panel</div>,
+}));
 vi.mock("@/hooks/useAdminUsers", () => ({ default: () => hook.value }));
 
 const setHook = (over: Record<string, unknown> = {}) => {
@@ -93,6 +96,7 @@ describe("AdminPage", () => {
   it("mounts the BGG data panel below the member tables", () => {
     renderWithMantine(<AdminPage meId="3" />);
     expect(screen.getByText("bgg panel")).toBeInTheDocument();
+    expect(screen.getByText("cover panel")).toBeInTheDocument();
   });
 
   it("mounts the player links panel", () => {
