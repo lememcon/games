@@ -245,6 +245,7 @@ export function fakeData(
   const imports: { input: NormalizedImport; context: ImportContext }[] = [];
   const scoreCalls: { year: number; resolveNames: boolean }[] = [];
   const topCalls: { year: number; discordId: string }[] = [];
+  let version = 0;
 
   const data: DataStore = {
     listYears: async () => [...years.keys()].sort((a, b) => b - a),
@@ -310,10 +311,12 @@ export function fakeData(
             a.bgg_id - b.bgg_id,
         );
     },
+    getDataVersion: async () => String(version),
     importData: async (input, context) => {
       if (input.year !== null && years.has(input.year))
         return refuse(409, "year_exists");
       imports.push({ input, context });
+      version += 1;
       if (input.year !== null)
         years.set(
           input.year,

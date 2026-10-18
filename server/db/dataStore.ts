@@ -1,6 +1,7 @@
 import type { DataStore } from "../types";
 import { importData } from "./import";
 import {
+  getDataVersion,
   getGames,
   getScores,
   getTopGames,
@@ -20,5 +21,6 @@ export const createDataStore = (
   getTopGames: (year, discordId) => getTopGames(db, year, discordId),
   getYearTotals: () => getYearTotals(db),
   listUnplayedGames: () => listUnplayedGames(db),
+  getDataVersion: () => getDataVersion(db),
   importData: (input, context) => importData(db, input, context),
 });

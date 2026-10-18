@@ -17,6 +17,12 @@ const bump = () => {
   listeners.forEach((listener) => listener());
 };
 
+// Another tab or device imported: drop cached scores and refetch.
+export const remoteImport = (): void => {
+  invalidateScores();
+  bump();
+};
+
 const onStorage = (e: StorageEvent) => {
   if (e.key === STORAGE_KEY) {
     invalidateScores();
@@ -30,10 +36,7 @@ const getChannel = (): BroadcastChannel | null => {
   if (typeof BroadcastChannel === "undefined") return null;
   if (!channel) {
     channel = new BroadcastChannel(STORAGE_KEY);
-    channel.onmessage = () => {
-      invalidateScores();
-      bump();
-    };
+    channel.onmessage = remoteImport;
   }
   return channel;
 };

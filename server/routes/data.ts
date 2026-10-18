@@ -23,6 +23,11 @@ export function dataRoutes(data: DataStore) {
   });
   const read = [etag(), noCache] as const;
 
+  // A token that changes on every import; clients poll it to know when to refetch.
+  routes.get("/data-version", ...read, async (c) =>
+    c.json({ version: await data.getDataVersion() }),
+  );
+
   routes.get("/years", ...read, async (c) =>
     c.json({ years: await data.listYears() }),
   );

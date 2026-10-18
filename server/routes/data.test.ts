@@ -31,7 +31,7 @@ const MEMBER: AppUser = {
 const PENDING: AppUser = { ...MEMBER, status: "pending" } as unknown as AppUser;
 
 function makeApp(user: AppUser | null = null) {
-  const { data, scoreCalls } = fakeData({
+  const { data, scoreCalls, years } = fakeData({
     years: {
       2025: [
         rows[0],
@@ -72,8 +72,44 @@ function makeApp(user: AppUser | null = null) {
     played: fakePlayed().played,
     resolveSession: async () => ({ user }),
   });
-  return Object.assign(app, { scoreCalls });
+  return Object.assign(app, { scoreCalls, data, years });
 }
+
+describe("GET /api/data-version", () => {
+  it("returns the version without a session", async () => {
+    const res = await makeApp().request("/api/data-version");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ version: "0" });
+  });
+
+  it("is revalidated with an ETag, never publicly cached", async () => {
+    const app = makeApp();
+    const first = await app.request("/api/data-version");
+    expect(first.headers.get("cache-control")).toBe("private, no-cache");
+    const res = await app.request("/api/data-version", {
+      headers: { "If-None-Match": first.headers.get("etag")! },
+    });
+    expect(res.status).toBe(304);
+  });
+
+  it("changes after a year import and after a games-only import", async () => {
+    const app = makeApp();
+    const ctx = { importedBy: "1", sourceFilename: "f.json" };
+    const empty = { players: [], scores: [], warnings: [] };
+    const read = async () =>
+      (
+        (await (await app.request("/api/data-version")).json()) as {
+          version: string;
+        }
+      ).version;
+    const v0 = await read();
+    await app.data.importData({ ...empty, year: 2030, games: [] }, ctx);
+    const v1 = await read();
+    await app.data.importData({ ...empty, year: null, games: [] }, ctx);
+    const v2 = await read();
+    expect(new Set([v0, v1, v2]).size).toBe(3);
+  });
+});
 
 describe("GET /api/years", () => {
   it("lists years newest first without a session", async () => {

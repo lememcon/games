@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { inArray, sql } from "drizzle-orm";
 
 import type { NormalizedImport } from "../import";
@@ -5,9 +7,11 @@ import { refuse } from "../result";
 import { chunk, newPlayers, planGames, summarize, toMetadata } from "../shape";
 import type { ImportContext, ImportSummary, MutationResult } from "../types";
 import { upsertMetadata } from "./bggRepo";
-import { appUser, game, player, score, year } from "./schema";
+import { appSetting, appUser, game, player, score, year } from "./schema";
 import type { StoreDb } from "./userStore";
 
+/** The `app_setting` row holding the token that changes on every import. */
+export const DATA_VERSION_KEY = "data_version";
 const CHUNK = 500;
 const UNIQUE_VIOLATION = "23505";
 
@@ -128,6 +132,16 @@ export async function importData(
             rank: r.rank,
           })),
         );
+
+      // Last, so a rolled-back import leaves the version unchanged.
+      const token = randomUUID();
+      await tx
+        .insert(appSetting)
+        .values({ key: DATA_VERSION_KEY, value: token })
+        .onConflictDoUpdate({
+          target: appSetting.key,
+          set: { value: token, updatedAt: new Date() },
+        });
 
       return {
         ok: true as const,

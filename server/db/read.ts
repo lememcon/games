@@ -15,8 +15,10 @@ import type {
   UnplayedGame,
   YearTotal,
 } from "../types";
+import { DATA_VERSION_KEY } from "./import";
 import {
   account,
+  appSetting,
   appUser,
   game,
   gameMetadata,
@@ -26,6 +28,15 @@ import {
   year,
 } from "./schema";
 import type { StoreDb } from "./userStore";
+
+/** Changes on every import; "0" when none has happened yet. */
+export async function getDataVersion(db: StoreDb): Promise<string> {
+  const [row] = await db
+    .select({ value: appSetting.value })
+    .from(appSetting)
+    .where(eq(appSetting.key, DATA_VERSION_KEY));
+  return row?.value ?? "0";
+}
 
 /** Newest first. */
 export async function listYears(db: StoreDb): Promise<number[]> {

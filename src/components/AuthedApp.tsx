@@ -12,6 +12,7 @@ import PublicProfile from "@/components/PublicProfile";
 import Scoreboard from "@/components/Scoreboard";
 import YearRecap from "@/components/YearRecap";
 import AdminImport from "@/components/admin/AdminImport";
+import useImportFeed from "@/hooks/useImportFeed";
 import useLocalState from "@/hooks/useLocalState";
 import type { ApprovedUser } from "@/types";
 
@@ -40,6 +41,7 @@ const AdminShell = ({
 function AuthedApp({ user, onUserChanged = () => {} }: AuthedAppProps) {
   const isAdmin = user.role === "admin";
   const [showBackdrop, setShowBackdrop] = useLocalState("show_backdrop", true);
+  useImportFeed();
 
   return (
     <>

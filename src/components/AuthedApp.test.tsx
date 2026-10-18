@@ -6,6 +6,7 @@ import AuthedApp from "@/components/AuthedApp";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser } from "@/types";
 
+vi.mock("@/hooks/useImportFeed", () => ({ default: () => {} }));
 vi.mock("@/components/PageBackdrop", () => ({
   default: () => <div>backdrop</div>,
 }));
