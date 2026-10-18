@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { useChangeVersion } from "@/lib/changeSync";
 import type { Profile } from "@/types";
 
 export type ProfileState =
@@ -17,6 +18,7 @@ const useProfile = (
   discordId: string,
   fetchImpl: typeof fetch = fetch,
 ): ProfileState => {
+  const changes = useChangeVersion("profile");
   const [result, setResult] = useState<{
     id: string;
     state: ProfileState;
@@ -41,7 +43,7 @@ const useProfile = (
     return () => {
       cancelled = true;
     };
-  }, [discordId, fetchImpl]);
+  }, [discordId, fetchImpl, changes]);
 
   return result?.id === discordId ? result.state : LOADING;
 };

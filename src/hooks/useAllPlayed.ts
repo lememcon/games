@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { announceChange } from "@/lib/changeSync";
 import { toPlayedMaps, type PlayedMap } from "@/lib/played";
 import type { AllPlayedResponse, MarkPlayedResponse } from "@/types";
 
@@ -81,6 +82,7 @@ export const useMarkPlayed = (
         { method: "POST", body: { discordIds } },
         fetchImpl,
       );
+      announceChange("played");
       if (yearRef.current !== year) return;
       marked.current = true;
       setErrorState(null);

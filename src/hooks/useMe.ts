@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { useChangeVersion } from "@/lib/changeSync";
 import type { Me } from "@/types";
 
 const isMe = (body: unknown): body is Me => {
@@ -57,6 +58,15 @@ const useMe = (fetchImpl: typeof fetch = fetch) => {
       inFlight.current = false;
     };
   }, [request]);
+
+  // Another tab changed the profile: refetch quietly, keeping what is shown.
+  const profileVersion = useChangeVersion("profile");
+  const seenVersion = useRef(profileVersion);
+  useEffect(() => {
+    if (seenVersion.current === profileVersion) return;
+    seenVersion.current = profileVersion;
+    request();
+  }, [profileVersion, request]);
 
   const retry = useCallback(() => {
     if (inFlight.current) return;

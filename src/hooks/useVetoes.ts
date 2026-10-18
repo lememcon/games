@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { GENERIC_ERROR, describeApiError } from "@/lib/apiErrors";
+import { announceChange, useChangeVersion } from "@/lib/changeSync";
 import { vetoesByMember } from "@/lib/games";
 import { bulkFailureMessage } from "@/lib/selection";
 import { vetoesApi } from "@/lib/vetoesApi";
@@ -76,6 +77,7 @@ export const useVetoSet = (
   }
 
   const hasApi = api !== null;
+  const changes = useChangeVersion("vetoes");
   useEffect(() => {
     let cancelled = false;
     const mine = ++latest.current;
@@ -91,7 +93,7 @@ export const useVetoSet = (
     return () => {
       cancelled = true;
     };
-  }, [key, hasApi]);
+  }, [key, hasApi, changes]);
 
   const bump = (bggId: number) =>
     (gens.current[bggId] = (gens.current[bggId] ?? 0) + 1);
@@ -127,6 +129,7 @@ export const useVetoSet = (
     let ok = true;
     try {
       await run(scope);
+      announceChange("vetoes");
     } catch (e) {
       ok = false;
       message = describeApiError(e);
@@ -170,6 +173,7 @@ export const useVetoSet = (
     // key's own list fetch.
     if (stale()) return [];
     const failed = bggIds.filter((_, i) => results[i].status === "rejected");
+    if (failed.length < bggIds.length) announceChange("vetoes");
     let message: string | null = null;
     if (failed.length === bggIds.length) {
       const first = results.find((r) => r.status === "rejected");

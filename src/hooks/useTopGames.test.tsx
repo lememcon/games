@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import useTopGames from "@/hooks/useTopGames";
 import { announceImport } from "@/lib/scoresSync";
-import { FakeBroadcastChannel } from "@/test/setup";
+import { channelByName } from "@/test/setup";
 
 const message = () =>
-  FakeBroadcastChannel.instances[0].onmessage!({} as MessageEvent);
+  channelByName("scores-import").onmessage!({} as MessageEvent);
 
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }));

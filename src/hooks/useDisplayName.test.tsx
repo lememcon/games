@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useDisplayName from "@/hooks/useDisplayName";
 import * as cache from "@/lib/scoresCache";
+import { FakeBroadcastChannel } from "@/test/setup";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
 
 describe("useDisplayName", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -107,5 +113,29 @@ describe("useDisplayName", () => {
       await hook.current.save("x");
     });
     expect(hook.current.error).toMatch(/Something went wrong/);
+  });
+
+  it("announces a profile change after a successful save", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(json({ name: "Kel", displayName: "Kel" }));
+    const { result: hook } = renderHook(() =>
+      useDisplayName(vi.fn(), fetchImpl),
+    );
+    await act(async () => {
+      await hook.current.save("Kel");
+    });
+    expect(posts()).toEqual(["profile"]);
+  });
+
+  it("announces nothing when the save fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ error: "boom" }, 500));
+    const { result: hook } = renderHook(() =>
+      useDisplayName(vi.fn(), fetchImpl),
+    );
+    await act(async () => {
+      await hook.current.save("Kel");
+    });
+    expect(posts()).toEqual([]);
   });
 });

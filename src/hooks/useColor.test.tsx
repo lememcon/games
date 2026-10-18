@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useColor from "@/hooks/useColor";
 import * as cache from "@/lib/scoresCache";
+import { FakeBroadcastChannel } from "@/test/setup";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
 
 describe("useColor", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -88,5 +94,23 @@ describe("useColor", () => {
       await hook.current.save("#2F6BB8");
     });
     expect(hook.current.error).toMatch(/Something went wrong/);
+  });
+
+  it("announces a profile change after a successful save", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ color: "#2F6BB8" }));
+    const { result: hook } = renderHook(() => useColor(vi.fn(), fetchImpl));
+    await act(async () => {
+      await hook.current.save("#2F6BB8");
+    });
+    expect(posts()).toEqual(["profile"]);
+  });
+
+  it("announces nothing when the save fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ error: "boom" }, 500));
+    const { result: hook } = renderHook(() => useColor(vi.fn(), fetchImpl));
+    await act(async () => {
+      await hook.current.save("#2F6BB8");
+    });
+    expect(posts()).toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useChangeVersion } from "@/lib/changeSync";
 import { load } from "@/lib/scoresCache";
 import { useImportVersion } from "@/lib/scoresSync";
 import type { Data } from "@/types";
@@ -23,7 +24,8 @@ const useData = (
   year: string | null,
   fetchImpl: typeof fetch = fetch,
 ): Data => {
-  const version = useImportVersion();
+  // A name or color change in another tab changes the scores too.
+  const version = useImportVersion() + useChangeVersion("profile");
   const [result, setResult] = useState<{
     year: string;
     version: number;

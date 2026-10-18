@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { announceChange, useChangeVersion } from "@/lib/changeSync";
 import { toPlayedMap, type PlayedMap } from "@/lib/played";
 import { clearLegacyCounts, readLegacyPlayed } from "@/lib/playedMigration";
 import type { PlayedResponse } from "@/types";
@@ -21,7 +22,18 @@ interface Session {
   // A clear-all is waiting on the server: toggles and further clears are
   // ignored until it settles.
   clearing: boolean;
+  // Counts every local edit and every time a write settles; a refresh only
+  // applies if it did not move while the GET was out.
+  writes: number;
+  // Another tab changed the list and this tab has not caught up yet.
+  stale: boolean;
+  // A refresh GET is out; only one runs at a time.
+  refreshing: boolean;
+  // Refreshes if stale and the session is idle; a no-op otherwise.
+  run: () => void;
 }
+
+const idle = (s: Session) => s.inFlight.size === 0 && !s.clearing;
 
 const withPlayed = (map: PlayedMap, id: string, played: boolean): PlayedMap => {
   if (played) return { ...map, [id]: 1 };
@@ -52,7 +64,11 @@ function flush(
     )
     .then((ok) => {
       s.inFlight.delete(id);
-      if (ok) s.confirmed = withPlayed(s.confirmed, id, want);
+      s.writes += 1;
+      if (ok) {
+        s.confirmed = withPlayed(s.confirmed, id, want);
+        announceChange("played");
+      }
       // A newer change is sent as is (after a failure too); otherwise a
       // failed write goes back to what the server has. A cancelled session
       // still sends what was wanted but no longer updates the screen.
@@ -61,6 +77,7 @@ function flush(
         if (!s.cancelled) onRollback(s.desired);
       }
       flush(s, id, fetchImpl, onRollback);
+      s.run();
     });
 }
 
@@ -108,8 +125,39 @@ const usePlayed = (
       confirmed: {},
       inFlight: new Set(),
       clearing: false,
+      writes: 0,
+      stale: false,
+      refreshing: false,
+      run: () => {},
     };
     session.current = s;
+
+    // Reloads the list after another tab changed it. The answer is dropped
+    // when this tab wrote anything while it was out, or is writing now, so it
+    // can never undo a local edit; a dropped answer is retried when idle.
+    s.run = () => {
+      if (s.cancelled || !s.stale || s.refreshing || !idle(s)) return;
+      s.stale = false;
+      s.refreshing = true;
+      const writes = s.writes;
+      apiFetch<PlayedResponse>(`/me/played?year=${year}`, {}, fetchImpl)
+        .then(
+          (body) => toPlayedMap(body.played),
+          () => null,
+        )
+        .then((played) => {
+          s.refreshing = false;
+          if (s.cancelled) return;
+          if (played) {
+            if (s.writes === writes && idle(s)) {
+              s.confirmed = played;
+              s.desired = played;
+              setShown({ year, played });
+            } else s.stale = true;
+          }
+          s.run();
+        });
+    };
 
     const load = async () => {
       let played: PlayedMap;
@@ -165,10 +213,24 @@ const usePlayed = (
     };
   }, [year, fetchImpl]);
 
+  // Another tab changed the played games. Ignored until this tab's own load
+  // is in, which already reads the latest.
+  const changes = useChangeVersion("played");
+  const seenChanges = useRef(changes);
+  useEffect(() => {
+    if (seenChanges.current === changes) return;
+    seenChanges.current = changes;
+    const s = session.current;
+    if (!s?.ready) return;
+    s.stale = true;
+    s.run();
+  }, [changes]);
+
   const toggle = useCallback(
     (id: string) => {
       const s = session.current;
       if (!s?.ready || s.clearing) return;
+      s.writes += 1;
       s.desired = withPlayed(s.desired, id, !(id in s.desired));
       setErrorState(null);
       setShown({ year: s.year, played: s.desired });
@@ -184,6 +246,7 @@ const usePlayed = (
   const markConfirmed = useCallback((id: string) => {
     const s = session.current;
     if (!s?.ready || s.clearing) return;
+    s.writes += 1;
     s.desired = withPlayed(s.desired, id, true);
     s.confirmed = withPlayed(s.confirmed, id, true);
     setShown({ year: s.year, played: s.desired });
@@ -195,6 +258,7 @@ const usePlayed = (
     const s = session.current;
     if (!s?.ready || s.clearing) return;
     const snapshot = s.desired;
+    s.writes += 1;
     s.clearing = true;
     s.desired = {};
     setErrorState(null);
@@ -210,13 +274,16 @@ const usePlayed = (
       )
       .then((ok) => {
         s.clearing = false;
+        s.writes += 1;
         const ids = new Set([
           ...Object.keys(s.desired),
           ...Object.keys(s.confirmed),
           ...Object.keys(snapshot),
         ]);
-        if (ok) s.confirmed = {};
-        else s.desired = snapshot;
+        if (ok) {
+          s.confirmed = {};
+          announceChange("played");
+        } else s.desired = snapshot;
         if (!s.cancelled) {
           setShown({ year: s.year, played: s.desired });
           if (!ok)
@@ -226,6 +293,7 @@ const usePlayed = (
             });
         }
         for (const id of ids) flush(s, id, fetchImpl, onRollback);
+        s.run();
       });
   }, [fetchImpl]);
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { GENERIC_ERROR, describeApiError } from "@/lib/apiErrors";
+import { announceChange, useChangeVersion } from "@/lib/changeSync";
 import { vetoesApi } from "@/lib/vetoesApi";
 
 type Api = ReturnType<typeof vetoesApi>;
@@ -18,6 +19,7 @@ const useMyVetoList = <T>(
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
+  const changes = useChangeVersion("vetoes");
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +30,7 @@ const useMyVetoList = <T>(
     return () => {
       cancelled = true;
     };
-  }, [fetchImpl, pick]);
+  }, [fetchImpl, pick, changes]);
 
   // Runs one mutation then refetches; a second call while one runs is ignored.
   // Resolves true only when the change and the refetch both succeeded.
@@ -41,6 +43,7 @@ const useMyVetoList = <T>(
       let ok = false;
       try {
         await run();
+        announceChange("vetoes");
         setVetoes((await pick(vetoesApi(fetchImpl))()).vetoes);
         ok = true;
       } catch (e) {

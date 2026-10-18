@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
 import { GENERIC_ERROR, isAuthError } from "@/lib/apiErrors";
+import { announceChange } from "@/lib/changeSync";
 import { invalidateScores } from "@/lib/scoresCache";
 import type { ColorResult } from "@/types";
 
@@ -27,6 +28,7 @@ const useColor = (onSaved: () => void, fetchImpl: typeof fetch = fetch) => {
           fetchImpl,
         );
         invalidateScores();
+        announceChange("profile");
         onSaved();
         return result;
       } catch (e) {

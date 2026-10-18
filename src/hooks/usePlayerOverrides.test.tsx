@@ -3,11 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import usePlayerOverrides from "@/hooks/usePlayerOverrides";
 import { GENERIC_ERROR } from "@/lib/apiErrors";
+import { FakeBroadcastChannel } from "@/test/setup";
 
 const res = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 const none = () => new Response(null, { status: 204 });
 const mine = [{ discordId: "d1", bggId: 1, min: 3, max: 4 }];
+
+const posts = () =>
+  FakeBroadcastChannel.instances
+    .filter((c) => c.name === "user-changes")
+    .flatMap((c) => c.posted);
 
 const setup = async (...next: Response[]) => {
   const fetchImpl = vi.fn();
@@ -119,5 +125,15 @@ describe("usePlayerOverrides", () => {
     const { hook } = await setup(none(), res({}, 500));
     await act(() => hook.result.current.save(1, { min: 3, max: 4 }));
     expect(hook.result.current.error).toBe(GENERIC_ERROR);
+  });
+
+  it("announces after a saved or reset change, not a failed one", async () => {
+    const { hook } = await setup(none(), res({ overrides: mine }));
+    await act(() => hook.result.current.save(1, { min: 2, max: 4 }));
+    expect(posts()).toEqual(["overrides"]);
+
+    const failing = await setup(res({}, 500), res({ overrides: mine }));
+    await act(() => failing.hook.result.current.reset(1));
+    expect(posts()).toEqual(["overrides"]);
   });
 });
