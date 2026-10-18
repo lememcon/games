@@ -7,6 +7,7 @@ import {
 } from "./covers/config";
 import { CoverFetchError } from "./covers/fetch";
 import { createCoverService } from "./covers/service";
+import { CUSTOM_IMAGE } from "./customImage";
 import type { NormalizedImport } from "./import";
 import { refuse } from "./result";
 import { effectiveUser, validateChange, validateRemove } from "./roles";
@@ -115,12 +116,14 @@ export function fakeBggRepo() {
       writes.push(games);
       for (const g of games) {
         const old = rows.get(g.bggId);
-        const custom = old?.imageUrl === "custom";
+        const custom = old?.imageUrl === CUSTOM_IMAGE;
         rows.set(g.bggId, {
           bggId: g.bggId,
           minPlayers: g.minPlayers ?? old?.minPlayers ?? null,
           maxPlayers: g.maxPlayers ?? old?.maxPlayers ?? null,
-          imageUrl: custom ? "custom" : (g.imageUrl ?? old?.imageUrl ?? null),
+          imageUrl: custom
+            ? CUSTOM_IMAGE
+            : (g.imageUrl ?? old?.imageUrl ?? null),
           ext: custom
             ? old.ext
             : g.imageUrl != null
@@ -139,8 +142,8 @@ export function fakeBggRepo() {
     setCustomCover: async (bggId, key) => {
       const row = rows.get(bggId);
       if (!row) return false;
-      row.imageUrl = "custom";
-      covers.set(bggId, { key, source: "custom" });
+      row.imageUrl = CUSTOM_IMAGE;
+      covers.set(bggId, { key, source: CUSTOM_IMAGE });
       return true;
     },
     listCoverNeeds: async () =>
@@ -149,7 +152,7 @@ export function fakeBggRepo() {
           const c = covers.get(r.bggId);
           return (
             r.imageUrl?.startsWith("https://") &&
-            c?.source !== "custom" &&
+            c?.source !== CUSTOM_IMAGE &&
             (!c || c.source !== r.imageUrl)
           );
         })

@@ -6,14 +6,13 @@ import type {
 } from "drizzle-orm/pg-core";
 
 import type { BggGame } from "../bgg/client";
+import { CUSTOM_IMAGE } from "../customImage";
 import type { BggRepo } from "../types";
 import * as schema from "./schema";
 import { appSetting, gameMetadata } from "./schema";
 
 /** Satisfied by both the node-postgres client and PGlite (tests). */
 export type BggDb = PgDatabase<PgQueryResultHKT, typeof schema>;
-
-const CUSTOM = "custom";
 
 export function createBggRepo(db: BggDb): BggRepo {
   return {
@@ -57,7 +56,11 @@ export function createBggRepo(db: BggDb): BggRepo {
     async setCustomCover(bggId, key) {
       const rows = await db
         .update(gameMetadata)
-        .set({ imageUrl: CUSTOM, imageKey: key, imageSource: CUSTOM })
+        .set({
+          imageUrl: CUSTOM_IMAGE,
+          imageKey: key,
+          imageSource: CUSTOM_IMAGE,
+        })
         .where(eq(gameMetadata.bggId, bggId))
         .returning({ bggId: gameMetadata.bggId });
       return rows.length > 0;
@@ -72,7 +75,7 @@ export function createBggRepo(db: BggDb): BggRepo {
             like(gameMetadata.imageUrl, "https://%"),
             or(
               isNull(gameMetadata.imageSource),
-              ne(gameMetadata.imageSource, CUSTOM),
+              ne(gameMetadata.imageSource, CUSTOM_IMAGE),
             ),
             or(
               isNull(gameMetadata.imageKey),
@@ -100,7 +103,7 @@ export async function upsertMetadata(
   if (games.length === 0) return;
   const existing = (col: AnyPgColumn) => sql`${col}`;
   const excluded = (name: string) => sql`excluded.${sql.identifier(name)}`;
-  const isCustom = sql`${existing(gameMetadata.imageUrl)} = ${CUSTOM}`;
+  const isCustom = sql`${existing(gameMetadata.imageUrl)} = ${CUSTOM_IMAGE}`;
   await db
     .insert(gameMetadata)
     .values(games.map((g) => ({ ...g, fetchedAt })))

@@ -1,5 +1,6 @@
 /** Pure shaping between database rows and the API/legacy shapes. SQL stays in server/db. */
 import type { BggGame } from "./bgg/client";
+import { CUSTOM_IMAGE } from "./customImage";
 import type { NormalizedGame, NormalizedImport } from "./import";
 import type {
   GameRow,
@@ -190,7 +191,7 @@ export function toGamesMap(
   for (const r of rows) {
     const mirrored =
       r.imageKey != null &&
-      (r.imageSource === "custom" ||
+      (r.imageSource === CUSTOM_IMAGE ||
         (r.imageSource != null && r.imageSource === r.imageUrl));
     map[String(r.bggId)] = {
       ...(r.name !== null ? { name: r.name } : {}),

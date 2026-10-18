@@ -6,6 +6,7 @@
  *   only upserts game metadata
  */
 
+import { CUSTOM_IMAGE } from "./customImage";
 import { isRecord } from "./validate";
 
 export const MAX_ROWS = 20_000;
@@ -15,8 +16,6 @@ const MAX_IMAGE = 2048;
 const MAX_FILENAME = 100;
 const INT_MAX = 2_147_483_647;
 const EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
-/** games.json marks hand-picked art with this instead of a URL. */
-const CUSTOM_IMAGE = "custom";
 
 export interface ImportIssue {
   path: string;
