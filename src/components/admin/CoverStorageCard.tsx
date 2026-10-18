@@ -45,13 +45,16 @@ const StorageFormView = ({
   actionError,
   save,
   clear,
+  clearTest,
   test,
 }: Loaded) => {
   const saved = toForm(info);
   const [form, setForm] = useState(saved);
   const edited = isEdited(form, saved);
-  const set = (key: keyof StorageForm, value: string) =>
+  const set = (key: keyof StorageForm, value: string) => {
+    clearTest();
     setForm((f) => ({ ...f, [key]: value }));
+  };
 
   return (
     <Stack gap="sm">
@@ -122,6 +125,12 @@ const StorageFormView = ({
           </Button>
         )}
       </Group>
+
+      {edited && !isComplete(form) && (
+        <Text size="sm" c="dimmed">
+          Re-enter the access key id to change any setting.
+        </Text>
+      )}
 
       {testResult && (
         <Stack gap={0} role="status">

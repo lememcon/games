@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { coverStorageApi } from "@/lib/adminApi";
 import { describeStorageError } from "@/lib/coverStorage";
@@ -19,6 +19,9 @@ const useCoverStorage = (fetchImpl: typeof fetch = fetch) => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<CoverStorageTest | null>(null);
 
+  // Bumped by every save, clear and edit so a slower test result is dropped.
+  const latest = useRef(0);
+
   const load = useCallback(() => api.get().then(setInfo), [api]);
 
   useEffect(() => {
@@ -36,6 +39,7 @@ const useCoverStorage = (fetchImpl: typeof fetch = fetch) => {
   const save = useCallback(
     async (input: CoverStorageInput): Promise<boolean> => {
       setActionError(null);
+      latest.current += 1;
       try {
         setInfo(await api.put(input));
         setTestResult(null);
@@ -51,25 +55,40 @@ const useCoverStorage = (fetchImpl: typeof fetch = fetch) => {
   // Removing the override falls back to the server environment, so reload.
   const clear = useCallback(async () => {
     setActionError(null);
+    latest.current += 1;
     try {
       await api.clear();
+    } catch (e) {
+      setActionError(describeStorageError(e));
+      return;
+    }
+    setTestResult(null);
+    try {
       await load();
-      setTestResult(null);
     } catch (e) {
       setActionError(describeStorageError(e));
     }
   }, [api, load]);
+
+  const clearTest = useCallback(() => {
+    latest.current += 1;
+    setTestResult(null);
+  }, []);
 
   // Tests the given unsaved input, otherwise the saved settings.
   const test = useCallback(
     async (input?: CoverStorageInput) => {
       setActionError(null);
       setTesting(true);
+      const id = ++latest.current;
       try {
-        setTestResult(await api.test(input));
+        const result = await api.test(input);
+        if (id === latest.current) setTestResult(result);
       } catch (e) {
-        setTestResult(null);
-        setActionError(describeStorageError(e));
+        if (id === latest.current) {
+          setTestResult(null);
+          setActionError(describeStorageError(e));
+        }
       } finally {
         setTesting(false);
       }
@@ -86,6 +105,7 @@ const useCoverStorage = (fetchImpl: typeof fetch = fetch) => {
     testResult,
     save,
     clear,
+    clearTest,
     test,
   };
 };

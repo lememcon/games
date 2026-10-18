@@ -95,6 +95,33 @@ describe("useCoverStorage", () => {
     expect(hook.result.current.actionError).toBeTruthy();
   });
 
+  it("reports a failed reload after a successful clear", async () => {
+    const { hook } = await setup(
+      new Response(null, { status: 204 }),
+      res({}, 500),
+    );
+    await act(() => hook.result.current.clear());
+    expect(hook.result.current.actionError).toBeTruthy();
+  });
+
+  it("drops a test result that arrives after an edit", async () => {
+    const ok = { ok: true, status: "ok", message: "Works." };
+    const { hook, fetchImpl } = await setup();
+    let release: (r: Response) => void = () => {};
+    fetchImpl.mockReturnValueOnce(new Promise<Response>((r) => (release = r)));
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = hook.result.current.test();
+    });
+    act(() => hook.result.current.clearTest());
+    await act(async () => {
+      release(res(ok));
+      await pending;
+    });
+    expect(hook.result.current.testResult).toBeNull();
+    expect(hook.result.current.testing).toBe(false);
+  });
+
   it("tests saved or typed settings and clears the result on save", async () => {
     const ok = { ok: true, status: "ok", message: "Works." };
     const { hook, fetchImpl } = await setup(res(ok), res(ok), res(INFO));

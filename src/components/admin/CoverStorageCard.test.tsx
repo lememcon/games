@@ -35,6 +35,7 @@ const NONE: CoverStorageInfo = {
 const fns = {
   save: vi.fn(),
   clear: vi.fn(),
+  clearTest: vi.fn(),
   test: vi.fn(),
 };
 
@@ -114,6 +115,40 @@ describe("CoverStorageCard", () => {
     expect(fns.test).toHaveBeenCalledWith(expected);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(fns.save).toHaveBeenCalledWith(expected);
+  });
+
+  it("includes a typed secret in the payloads and omits a blank one", async () => {
+    setup();
+    await fill("Access key id", "AKIA");
+    await fill("Secret access key", "shh");
+    await userEvent.click(screen.getByRole("button", { name: "Test storage" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(fns.test).toHaveBeenLastCalledWith(
+      expect.objectContaining({ secretAccessKey: "shh" }),
+    );
+    expect(fns.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ secretAccessKey: "shh" }),
+    );
+    await userEvent.clear(screen.getByLabelText("Secret access key"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(fns.save.mock.lastCall?.[0]).not.toHaveProperty("secretAccessKey");
+  });
+
+  it("clears the test result when a field is edited", async () => {
+    setup({ testResult: { ok: true, status: "ok", message: "Works." } });
+    expect(fns.clearTest).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText("Bucket"), "x");
+    expect(fns.clearTest).toHaveBeenCalled();
+  });
+
+  it("explains disabled buttons once edited without the key id", async () => {
+    setup();
+    const hint = /Re-enter the access key id/;
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
+    await fill("Bucket", "other");
+    expect(screen.getByText(hint)).toBeInTheDocument();
+    await fill("Access key id", "AKIA");
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
   });
 
   it("keeps testing disabled while required fields are missing", async () => {
