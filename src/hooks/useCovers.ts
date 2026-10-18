@@ -2,7 +2,6 @@ import { useMemo } from "react";
 
 import useGames from "@/hooks/useGames";
 import { resolveImage } from "@/lib/games";
-import images from "@/lib/images";
 
 /** Cover URL by BGG id for every game that has one; empty while loading or on error. */
 const useCovers = (fetchImpl: typeof fetch = fetch): Record<string, string> => {
@@ -10,7 +9,7 @@ const useCovers = (fetchImpl: typeof fetch = fetch): Record<string, string> => {
   return useMemo(() => {
     const covers: Record<string, string> = {};
     for (const [id, meta] of Object.entries(games)) {
-      const url = resolveImage(id, meta, images);
+      const url = resolveImage(meta);
       if (url) covers[id] = url;
     }
     return covers;

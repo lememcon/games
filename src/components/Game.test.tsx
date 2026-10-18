@@ -8,7 +8,7 @@ import type { YearVetoesState } from "@/hooks/useYearVetoes";
 import { renderWithMantine } from "@/test/utils";
 import type { Data, GamesData } from "@/types";
 
-// "11" maps to the real bundled src/assets/games/11.jpg; "50" has no image;
+// "11" has an https URL; "50" has no image;
 // "60" only has an https URL.
 const yearTotals = vi.hoisted(() => ({
   totals: [] as { year: number; bgg_id: number; total: number }[],

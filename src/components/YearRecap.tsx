@@ -20,7 +20,6 @@ import usePageMeta from "@/hooks/usePageMeta";
 import useProfile from "@/hooks/useProfile";
 import useYears from "@/hooks/useYears";
 import { buildSelectedGames } from "@/lib/games";
-import images from "@/lib/images";
 import { pageMeta, recapMeta } from "@/lib/pageMeta";
 import { RECAP_TOP, buildRecap } from "@/lib/recap";
 import { gamePath, isYear } from "@/lib/routes";
@@ -187,7 +186,6 @@ const Loaded = ({
       byPlayer: data.by_player,
       players: [],
       gameData: games,
-      images,
       hidePlayed: false,
       playerPlayed: {},
     }).slice(0, RECAP_TOP);

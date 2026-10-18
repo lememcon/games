@@ -131,24 +131,4 @@ fetch(DATA_URL, { headers: HEADERS })
     fs.writeFileSync(GAMES_FILE, JSON.stringify(all_games, null, 2));
 
     return all_games;
-  })
-  .then((all_games) => {
-    // Look for images that we don't have
-    const ids = Object.keys(all_games);
-    R.map((id) => {
-      if (all_games[id].image) {
-        const remote = all_games[id].image;
-        const ext = path.extname(remote);
-        const local = `./src/assets/games/${id}${ext}`;
-        if (!fs.existsSync(local)) {
-          // Fetch image
-          if (all_games[id].image !== "custom") {
-            console.log("Fetching:", all_games[id].image, "as", ext);
-            fetch(remote)
-              .then((response) => response.arrayBuffer())
-              .then((buf) => fs.writeFileSync(local, Buffer.from(buf)));
-          }
-        }
-      }
-    }, ids);
   });

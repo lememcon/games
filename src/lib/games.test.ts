@@ -149,7 +149,6 @@ describe("player count bounds", () => {
         byPlayer: rows(n),
         players: Object.keys(rows(n)),
         gameData: { 100: root },
-        images: {},
         hidePlayed: false,
         playerPlayed: {},
       }).map((g) => g.name);
@@ -177,7 +176,6 @@ describe("player count bounds", () => {
         byPlayer,
         players: four,
         gameData: meta,
-        images: {},
         hidePlayed: false,
         playerPlayed: {},
       })
@@ -212,61 +210,28 @@ describe("player count bounds", () => {
 });
 
 describe("resolveImage", () => {
-  const images = { "/src/assets/games/7.png": "bundled.png" };
-
-  it("prefers a valid https cover over bundled and remote images", () => {
+  it("prefers a valid https cover over the remote image", () => {
     expect(
-      resolveImage(
-        "7",
-        {
-          cover: "https://cdn.example.com/c.jpg",
-          image: "https://example.com/a.png",
-          ext: ".png",
-        },
-        images,
-      ),
+      resolveImage({
+        cover: "https://cdn.example.com/c.jpg",
+        image: "https://example.com/a.png",
+        ext: ".png",
+      }),
     ).toBe("https://cdn.example.com/c.jpg");
   });
 
   it("ignores a non-https cover", () => {
     expect(
-      resolveImage(
-        "7",
-        { cover: "http://cdn.example.com/c.jpg", ext: ".png" },
-        images,
-      ),
-    ).toBe("bundled.png");
-  });
-
-  it("prefers the bundled file for the id and ext", () => {
-    expect(
-      resolveImage(
-        "7",
-        { image: "https://example.com/a.png", ext: ".png" },
-        images,
-      ),
-    ).toBe("bundled.png");
-  });
-
-  it("uses the bundled file even when the image URL is null", () => {
-    expect(resolveImage("7", { image: null, ext: ".png" }, images)).toBe(
-      "bundled.png",
-    );
+      resolveImage({
+        cover: "http://cdn.example.com/c.jpg",
+        image: "https://example.com/a.png",
+      }),
+    ).toBe("https://example.com/a.png");
   });
 
   it("falls back to a valid https URL", () => {
     expect(
-      resolveImage(
-        "8",
-        { image: "https://example.com/a.png", ext: ".png" },
-        images,
-      ),
-    ).toBe("https://example.com/a.png");
-  });
-
-  it("falls back to a URL when there is no ext", () => {
-    expect(
-      resolveImage("8", { image: "https://example.com/a.png" }, images),
+      resolveImage({ image: "https://example.com/a.png", ext: ".png" }),
     ).toBe("https://example.com/a.png");
   });
 
@@ -279,11 +244,11 @@ describe("resolveImage", () => {
     [null],
     [undefined],
   ])("returns nothing for the image %j", (image) => {
-    expect(resolveImage("8", { image, ext: ".png" }, images)).toBeUndefined();
+    expect(resolveImage({ image, ext: ".png" })).toBeUndefined();
   });
 
   it("returns nothing without metadata", () => {
-    expect(resolveImage("7", undefined, images)).toBeUndefined();
+    expect(resolveImage(undefined)).toBeUndefined();
   });
 });
 
@@ -330,7 +295,6 @@ describe("buildSelectedGames", () => {
       byPlayer,
       players: [],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -353,7 +317,6 @@ describe("buildSelectedGames", () => {
       },
       players: [],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -367,7 +330,6 @@ describe("buildSelectedGames", () => {
       byPlayer,
       players: [],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -394,7 +356,6 @@ describe("buildSelectedGames", () => {
       },
       players: [],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -419,7 +380,6 @@ describe("buildSelectedGames", () => {
       },
       players: [],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -433,7 +393,6 @@ describe("buildSelectedGames", () => {
       byPlayer,
       players: ["carol"],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -446,7 +405,6 @@ describe("buildSelectedGames", () => {
       byPlayer,
       players: ["bob"],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -465,7 +423,6 @@ describe("buildSelectedGames", () => {
         byPlayer,
         players,
         gameData,
-        images: {},
         hidePlayed,
         playerPlayed,
       });
@@ -534,7 +491,6 @@ describe("buildSelectedGames", () => {
           byPlayer: linked,
           players: [],
           gameData,
-          images: {},
           hidePlayed: false,
           playerPlayed,
         });
@@ -569,7 +525,6 @@ describe("buildSelectedGames", () => {
       byPlayer: threePlayers,
       players: ["a", "b", "c"],
       gameData,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -577,30 +532,13 @@ describe("buildSelectedGames", () => {
     expect(games).toEqual([]);
   });
 
-  it("resolves the image path from the injected images map", () => {
-    const images = { "/src/assets/games/100.jpg": "root.jpg" };
-    const [root] = buildSelectedGames({
-      byPlayer,
-      players: [],
-      gameData: {
-        100: { players: { min: 2, max: 4 }, image: "pic.jpg", ext: ".jpg" },
-      },
-      images,
-      hidePlayed: false,
-      playerPlayed: {},
-    });
-
-    expect(root.image).toBe("root.jpg");
-  });
-
-  it("falls back to an https image URL when nothing is bundled", () => {
+  it("falls back to an https image URL with no cover", () => {
     const [root] = buildSelectedGames({
       byPlayer,
       players: [],
       gameData: {
         100: { image: "https://example.com/root.jpg", ext: ".jpg" },
       },
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -613,7 +551,6 @@ describe("buildSelectedGames", () => {
       byPlayer,
       players: [],
       gameData: { 100: { image: "custom", ext: ".jpg" } },
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
     });
@@ -745,7 +682,6 @@ describe("member player count ranges", () => {
       byPlayer: scores,
       players,
       gameData: meta,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerRanges,
@@ -770,7 +706,6 @@ describe("member player count ranges", () => {
       byPlayer: noRoot,
       players: ["Garret", "Ann"],
       gameData: meta,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerRanges: garret4,
@@ -798,7 +733,6 @@ describe("member player count ranges", () => {
         byPlayer: scores,
         players: ["Garret", "Ann", "Bo", "Cy"],
         gameData: small,
-        images: {},
         hidePlayed: false,
         playerPlayed: {},
         playerRanges: garret4,
@@ -825,7 +759,6 @@ describe("member player count ranges", () => {
       byPlayer: scores,
       players: ["Garret", "Ann", "Bo", "Cy"],
       gameData: meta,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerRanges: garret4,
@@ -845,7 +778,6 @@ describe("member player count ranges", () => {
       byPlayer: twoGames,
       players: ["Garret", "Ann", "Bo", "Cy"],
       gameData: meta,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerRanges: garret4,
@@ -865,7 +797,6 @@ describe("member player count ranges", () => {
       byPlayer: twoGames,
       players: five,
       gameData: meta,
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerRanges: garret4,
@@ -923,7 +854,6 @@ describe("suggestSplits", () => {
       byPlayer: build(table),
       players: four,
       gameData: {},
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       ...extra,
@@ -1382,7 +1312,6 @@ describe("buildSelectedGames sort modes", () => {
         byPlayer: modeData,
         players: [],
         gameData: {},
-        images: {},
         hidePlayed: false,
         playerPlayed: {},
         sortMode,
@@ -1407,7 +1336,6 @@ describe("buildSelectedGames sort modes", () => {
       byPlayer: { ...modeData, cara: [] },
       players: ["alice", "bob", "cara"],
       gameData: {},
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       sortMode: "lowest",
@@ -1439,7 +1367,6 @@ describe("suggestSplits sort modes", () => {
       byPlayer: build(table),
       players: four,
       gameData: {},
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       sortMode,
@@ -1607,7 +1534,6 @@ describe("member vetoes", () => {
       byPlayer: scores,
       players,
       gameData: {},
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerVetoes,
@@ -1663,7 +1589,6 @@ describe("member vetoes", () => {
       byPlayer: scores,
       players,
       gameData: {},
-      images: {},
       hidePlayed: false,
       playerPlayed: {},
       playerVetoes: ann,

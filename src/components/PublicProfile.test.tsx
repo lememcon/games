@@ -7,10 +7,6 @@ import { headValue, resetHead } from "@/test/head";
 import { renderWithMantine } from "@/test/utils";
 import type { Profile } from "@/types";
 
-vi.mock("@/lib/images", () => ({
-  default: { "/src/assets/games/7.jpg": "/bundled/7.jpg" },
-}));
-
 const hook = vi.hoisted(() => ({
   state: { status: "loading" } as unknown,
   useProfile: vi.fn(),
@@ -250,40 +246,6 @@ describe("PublicProfile", () => {
         "https://cdn.example.com/8.webp",
       );
       hook.games = { games: {}, loading: false, error: false };
-    });
-
-    it("prefers the bundled cover for a permanent veto with an ext", () => {
-      show({
-        vetoes: [
-          {
-            bggId: 7,
-            name: "Azul",
-            image: "https://example.com/a.jpg",
-            ext: ".jpg",
-          },
-        ],
-      });
-      const s = section("Vetoed games");
-      expect(s.querySelectorAll("img")).toHaveLength(1);
-      expect(s.querySelector("img")).toHaveAttribute("src", "/bundled/7.jpg");
-    });
-
-    it("prefers the bundled cover for a year veto with an ext", () => {
-      show({
-        yearVetoes: [
-          {
-            year: 2026,
-            bggId: 7,
-            name: "Brass",
-            image: "https://example.com/b.jpg",
-            ext: ".jpg",
-          },
-        ],
-      });
-      expect(section("Vetoed in 2026").querySelector("img")).toHaveAttribute(
-        "src",
-        "/bundled/7.jpg",
-      );
     });
 
     it("falls back to the https image for a year veto without an ext", () => {

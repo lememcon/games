@@ -79,7 +79,7 @@ pnpm dev
 | `pnpm server:start`  | Run the compiled server                             |
 | `pnpm db:generate`   | Generate a Drizzle migration from the schema        |
 | `pnpm db:migrate`    | Apply migrations (needs `pnpm server:build` first)  |
-| `pnpm update`        | Refresh game metadata and images (see below)        |
+| `pnpm update`        | Refresh game metadata (see below)                   |
 
 ## How it works
 
@@ -98,11 +98,11 @@ Score data is **not** bundled — it comes from the API, which reads PostgreSQL:
   score used to normalize the score bars.
 - `GET /api/games` returns every game's metadata (player-count bounds, cover image
   URL and extension) in the shape of `src/assets/games.json`, which stays in the repo
-  as import source data and for `pnpm update`. Cover images in `src/assets/games/` are
-  imported via Vite's `import.meta.glob`.
+  as import source data and for `pnpm update`. Covers are not bundled; they load from
+  the server-resolved `cover` URL, falling back to the BGG image URL.
 - `src/lib/games.ts` holds the pure logic — `buildSelectedGames` aggregates and
   sorts the games list, and `computeMaxScores` derives the normalization maxima.
-  It takes injected dependencies (images, metadata, played games) so it can be
+  It takes injected dependencies (metadata, played games) so it can be
   unit-tested without a rendered tree.
 
 ### Layout
@@ -114,15 +114,14 @@ src/
   components/        UI components (table, rows, filters, detail views, ...)
   hooks/             useData, useLocalState, usePlayed
   lib/games.ts       Pure games-list aggregation and score math
-  assets/            games.json, cover images, styles, logo
+  assets/            games.json, styles, logo
   test/              Vitest setup and shared render helpers
 server/              Hono API server, Better Auth, Drizzle schema (see Backend)
 ```
 
 ### Refreshing game metadata (`pnpm update`)
 
-`update.cjs` keeps `games.json` and the local cover images in sync with the
-score feed:
+`update.cjs` keeps `games.json` in sync with the score feed:
 
 1. Fetches the current year's data feed and collects every `bgg_id` referenced.
 2. For ids not already in `games.json`, queries the
@@ -130,11 +129,9 @@ score feed:
    batches of 20 (throttled with a 5s pause between batches) for player counts
    and cover image URLs.
 3. Writes the merged metadata back to `games.json`.
-4. Downloads any missing cover images into `src/assets/games/`. Images marked
-   `"custom"` are skipped so hand-picked art isn't overwritten.
 
 It reads a `BGG_API_KEY` from the environment for the authenticated feed/API
-requests. Commit the regenerated `games.json` and new images.
+requests. Commit the regenerated `games.json`.
 
 ## Backend
 
@@ -243,7 +240,7 @@ session; optional `?filename=` is stored with the year). Two shapes:
 
 `sample-data.json` has no year, so add `"year": 2025` (or the right year) to it before
 uploading it as a year upload. `src/assets/games.json` uploads as is (its `"custom"` image
-marker is stored as is and the bundled cover is used). Rules: 20,000 score rows at
+marker is stored as is and gets no cover until one is uploaded). Rules: 20,000 score rows at
 most, strings up to 200 characters, https image URLs only, extensions `.jpg .jpeg .png .webp
 .gif`, no two game ids sharing a name, and players that differ only by case are one player
 (first spelling wins; a warning says so). A game's stored name is never overwritten; a

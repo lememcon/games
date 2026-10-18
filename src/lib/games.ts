@@ -104,18 +104,13 @@ const isHttpsUrl = (value: string | null | undefined): value is string => {
 export const avatarUrl = (value: string | null | undefined) =>
   isHttpsUrl(value) ? value : undefined;
 
-// Cover image for a game: the server's mirrored cover URL, then the bundled
-// file for this id and ext, then the game's image URL, else none. URLs must be
-// valid https.
+// Cover image for a game: the server's mirrored cover URL, then the game's
+// image URL, else none. URLs must be valid https.
 export const resolveImage = (
-  id: string,
   meta: GameMeta | undefined,
-  images: Record<string, string>,
 ): string | undefined => {
   if (!meta) return undefined;
   if (isHttpsUrl(meta.cover)) return meta.cover;
-  const bundled = meta.ext ? images[`/src/assets/games/${id}${meta.ext}`] : "";
-  if (bundled) return bundled;
   return isHttpsUrl(meta.image) ? meta.image : undefined;
 };
 
@@ -315,13 +310,12 @@ export const vetoedByFor = (
 };
 
 // Aggregate the per-player score rows into a sorted list of games. Kept pure
-// (images/gameData/playerPlayed injected) so it can be tested without Vite or
+// (gameData/playerPlayed injected) so it can be tested without Vite or
 // a rendered tree.
 interface BuildSelectedGamesArgs {
   byPlayer: Record<string, PlayerGameScore[]>;
   players: string[];
   gameData: GamesData;
-  images: Record<string, string>;
   hidePlayed: boolean;
   playerPlayed: PlayerPlayed;
   // Defaults to none.
@@ -336,7 +330,6 @@ export const buildSelectedGames = ({
   byPlayer,
   players,
   gameData,
-  images,
   hidePlayed,
   playerPlayed,
   playerRanges = {},
@@ -411,7 +404,7 @@ export const buildSelectedGames = ({
           players: {},
           playedBy,
         };
-        const image = resolveImage(id, meta, images);
+        const image = resolveImage(meta);
         if (image) selectedGames[item.game].image = image;
       }
 
