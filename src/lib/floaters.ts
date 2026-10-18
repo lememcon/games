@@ -43,12 +43,16 @@ const motion = (
  * lane across the width plus randomized motion values. `preferred` ids that
  * are in the pool come first (up to `count`); random ids fill the rest, and
  * the whole set is shuffled so the favourites are not all in the left lanes.
+ * When `weights` gives every in-pool preferred id a finite, non-uniform value,
+ * the preferred slots are instead weighted draws with replacement (so a
+ * dominant score can appear more than once); otherwise `weights` is ignored.
  */
 export const pickFloaters = (
   ids: readonly string[],
   count: number,
   rng: () => number = Math.random,
   preferred: readonly string[] = [],
+  weights?: Readonly<Record<string, number>>,
 ): Floater[] => {
   const n = Math.max(0, Math.min(count, ids.length));
   const lane = 100 / Math.max(n, 1);
@@ -69,7 +73,22 @@ export const pickFloaters = (
     return picked;
   }
 
-  const order = [...first];
+  const w = weights ? first.map((id) => weights[id]) : [];
+  const min = Math.min(...w);
+  const weighted =
+    w.length > 0 && w.every(Number.isFinite) && w.some((x) => x !== w[0]);
+  let order = [...first];
+  if (weighted) {
+    const shift = min <= 0 ? 1 - min : 0;
+    const cum: number[] = [];
+    let total = 0;
+    for (const x of w) cum.push((total += x + shift));
+    order = first.map(() => {
+      const r = rng() * total;
+      const k = cum.findIndex((c) => r < c);
+      return first[k === -1 ? first.length - 1 : k];
+    });
+  }
   for (let i = 0; order.length < n; i++) {
     const j = i + Math.floor(rng() * (pool.length - i));
     [pool[i], pool[j]] = [pool[j], pool[i]];

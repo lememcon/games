@@ -161,8 +161,18 @@ describe("useBackdropCovers", () => {
     await waitFor(() => expect(result.current.pool).toHaveLength(3));
     expect(result.current.pool).toEqual(["1", "2", "3"]);
     expect(result.current.preferred).toEqual(["2", "1"]);
+    expect(result.current.weights).toEqual({ "2": 100, "1": 99 });
     expect(calls(fetchImpl)).toContain("/api/me/top-games?year=2024");
     expect(calls(fetchImpl).some((u) => u.includes("/scores"))).toBe(false);
+  });
+
+  it("omits a preferred id outside the pool from preferred and weights", async () => {
+    const fetchImpl = fakeFetch({ top: games(4, 1) });
+    const { result } = renderHook(() => useBackdropCovers("/2024", fetchImpl));
+    await waitFor(() => expect(result.current.preferred).toEqual(["1"]));
+    expect(result.current.pool).toEqual(["1", "2", "3"]);
+    expect(result.current.weights).toEqual({ "1": 99 });
+    expect(result.current.weights).not.toHaveProperty("4");
   });
 
   it("uses the saved year on pages without one and keeps every cover", async () => {
