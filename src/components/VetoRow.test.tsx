@@ -21,13 +21,12 @@ describe("VetoRow", () => {
     expect(img).toHaveAttribute("width", "40");
   });
 
-  it("prefers the mirrored cover over the image URL and ext", () => {
+  it("prefers the mirrored cover over the image URL", () => {
     const { container } = renderWithMantine(
       <VetoRow
         bggId={7}
         name="Azul"
         image="https://example.com/a.jpg"
-        ext=".jpg"
         cover="https://cdn.example.com/7.webp"
       />,
     );
@@ -60,7 +59,7 @@ describe("VetoRow", () => {
 
   it("shows a blank box for a custom image with no https URL", () => {
     const { container } = renderWithMantine(
-      <VetoRow bggId={1} name="Root" image="custom" ext=".jpg" />,
+      <VetoRow bggId={1} name="Root" image="custom" />,
     );
     expect(cover(container)).toBeNull();
     expect(blank(container)).not.toBeNull();

@@ -3,16 +3,14 @@ import { useState } from "react";
 import { resolveImage } from "@/lib/games";
 
 interface GameCoverProps {
-  bggId: number | string;
   image?: string | null;
-  ext?: string | null;
   cover?: string | null;
 }
 
 // A 40px decorative cover, or a blank square when there is none or it fails.
-const GameCover = ({ image, ext, cover: mirrored }: GameCoverProps) => {
+const GameCover = ({ image, cover: mirrored }: GameCoverProps) => {
   const [failed, setFailed] = useState(false);
-  const cover = resolveImage({ image, ext, cover: mirrored ?? undefined });
+  const cover = resolveImage({ image, cover: mirrored ?? undefined });
   return (
     <div className="tray-cover tray-cover--xs">
       {cover && !failed ? (
