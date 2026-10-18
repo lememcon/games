@@ -270,6 +270,27 @@ export interface BggStatus {
 export type BggDownloadRequest =
   { mode: "missing" } | { mode: "ids"; ids: number[] };
 
+export type CoverJobState = BggJobState;
+
+export interface CoverJob {
+  state: CoverJobState;
+  mode: "missing" | null;
+  total: number;
+  done: number;
+  mirrored: number;
+  failed: number;
+  errors: string[];
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface CoverStatus {
+  configured: boolean;
+  coverBaseUrl: string | null;
+  pending: number;
+  job: CoverJob;
+}
+
 // 201 body of POST /api/admin/import. `year` is null for a games-only upload.
 export interface ImportResult {
   year: number | null;
