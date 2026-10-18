@@ -1,5 +1,5 @@
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import FloatingCovers from "@/components/FloatingCovers";
 
@@ -81,5 +81,46 @@ describe("FloatingCovers", () => {
     await waitFor(() =>
       expect(container.querySelector(".floaters")).toBeEmptyDOMElement(),
     );
+  });
+
+  it("renders duplicate ids without a key warning", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const covers = makeCovers(12);
+    const { container } = render(
+      <FloatingCovers
+        covers={covers}
+        preferred={["1", "2"]}
+        weights={{ "1": 100000, "2": 1 }}
+      />,
+    );
+    await waitFor(() =>
+      expect(container.querySelectorAll("img")).toHaveLength(10),
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("does not re-pick for a new weights object with the same content", async () => {
+    const covers = makeCovers(30);
+    const preferred = ["1", "2"];
+    const { container, rerender } = render(
+      <FloatingCovers
+        covers={covers}
+        preferred={preferred}
+        weights={{ "1": 5, "2": 1 }}
+      />,
+    );
+    await waitFor(() =>
+      expect(container.querySelectorAll("img")).toHaveLength(10),
+    );
+    const before = srcs(container);
+    rerender(
+      <FloatingCovers
+        covers={covers}
+        preferred={[...preferred]}
+        weights={{ "1": 5, "2": 1 }}
+      />,
+    );
+    expect(srcs(container)).toEqual(before);
   });
 });

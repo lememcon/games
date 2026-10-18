@@ -26,6 +26,7 @@ describe("useTopGames", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current).toEqual({
       ids: ["7", "3"],
+      scores: { "7": 12, "3": 9 },
       loading: false,
       error: false,
     });
@@ -41,7 +42,12 @@ describe("useTopGames", () => {
       const fetchImpl = vi.fn(() => json(body)) as unknown as typeof fetch;
       const { result } = renderHook(() => useTopGames("2025", fetchImpl));
       await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current).toEqual({ ids: [], loading: false, error: true });
+      expect(result.current).toEqual({
+        ids: [],
+        scores: {},
+        loading: false,
+        error: true,
+      });
     },
   );
 
@@ -104,6 +110,7 @@ describe("useTopGames", () => {
       act(() => message());
       expect(result.current).toEqual({
         ids: ["1"],
+        scores: { "1": 1 },
         loading: false,
         error: false,
       });
@@ -138,6 +145,7 @@ describe("useTopGames", () => {
       });
       expect(result.current).toEqual({
         ids: ["1"],
+        scores: { "1": 1 },
         loading: false,
         error: false,
       });
@@ -156,7 +164,12 @@ describe("useTopGames", () => {
 
       rerender({ year: "2025" });
       await waitFor(() => expect(result.current.error).toBe(true));
-      expect(result.current).toEqual({ ids: [], loading: false, error: true });
+      expect(result.current).toEqual({
+        ids: [],
+        scores: {},
+        loading: false,
+        error: true,
+      });
     });
 
     it("never shows the old year when the year changes mid-refetch", async () => {

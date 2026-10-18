@@ -24,6 +24,8 @@ export interface BackdropCovers {
   pool: string[];
   /** BGG ids to show first: the player's top scores that year. */
   preferred: string[];
+  /** Raw score by cover key, for the preferred covers. */
+  weights: Readonly<Record<string, number>>;
   /** Cover URL by BGG id. */
   covers: Record<string, string>;
 }
@@ -62,18 +64,27 @@ const useBackdropCovers = (
           .sort()
           .join(",")
       : null;
-  const preferredKey = ready ? top.ids.join(",") : "";
+  const preferredKey = ready
+    ? top.ids.map((id) => `${id}:${top.scores[id]}`).join(",")
+    : "";
 
   return useMemo(() => {
-    if (unknown) return { pool: [], preferred: [], covers };
+    if (unknown) return { pool: [], preferred: [], weights: {}, covers };
     const allowed =
       allowedKey === null
         ? null
         : new Set(allowedKey.split(",").filter(Boolean));
     const pool = buildCoverPool(Object.keys(covers), allowed);
     const inPool = new Set(pool);
-    const preferred = preferredKey.split(",").filter((id) => inPool.has(id));
-    return { pool, preferred, covers };
+    const preferred: string[] = [];
+    const weights: Record<string, number> = {};
+    for (const entry of preferredKey.split(",").filter(Boolean)) {
+      const [id, score] = entry.split(":");
+      if (!inPool.has(id)) continue;
+      preferred.push(id);
+      weights[id] = Number(score);
+    }
+    return { pool, preferred, weights, covers };
   }, [unknown, allowedKey, preferredKey, covers]);
 };
 

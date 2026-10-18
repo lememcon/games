@@ -6,13 +6,22 @@ import { useImportVersion } from "@/lib/scoresSync";
 interface TopGamesState {
   /** Game ids (as strings) of the member's best scores, best first. */
   ids: string[];
+  /** Raw score by game id. */
+  scores: Record<string, number>;
   loading: boolean;
   error: boolean;
 }
 
-const pending: TopGamesState = { ids: [], loading: true, error: false };
+const pending: TopGamesState = {
+  ids: [],
+  scores: {},
+  loading: true,
+  error: false,
+};
 
-const parseIds = (body: unknown): string[] => {
+const parseGames = (
+  body: unknown,
+): { ids: string[]; scores: Record<string, number> } => {
   const games = (body as { games?: unknown } | null)?.games;
   if (
     !Array.isArray(games) ||
@@ -22,7 +31,16 @@ const parseIds = (body: unknown): string[] => {
   ) {
     throw new Error("unexpected /api/me/top-games body");
   }
-  return games.map((g) => `${(g as { bgg_id: number }).bgg_id}`);
+  const rows = games as { bgg_id: number; score?: unknown }[];
+  return {
+    ids: rows.map((g) => `${g.bgg_id}`),
+    scores: Object.fromEntries(
+      rows.map((g) => [
+        `${g.bgg_id}`,
+        typeof g.score === "number" ? g.score : NaN,
+      ]),
+    ),
+  };
 };
 
 // The signed-in member's ten highest scores in a year. A null or empty year (not
@@ -50,11 +68,11 @@ const useTopGames = (
       fetchImpl,
     )
       .then((body) => ({
-        ids: parseIds(body),
+        ...parseGames(body),
         loading: false,
         error: false,
       }))
-      .catch(() => ({ ids: [], loading: false, error: true }))
+      .catch(() => ({ ids: [], scores: {}, loading: false, error: true }))
       .then((state) => {
         if (cancelled) return;
         setResult((prev) =>

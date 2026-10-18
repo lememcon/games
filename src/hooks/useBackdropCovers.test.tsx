@@ -161,6 +161,7 @@ describe("useBackdropCovers", () => {
     await waitFor(() => expect(result.current.pool).toHaveLength(3));
     expect(result.current.pool).toEqual(["1", "2", "3"]);
     expect(result.current.preferred).toEqual(["2", "1"]);
+    expect(result.current.weights).toEqual({ "2": 100, "1": 99 });
     expect(calls(fetchImpl)).toContain("/api/me/top-games?year=2024");
     expect(calls(fetchImpl).some((u) => u.includes("/scores"))).toBe(false);
   });

@@ -11,6 +11,8 @@ interface FloatingCoversProps {
   pool?: readonly string[];
   /** BGG ids to show first. */
   preferred?: readonly string[];
+  /** Raw score by BGG id; weights how often each preferred cover is drawn. */
+  weights?: Readonly<Record<string, number>>;
 }
 
 /** Decorative drifting game covers behind the sign-in card and the app. */
@@ -18,17 +20,20 @@ const FloatingCovers = ({
   covers,
   pool,
   preferred = [],
+  weights,
 }: FloatingCoversProps) => {
   const ids = pool ?? Object.keys(covers);
   // Re-pick only when the contents change, not the array identities.
-  const key = `${ids.join("|")}#${preferred.join("|")}`;
+  const key = `${ids.join("|")}#${preferred
+    .map((k) => `${k}:${weights?.[k] ?? ""}`)
+    .join("|")}`;
   const [picked, setPicked] = useState(() => ({
     key,
-    floaters: pickFloaters(ids, COUNT, Math.random, preferred),
+    floaters: pickFloaters(ids, COUNT, Math.random, preferred, weights),
   }));
   let floaters = picked.floaters;
   if (picked.key !== key) {
-    floaters = pickFloaters(ids, COUNT, Math.random, preferred);
+    floaters = pickFloaters(ids, COUNT, Math.random, preferred, weights);
     setPicked({ key, floaters });
   }
   const [mounted, setMounted] = useState(false);
@@ -42,9 +47,9 @@ const FloatingCovers = ({
 
   return (
     <div className="floaters" aria-hidden="true">
-      {floaters.map((f) => (
+      {floaters.map((f, i) => (
         <img
-          key={f.id}
+          key={`${i}:${f.id}`}
           src={covers[f.id]}
           alt=""
           loading="lazy"
