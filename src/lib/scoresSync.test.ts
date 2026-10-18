@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as cache from "@/lib/scoresCache";
 import {
   announceImport,
+  remoteImport,
   resetScoresSync,
   useImportVersion,
 } from "@/lib/scoresSync";
@@ -39,6 +40,15 @@ describe("scoresSync", () => {
     } finally {
       vi.stubGlobal("BroadcastChannel", original);
     }
+  });
+
+  it("remoteImport clears every year and bumps the version without posting", () => {
+    const invalidate = vi.spyOn(cache, "invalidateScores");
+    const { result } = renderHook(() => useImportVersion());
+    act(() => remoteImport());
+    expect(invalidate).toHaveBeenCalledWith();
+    expect(result.current).toBe(1);
+    expect(channels()[0].posted).toHaveLength(0);
   });
 
   it("posts on announce and bumps the local version", () => {

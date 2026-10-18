@@ -140,6 +140,10 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
     (route) => json(route, me),
   );
   await page.route(
+    (url) => pathOf(url) === "/api/data-version",
+    (route) => json(route, { version: "1" }),
+  );
+  await page.route(
     (url) => pathOf(url) === "/api/years",
     (route) => json(route, { years }),
   );

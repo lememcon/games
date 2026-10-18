@@ -75,6 +75,24 @@ function makeApp(user: AppUser | null = null) {
   return Object.assign(app, { scoreCalls });
 }
 
+describe("GET /api/data-version", () => {
+  it("returns the version without a session", async () => {
+    const res = await makeApp().request("/api/data-version");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ version: "0" });
+  });
+
+  it("is revalidated with an ETag, never publicly cached", async () => {
+    const app = makeApp();
+    const first = await app.request("/api/data-version");
+    expect(first.headers.get("cache-control")).toBe("private, no-cache");
+    const res = await app.request("/api/data-version", {
+      headers: { "If-None-Match": first.headers.get("etag")! },
+    });
+    expect(res.status).toBe(304);
+  });
+});
+
 describe("GET /api/years", () => {
   it("lists years newest first without a session", async () => {
     const res = await makeApp().request("/api/years");

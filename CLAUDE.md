@@ -43,6 +43,7 @@ A separate `commitlint` job runs on pull requests only.
   `BroadcastChannel("scores-import")`; a message clears every cached year and bumps
   `useImportVersion()`, which `useData`, `useYears`, `useGames`, `useYearTotals`,
   `useUnplayedGames` and `useTopGames` use to refetch (never showing old data).
+- `src/lib/importFeed.ts` — cross-device import sync: `startImportFeed` polls the public `GET /api/data-version` (an `app_setting` token the import transaction rewrites; ~45s while visible, plus on focus/visible); `useImportFeed` (mounted in `AuthedApp`) calls `remoteImport()` from `scoresSync.ts` when it changes.
 - `src/lib/changeSync.ts` — cross-tab sync for personal edits: `announceChange(topic)` (`played`, `vetoes`, `overrides`, `profile`) posts on the `user-changes` channel after a server-acknowledged write; `useChangeVersion(topic)` makes `usePlayed`, `useVetoes`, `useMyVetoList` (so `useMyVetoes`), `useProfile`, `useMe` and `useData` refetch (a profile message also clears the scores cache).
 - `src/lib/profile.ts` — pure display-name validation and profile stat formatters;
   `src/lib/playerColors.ts` — the player color context (kept out of `PlayerName.tsx` for

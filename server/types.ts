@@ -281,6 +281,8 @@ export interface DataStore {
   getYearTotals(): Promise<YearTotal[]>;
   /** Named games with no score row in any year, by name. */
   listUnplayedGames(): Promise<UnplayedGame[]>;
+  /** Opaque token that changes on every successful import; "0" before the first. */
+  getDataVersion(): Promise<string>;
   /** One transaction; refuses with 409 when the year already exists. */
   importData(
     input: NormalizedImport,

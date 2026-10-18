@@ -6,6 +6,8 @@ import AuthedApp from "@/components/AuthedApp";
 import { renderWithMantine } from "@/test/utils";
 import type { ApprovedUser } from "@/types";
 
+const useImportFeed = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/useImportFeed", () => ({ default: useImportFeed }));
 vi.mock("@/components/PageBackdrop", () => ({
   default: () => <div>backdrop</div>,
 }));
@@ -65,6 +67,7 @@ describe("AuthedApp", () => {
 
   it("renders the backdrop by default", () => {
     at("/", member);
+    expect(useImportFeed).toHaveBeenCalled();
     expect(screen.getByText("backdrop")).toBeInTheDocument();
   });
 
