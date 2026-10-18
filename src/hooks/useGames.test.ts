@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { StrictMode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import useGames from "@/hooks/useGames";
 import { announceImport } from "@/lib/scoresSync";
@@ -112,6 +113,61 @@ describe("useGames", () => {
         loading: false,
         error: false,
       });
+    });
+  });
+
+  describe("on the global fetch", () => {
+    const map = { 1: { players: { min: 1, max: 2 }, image: null, ext: null } };
+    const stub = () => {
+      const fetchMock = vi.fn(() => Promise.resolve(res(map)));
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    };
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("shares one request between instances", async () => {
+      const fetchMock = stub();
+      const a = renderHook(() => useGames());
+      const b = renderHook(() => useGames());
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      await waitFor(() => expect(b.result.current.loading).toBe(false));
+      expect(a.result.current.games).toEqual(map);
+      expect(b.result.current.games).toEqual(map);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches once for all instances after an import", async () => {
+      const fetchMock = stub();
+      const a = renderHook(() => useGames());
+      const b = renderHook(() => useGames());
+      await waitFor(() => expect(a.result.current.loading).toBe(false));
+      await waitFor(() => expect(b.result.current.loading).toBe(false));
+
+      act(() => announceImport());
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r));
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(a.result.current.loading).toBe(false);
+      expect(b.result.current.loading).toBe(false);
+    });
+
+    it("keeps each instance's result referentially stable", async () => {
+      stub();
+      const { result, rerender } = renderHook(() => useGames());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const first = result.current;
+      rerender();
+      expect(result.current).toBe(first);
+    });
+
+    it("issues one request under StrictMode", async () => {
+      const fetchMock = stub();
+      const { result } = renderHook(() => useGames(), { wrapper: StrictMode });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

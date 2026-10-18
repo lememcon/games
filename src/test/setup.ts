@@ -1,6 +1,7 @@
 import { beforeEach, vi } from "vitest";
 
 import { resetChangeSync } from "@/lib/changeSync";
+import { resetGamesCache } from "@/lib/gamesCache";
 import { resetScoresCache } from "@/lib/scoresCache";
 import { resetScoresSync } from "@/lib/scoresSync";
 
@@ -60,6 +61,7 @@ vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
 beforeEach(() => {
   FakeBroadcastChannel.instances = [];
   resetScoresCache();
+  resetGamesCache();
   resetScoresSync();
   resetChangeSync();
 });
