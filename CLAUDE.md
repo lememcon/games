@@ -83,6 +83,12 @@ A separate `commitlint` job runs on pull requests only.
     approved-only bulk read `GET /api/played?year=` behind `useAllPlayed`),
     `db/playedStore.ts` (the `PlayedStore` behind `deps.played`; table `played_count`, one
     row per member, year and game); `testing.ts` has `fakePlayed()`.
+  - Cover storage: `covers/config.ts` (`createCoverConfig`: an admin-saved encrypted `s3_config`
+    row in `app_setting` overrides the `S3_*` env, which is only a fallback; `parseS3Config`
+    is admin input only, env keeps its own checks), `covers/storageRoutes.ts`
+    (`/api/admin/cover-storage` GET/PUT/DELETE and `POST /test` probe), `covers/storage.ts`
+    (signed put/delete, never follows redirects); the cover service and `createDataStore`
+    take resolvers, so settings changes apply without a restart.
 - `@` is an alias for `src/` (configured in `vite.config.ts`).
 
 ## Conventions

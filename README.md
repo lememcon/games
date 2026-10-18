@@ -167,26 +167,28 @@ Consequences:
 Environment variables (see `.env.example`; a local `.env` is loaded automatically).
 With the Netlify rewrite the Discord redirect URI is `https://games.lememcon.com/api/auth/callback/discord`.
 
-| Variable                | Purpose                                                                                                                             |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | PostgreSQL connection string                                                                                                        |
-| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                                                                                                |
-| `BETTER_AUTH_URL`       | Public origin users see: `https://games.lememcon.com`; `http://localhost:3000` in dev                                               |
-| `DISCORD_CLIENT_ID`     | Discord application client id                                                                                                       |
-| `DISCORD_CLIENT_SECRET` | Discord application client secret                                                                                                   |
-| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role                                                                            |
-| `PORT`                  | Listen port (default `8080`)                                                                                                        |
-| `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                                                                          |
-| `COOKIE_DOMAIN`         | Session cookie parent domain, e.g. `.lememcon.com`; only for cross-origin login                                                     |
-| `S3_BUCKET`             | Cover mirror bucket. `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and `COVER_BASE_URL` are all-or-none      |
-| `S3_REGION`             | Bucket region, e.g. `us-east-1` (part of the all-or-none group)                                                                     |
-| `S3_ACCESS_KEY_ID`      | S3 access key id (part of the all-or-none group; never logged)                                                                      |
-| `S3_SECRET_ACCESS_KEY`  | S3 secret key (part of the all-or-none group; never logged)                                                                         |
-| `COVER_BASE_URL`        | https origin covers are served from, e.g. a CDN domain (part of the all-or-none group)                                              |
-| `S3_ENDPOINT`           | Optional https origin (no path) of an S3-compatible provider; unset means AWS                                                       |
-| `VITE_API_URL`          | Netlify build variable (not read by the server): API origin the SPA calls; unset means relative `/api`. Changing it needs a rebuild |
+| Variable                | Purpose                                                                                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string                                                                                                                                                  |
+| `BETTER_AUTH_SECRET`    | 32+ chars, `openssl rand -base64 32`                                                                                                                                          |
+| `BETTER_AUTH_URL`       | Public origin users see: `https://games.lememcon.com`; `http://localhost:3000` in dev                                                                                         |
+| `DISCORD_CLIENT_ID`     | Discord application client id                                                                                                                                                 |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret                                                                                                                                             |
+| `ADMIN_DISCORD_IDS`     | Comma-separated Discord user ids that get the admin role                                                                                                                      |
+| `PORT`                  | Listen port (default `8080`)                                                                                                                                                  |
+| `WEB_ORIGIN`            | SPA origin for CORS/CSRF when calling the API cross-origin                                                                                                                    |
+| `COOKIE_DOMAIN`         | Session cookie parent domain, e.g. `.lememcon.com`; only for cross-origin login                                                                                               |
+| `S3_BUCKET`             | Fallback cover mirror bucket (settings an admin saves override it). `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and `COVER_BASE_URL` are all-or-none |
+| `S3_REGION`             | Bucket region, e.g. `us-east-1` (part of the all-or-none group)                                                                                                               |
+| `S3_ACCESS_KEY_ID`      | S3 access key id (part of the all-or-none group; never logged)                                                                                                                |
+| `S3_SECRET_ACCESS_KEY`  | S3 secret key (part of the all-or-none group; never logged)                                                                                                                   |
+| `COVER_BASE_URL`        | https origin covers are served from, e.g. a CDN domain (part of the all-or-none group)                                                                                        |
+| `S3_ENDPOINT`           | Optional https origin (no path) of an S3-compatible provider; unset means AWS                                                                                                 |
+| `VITE_API_URL`          | Netlify build variable (not read by the server): API origin the SPA calls; unset means relative `/api`. Changing it needs a rebuild                                           |
 
-Cover mirror: `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
+Cover mirror: the `S3_*` and `COVER_BASE_URL` variables are now a fallback. Settings an
+admin saves through `/api/admin/cover-storage` override them, and deleting that override
+reverts to the environment. `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
 `COVER_BASE_URL` must be set together or not at all; a partial set refuses to boot and the
 error lists what is missing. Unsetting all of the `S3_*` and `COVER_*` variables together is
 the rollback. Serve `COVER_BASE_URL` from the provider's default CDN domain or a host outside
@@ -284,6 +286,18 @@ three store failures in a row. After an import or BGG download, press Mirror cov
 custom upload replaces the game's BGG image URL (marked custom), so rolling back S3 leaves
 such games without a cover until they are re-uploaded or fixed in the database.
 
+Admins can instead save the storage settings from `/api/admin/cover-storage`: `GET`
+(source `admin`, `env` or `none`, masked key id, never the secret), `PUT` (bucket, region,
+optional https endpoint, https cover base URL, access key id and secret; a blank secret
+reuses the saved one only if the endpoint, region and key id are unchanged, otherwise
+`400` `secret_required`), `DELETE` (back to the environment) and `POST test` (body `{}`
+tests the effective settings, or a full unsaved input; it writes and deletes a small
+object under `covers/.probe/` and answers `200` with `ok`, `status` and a fixed message,
+`409` while another test runs, `429` within 3 seconds of the last). The secret is stored
+encrypted in the `app_setting` table under the key derived from `BETTER_AUTH_SECRET`, so
+rotating that secret means entering it again. Like the other job state, this assumes a
+single server instance.
+
 Setup checklist:
 
 1. Create a private bucket.
@@ -292,9 +306,11 @@ Setup checklist:
    `Content-Security-Policy: default-src 'none'; sandbox`,
    `X-Content-Type-Options: nosniff` and `Cross-Origin-Resource-Policy: cross-origin`.
 3. Create an IAM user with only `s3:PutObject` on `covers/*` in that bucket.
-4. Set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
+   `s3:DeleteObject` on `covers/.probe/*` is optional: without it the settings test
+   still passes but warns that its probe object could not be removed.
+4. Save the settings through the admin API, or set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and
    `COVER_BASE_URL` (the CDN origin), plus `S3_ENDPOINT` for a non-AWS provider, and
-   restart.
+   restart (the environment is only a fallback).
 5. Press Mirror covers.
 
 Rollback: unset all of the `S3_*` and `COVER_*` variables together (a partial set refuses
