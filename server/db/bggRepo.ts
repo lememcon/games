@@ -40,6 +40,15 @@ export function createBggRepo(db: BggDb): BggRepo {
 
     listMetadata: () => db.select().from(gameMetadata),
 
+    async getMetadata(bggId) {
+      const [row] = await db
+        .select()
+        .from(gameMetadata)
+        .where(eq(gameMetadata.bggId, bggId))
+        .limit(1);
+      return row ?? null;
+    },
+
     upsertMetadata: (games, fetchedAt) => upsertMetadata(db, games, fetchedAt),
 
     async setCover(bggId, key, source) {

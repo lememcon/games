@@ -112,6 +112,7 @@ export function fakeBggRepo() {
       settings.delete(key);
     },
     listMetadata: async () => [...rows.values()],
+    getMetadata: async (bggId) => rows.get(bggId) ?? null,
     upsertMetadata: async (games, fetchedAt) => {
       writes.push(games);
       for (const g of games) {

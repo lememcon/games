@@ -73,6 +73,14 @@ describe("metadata", () => {
     expect(row.fetchedAt).toEqual(new Date("2026-02-01"));
   });
 
+  it("gets one row by id, or null when missing", async () => {
+    await repo.upsertMetadata([game(900005)], new Date("2026-03-01"));
+    const row = await repo.getMetadata(900005);
+    expect(row).toMatchObject({ bggId: 900005, imageUrl: IMG });
+    expect(row?.fetchedAt).toEqual(new Date("2026-03-01"));
+    expect(await repo.getMetadata(999999)).toBeNull();
+  });
+
   it("keeps stored values for fields BGG omitted", async () => {
     await repo.upsertMetadata([game(900002)], new Date(0));
     await repo.upsertMetadata(
