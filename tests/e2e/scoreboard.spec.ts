@@ -14,7 +14,9 @@ test("scoreboard ranks the newest year's games", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
 
-  await expect(page.getByRole("combobox")).toHaveValue("2024");
+  await expect(
+    page.getByRole("combobox", { name: "Year", exact: true }),
+  ).toHaveValue("2024");
   await expect(page.getByText("4 of 4 games")).toBeVisible();
 
   const names = page.getByRole("link", {

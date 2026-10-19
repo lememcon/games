@@ -17,7 +17,10 @@ test("an import in one tab adds the year to another tab without a reload", async
   await context.route(
     (url) => url.pathname === "/api/admin/import",
     (route) => {
-      state.years.push(2025);
+      if (!state.years.includes(2025)) state.years.push(2025);
+      state.scores = state.scores.filter(
+        (s) => !(s.bgg_id === 101 && s.player === "Dana"),
+      );
       state.scores.push({
         bgg_id: 101,
         game: "Alpha",
@@ -41,7 +44,7 @@ test("an import in one tab adds the year to another tab without a reload", async
   await page.goto("/2024");
   await expect(page.getByText("4 of 4 games")).toBeVisible();
   await page.evaluate("window.__noReload = true");
-  const year = page.getByRole("combobox");
+  const year = page.getByRole("combobox", { name: "Year", exact: true });
   await year.click();
   await expect(page.getByRole("option", { name: "2024" })).toBeVisible();
   await expect(page.getByRole("option", { name: "2025" })).toHaveCount(0);
