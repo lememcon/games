@@ -48,6 +48,7 @@ const Header = ({ year, years, onYearChange, user }: HeaderProps) => {
         {years && (
           <Select
             id="year"
+            aria-label="Year"
             value={year}
             data={years}
             onChange={onYearChange}

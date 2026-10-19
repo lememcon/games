@@ -52,12 +52,12 @@ describe("Header", () => {
 
   it("omits the year picker when no years are given", () => {
     const { queryByRole } = renderHeader({ years: undefined });
-    expect(queryByRole("combobox")).toBeNull();
+    expect(queryByRole("combobox", { name: "Year" })).toBeNull();
   });
 
   it("shows the current year in the selector", () => {
     const { getByRole } = renderHeader();
-    expect(getByRole("combobox")).toHaveValue("2025");
+    expect(getByRole("combobox", { name: "Year" })).toHaveValue("2025");
   });
 
   it("fires onYearChange when a different year is picked", async () => {
@@ -65,7 +65,7 @@ describe("Header", () => {
     const onYearChange = vi.fn();
     const { getByRole, getByText } = renderHeader({ onYearChange });
 
-    await user.click(getByRole("combobox"));
+    await user.click(getByRole("combobox", { name: "Year" }));
     await user.click(getByText("2026"));
 
     expect(onYearChange).toHaveBeenCalledWith("2026", expect.anything());
