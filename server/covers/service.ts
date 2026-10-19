@@ -241,8 +241,7 @@ export function createCoverService(deps: CoverServiceDeps) {
   ): Promise<CoverResult<CustomCover>> {
     const { storage, coverBaseUrl } = await resolveStorage();
     if (!storage) return fail(409, "storage_not_configured");
-    if (!(await repo.listMetadata()).some((r) => r.bggId === bggId))
-      return fail(404, "unknown_game");
+    if (!(await repo.getMetadata(bggId))) return fail(404, "unknown_game");
     const kind = sniff(bytes);
     if (!kind) return fail(415, "unsupported_image");
     const key = coverKey(bggId, bytes, kind.ext);

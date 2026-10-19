@@ -146,6 +146,8 @@ export interface BggRepo {
   setSetting(key: string, value: string, updatedBy: string): Promise<void>;
   deleteSetting(key: string): Promise<void>;
   listMetadata(): Promise<GameMetadataRow[]>;
+  /** One game's metadata row, or null when the game is unknown. */
+  getMetadata(bggId: number): Promise<GameMetadataRow | null>;
   /**
    * Inserts or refreshes rows. A row whose image is the "custom" sentinel keeps
    * its image and extension; fields BGG omitted keep their stored value.

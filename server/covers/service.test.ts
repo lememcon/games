@@ -537,6 +537,7 @@ describe("upload", () => {
       error: "storage_not_configured",
     });
     const s = setup();
+    const list = vi.spyOn(s.repo, "listMetadata");
     expect(await s.service.upload(99, png)).toEqual({
       ok: false,
       status: 404,
@@ -545,6 +546,7 @@ describe("upload", () => {
     expect(
       await s.service.upload(1, new TextEncoder().encode('{"a":1}')),
     ).toEqual({ ok: false, status: 415, error: "unsupported_image" });
+    expect(list).not.toHaveBeenCalled();
     expect(s.puts).toHaveLength(0);
   });
 
